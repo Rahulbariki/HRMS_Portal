@@ -1,11 +1,11 @@
 import { useState, useRef, useMemo } from 'react';
 import {
   Search, ZoomIn, ZoomOut,
-  List, GitFork, ChevronDown, ChevronRight,
-  Mail, Phone, Building, Briefcase, Check
+  List, GitFork, ChevronDown, ChevronRight, Check
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
+import EmployeeIdCard from '../../components/EmployeeIdCard';
 
 // Hierarchical company org data
 const ORG_DATA = {
@@ -533,69 +533,41 @@ export default function EmployeeOrgChart() {
         </div>
       )}
 
-      {/* Employee Detail Slide-over / Modal */}
+      {/* Employee Official ID Card Modal */}
       {selectedNode && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white relative">
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white rounded-full p-1 hover:bg-white/10 transition"
-              >
-                ✕
-              </button>
-              <div className="flex items-center gap-4">
-                {selectedNode.avatar ? (
-                  <img
-                    src={selectedNode.avatar}
-                    alt={selectedNode.name}
-                    className="w-16 h-16 rounded-full object-cover ring-4 ring-white/30"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-white text-amber-600 font-bold flex items-center justify-center text-xl ring-4 ring-white/30">
-                    {selectedNode.initials || selectedNode.name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-bold text-lg leading-tight">{selectedNode.name}</h3>
-                  <p className="text-white/90 text-xs mt-0.5">{selectedNode.designation}</p>
-                  <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium backdrop-blur-xs">
-                    {selectedNode.department}
-                  </span>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 max-w-md w-full relative my-8 animate-in fade-in-0 zoom-in-95 flex flex-col items-center">
+            <button
+              type="button"
+              onClick={() => setSelectedNode(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition font-bold cursor-pointer"
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+            <div className="w-full flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
+              <span className="font-bold text-xs text-slate-900">Official Company ID Badge</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Verified
+              </span>
             </div>
-
-            <div className="p-6 space-y-4 text-xs text-slate-700">
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3 text-slate-600">
-                  <Mail className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <span>{selectedNode.email}</span>
-                </div>
-                <div className="flex items-center gap-3 text-slate-600">
-                  <Phone className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <span>{selectedNode.phone}</span>
-                </div>
-                <div className="flex items-center gap-3 text-slate-600">
-                  <Building className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <span>IntelliAttend LLC Workspace</span>
-                </div>
-                <div className="flex items-center gap-3 text-slate-600">
-                  <Briefcase className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <span>{selectedNode.totalReports} team members reporting</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setSelectedNode(null)}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+            <EmployeeIdCard
+              employee={{
+                name: selectedNode.name.toUpperCase(),
+                designation: selectedNode.designation.toUpperCase(),
+                employeeId: selectedNode.id === 'emp-rahul-01' || selectedNode.name.toLowerCase().includes('rahul')
+                  ? 'SI0121'
+                  : `SI00${Math.abs(selectedNode.name.length * 7) % 80 + 10}`,
+                email: selectedNode.email,
+                phone: selectedNode.phone.replace(/[^0-9]/g, '').slice(-10) || '9876543210',
+                emergencyPhone: '9876543299',
+                doj: '05-10-2026',
+                bloodGroup: 'O+',
+                avatar: selectedNode.avatar,
+                company: 'SHNOOR INTERNATIONAL',
+              }}
+              showActions={true}
+            />
           </div>
         </div>
       )}

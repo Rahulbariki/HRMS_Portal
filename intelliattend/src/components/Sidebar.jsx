@@ -77,6 +77,8 @@ const menuItems = {
     { label: 'Company Policies', path: '/employee/policies', icon: FileCheck },
     { label: 'Organisation Chart', path: '/employee/org-chart', icon: Network },
     { label: 'Support Query', path: '/employee/support-query', icon: HelpCircle },
+    { label: 'Settings', path: '/employee/settings', icon: Settings },
+    { label: 'Profile', path: '/employee/profile', icon: UserCheck },
   ],
 };
 
