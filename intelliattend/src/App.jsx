@@ -57,6 +57,10 @@ import EmployeeLetters from './pages/employee/Letters';
 import EmployeeSupportQuery from './pages/employee/SupportQuery';
 import EmployeeSettings from './pages/employee/Settings';
 import EmployeeProfile from './pages/employee/Profile';
+import EmployeeOrgChart from './pages/employee/OrgChart';
+import EmployeeMail from './pages/employee/Mail';
+import EmployeeChat from './pages/employee/Chat';
+import EmployeeRegularization from './pages/employee/Regularization';
 import VerifyEmployee from './pages/VerifyEmployee';
 import CompanyLoginPage from './pages/CompanyLoginPage';
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage';
@@ -234,15 +238,19 @@ function AppRoutes() {
                 <Route path="dashboard" element={<ManagerDashboard />} />
                 <Route path="leaves" element={<ManagerLeaves />} />
                 <Route path="tasks" element={<ManagerTasks />} />
+                <Route path="chat" element={<EmployeeChat />} />
+                <Route path="mail" element={<EmployeeMail />} />
                 <Route path="policies" element={<ManagerPolicies />} />
                 <Route path="documents" element={<ManagerDocuments />} />
                 <Route path="news" element={<ManagerNews />} />
                 <Route path="holidays" element={<ManagerHolidays />} />
                 <Route path="attendance" element={<ManagerAttendance />} />
+                <Route path="regularization" element={<EmployeeRegularization />} />
                 <Route path="expenses" element={<ManagerExpenses />} />
                 <Route path="salary" element={<ManagerSalary />} />
                 <Route path="offboarding" element={<ManagerOffboarding />} />
                 <Route path="letters" element={<ManagerLetters />} />
+                <Route path="org-chart" element={<EmployeeOrgChart />} />
                 <Route path="queries" element={<ManagerQueries />} />
                 <Route path="settings" element={<ManagerSettings />} />
                 <Route path="profile" element={<ManagerProfile />} />
@@ -258,17 +266,21 @@ function AppRoutes() {
             <ProtectedRoute allowedRoles={['employee']}>
               <Routes>
                 <Route path="dashboard" element={<EmployeeDashboard />} />
+                <Route path="chat" element={<EmployeeChat />} />
+                <Route path="mail" element={<EmployeeMail />} />
                 <Route path="leaves" element={<EmployeeLeaves />} />
                 <Route path="tasks" element={<EmployeeTasks />} />
-                <Route path="policies" element={<EmployeePolicies />} />
-                <Route path="documents" element={<EmployeeDocuments />} />
                 <Route path="news" element={<EmployeeNews />} />
+                <Route path="documents" element={<EmployeeDocuments />} />
                 <Route path="holidays" element={<EmployeeHolidays />} />
                 <Route path="attendance" element={<EmployeeAttendance />} />
+                <Route path="regularization" element={<EmployeeRegularization />} />
                 <Route path="expenses" element={<EmployeeExpenses />} />
                 <Route path="salary" element={<EmployeeSalary />} />
-                <Route path="offboarding" element={<EmployeeOffboarding />} />
                 <Route path="letters" element={<EmployeeLetters />} />
+                <Route path="offboarding" element={<EmployeeOffboarding />} />
+                <Route path="policies" element={<EmployeePolicies />} />
+                <Route path="org-chart" element={<EmployeeOrgChart />} />
                 <Route path="support-query" element={<EmployeeSupportQuery />} />
                 <Route path="settings" element={<EmployeeSettings />} />
                 <Route path="profile" element={<EmployeeProfile />} />

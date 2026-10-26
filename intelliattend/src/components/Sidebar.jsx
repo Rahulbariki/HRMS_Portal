@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, CreditCard, FileText, Settings,
   Calendar, ClipboardList, DollarSign, Shield, Mail,
   FolderOpen, Newspaper, LogOut, ChevronLeft, ChevronRight,
-  Building, UserCheck, HelpCircle, FileCheck, Award, Zap
+  Building, UserCheck, HelpCircle, FileCheck, Award, Zap,
+  MessageSquare, CalendarDays, Clock, RefreshCw, Network
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import clsx from 'clsx';
 
 const menuItems = {
@@ -38,37 +40,43 @@ const menuItems = {
   ],
   manager: [
     { label: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
-    { label: 'Leaves', path: '/manager/leaves', icon: Calendar },
-    { label: 'Tasks', path: '/manager/tasks', icon: ClipboardList },
-    { label: 'Policies', path: '/manager/policies', icon: FileCheck },
-    { label: 'Documents', path: '/manager/documents', icon: FolderOpen },
+    { label: 'Chat', path: '/manager/chat', icon: MessageSquare },
+    { label: 'Emails', path: '/manager/mail', icon: Mail },
+    { label: 'My Tasks', path: '/manager/tasks', icon: ClipboardList },
     { label: 'News', path: '/manager/news', icon: Newspaper },
-    { label: 'Holidays', path: '/manager/holidays', icon: Calendar },
-    { label: 'Attendance', path: '/manager/attendance', icon: UserCheck },
+    { label: 'Documents', path: '/manager/documents', icon: FolderOpen },
+    { label: 'Leaves', path: '/manager/leaves', icon: Calendar },
+    { label: 'Holidays', path: '/manager/holidays', icon: CalendarDays },
+    { label: 'Attendance', path: '/manager/attendance', icon: Clock },
+    { label: 'Regularization', path: '/manager/regularization', icon: RefreshCw },
     { label: 'Expenses', path: '/manager/expenses', icon: DollarSign },
     { label: 'Salary', path: '/manager/salary', icon: Award },
-    { label: 'Offboarding', path: '/manager/offboarding', icon: LogOut },
     { label: 'Letters', path: '/manager/letters', icon: FileText },
+    { label: 'Offboarding', path: '/manager/offboarding', icon: LogOut },
+    { label: 'Company Policies', path: '/manager/policies', icon: FileCheck },
+    { label: 'Organisation Chart', path: '/manager/org-chart', icon: Network },
     { label: 'Support Queries', path: '/manager/queries', icon: HelpCircle },
     { label: 'Settings', path: '/manager/settings', icon: Settings },
     { label: 'Profile', path: '/manager/profile', icon: UserCheck },
   ],
   employee: [
     { label: 'Dashboard', path: '/employee/dashboard', icon: LayoutDashboard },
-    { label: 'Leaves', path: '/employee/leaves', icon: Calendar },
-    { label: 'Tasks', path: '/employee/tasks', icon: ClipboardList },
-    { label: 'Policies', path: '/employee/policies', icon: FileCheck },
-    { label: 'Documents', path: '/employee/documents', icon: FolderOpen },
+    { label: 'Chat', path: '/employee/chat', icon: MessageSquare },
+    { label: 'Emails', path: '/employee/mail', icon: Mail },
+    { label: 'My Tasks', path: '/employee/tasks', icon: ClipboardList },
     { label: 'News', path: '/employee/news', icon: Newspaper },
-    { label: 'Holidays', path: '/employee/holidays', icon: Calendar },
-    { label: 'Attendance', path: '/employee/attendance', icon: UserCheck },
+    { label: 'Documents', path: '/employee/documents', icon: FolderOpen },
+    { label: 'Leaves', path: '/employee/leaves', icon: Calendar },
+    { label: 'Holidays', path: '/employee/holidays', icon: CalendarDays },
+    { label: 'Attendance', path: '/employee/attendance', icon: Clock },
+    { label: 'Regularization', path: '/employee/regularization', icon: RefreshCw },
     { label: 'Expenses', path: '/employee/expenses', icon: DollarSign },
     { label: 'Salary', path: '/employee/salary', icon: Award },
-    { label: 'Offboarding', path: '/employee/offboarding', icon: LogOut },
     { label: 'Letters', path: '/employee/letters', icon: FileText },
+    { label: 'Offboarding', path: '/employee/offboarding', icon: LogOut },
+    { label: 'Company Policies', path: '/employee/policies', icon: FileCheck },
+    { label: 'Organisation Chart', path: '/employee/org-chart', icon: Network },
     { label: 'Support Query', path: '/employee/support-query', icon: HelpCircle },
-    { label: 'Settings', path: '/employee/settings', icon: Settings },
-    { label: 'Profile', path: '/employee/profile', icon: UserCheck },
   ],
 };
 
@@ -83,8 +91,15 @@ function Globe({ className }) {
 }
 
 export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMobileOpen: controlledSetMobileOpen }) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const mobileOpen = controlledMobileOpen !== undefined ? controlledMobileOpen : internalMobileOpen;
   const setMobileOpen = controlledSetMobileOpen || setInternalMobileOpen;
@@ -170,9 +185,22 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
           )}
 
           <button
+            type="button"
+            onClick={handleLogout}
+            className={clsx(
+              'mt-2 w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors font-bold text-xs cursor-pointer',
+              collapsed && 'justify-center'
+            )}
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0 text-rose-600" />
+            {!collapsed && <span className="font-display text-xs text-rose-600">Logout</span>}
+          </button>
+
+          <button
             onClick={() => setCollapsed(!collapsed)}
             className={clsx(
-              'mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-muted hover:bg-slate-100 transition-colors',
+              'mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-muted hover:bg-slate-100 transition-colors',
               collapsed && 'justify-center'
             )}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

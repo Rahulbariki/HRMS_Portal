@@ -1,0 +1,367 @@
+import { useState, useMemo } from 'react';
+import {
+  RefreshCw, Plus, Clock, CheckCircle2,
+  XCircle, AlertCircle, X, Search
+} from 'lucide-react';
+import clsx from 'clsx';
+import { useAuth } from '../../contexts/AuthContext';
+
+const INITIAL_REGULARIZATIONS = [
+  {
+    id: 1,
+    attendanceDate: '2026-10-24',
+    day: 'Saturday',
+    originalClockIn: '10:45 AM',
+    originalClockOut: '06:15 PM',
+    requestedClockIn: '09:30 AM',
+    requestedClockOut: '06:30 PM',
+    reasonType: 'Biometric Scanner Failure / Network Glitch',
+    reasonDetails: 'Device terminal failed to sync face verification at office gate entry.',
+    status: 'Approved',
+    managerComment: 'Verified with physical security entry register.',
+    appliedDate: '2026-10-24',
+  },
+  {
+    id: 2,
+    attendanceDate: '2026-10-21',
+    day: 'Wednesday',
+    originalClockIn: '11:15 AM',
+    originalClockOut: '07:30 PM',
+    requestedClockIn: '09:00 AM',
+    requestedClockOut: '07:30 PM',
+    reasonType: 'On-site Client Meeting',
+    reasonDetails: 'Client site deployment visit at Hyderabad facility during morning hours.',
+    status: 'Approved',
+    managerComment: 'Approved as per itinerary.',
+    appliedDate: '2026-10-21',
+  },
+  {
+    id: 3,
+    attendanceDate: '2026-10-26',
+    day: 'Monday',
+    originalClockIn: 'Missed Punch',
+    originalClockOut: '07:00 PM',
+    requestedClockIn: '09:15 AM',
+    requestedClockOut: '07:00 PM',
+    reasonType: 'Forgot to Clock In',
+    reasonDetails: 'Was in urgent sprint triage call with tech lead right after arrival.',
+    status: 'Pending',
+    managerComment: null,
+    appliedDate: '2026-10-26',
+  },
+];
+
+export default function EmployeeRegularization() {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState(INITIAL_REGULARIZATIONS);
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Form state
+  const [date, setDate] = useState('');
+  const [reqIn, setReqIn] = useState('09:00');
+  const [reqOut, setReqOut] = useState('18:30');
+  const [reasonType, setReasonType] = useState('Biometric / Scanner Issue');
+  const [reasonDetails, setReasonDetails] = useState('');
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter(req => {
+      if (filterStatus !== 'All' && req.status !== filterStatus) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          req.attendanceDate.toLowerCase().includes(q) ||
+          req.reasonType.toLowerCase().includes(q) ||
+          req.reasonDetails.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [requests, filterStatus, searchQuery]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!date) return;
+
+    const newReq = {
+      id: Date.now(),
+      attendanceDate: date,
+      day: new Date(date).toLocaleDateString('en-GB', { weekday: 'long' }),
+      originalClockIn: 'Missed / Irregular',
+      originalClockOut: 'Missed / Irregular',
+      requestedClockIn: reqIn,
+      requestedClockOut: reqOut,
+      reasonType,
+      reasonDetails,
+      status: 'Pending',
+      managerComment: null,
+      appliedDate: new Date().toISOString().slice(0, 10),
+    };
+
+    setRequests([newReq, ...requests]);
+    setIsModalOpen(false);
+    setDate('');
+    setReasonDetails('');
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+            Attendance Regularization
+          </h1>
+          <p className="font-body mt-1 text-xs text-slate-500">
+            Request corrections for missed punches or biometric discrepancies
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Apply Regularization</span>
+        </button>
+      </div>
+
+      {/* Summary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Pending Requests</p>
+            <p className="font-display text-2xl font-bold text-amber-600 mt-1">
+              {requests.filter(r => r.status === 'Pending').length}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <Clock className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Approved This Month</p>
+            <p className="font-display text-2xl font-bold text-emerald-600 mt-1">
+              {requests.filter(r => r.status === 'Approved').length}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Monthly Regularization Limit</p>
+            <p className="font-display text-2xl font-bold text-slate-900 mt-1">
+              {requests.length} / 5
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+            <RefreshCw className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="relative flex-1 w-full sm:max-w-xs">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search regularizations..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {['All', 'Pending', 'Approved', 'Rejected'].map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setFilterStatus(status)}
+              className={clsx(
+                'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer',
+                filterStatus === status
+                  ? 'bg-amber-600 text-white shadow-2xs'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              )}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Requests Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-600">
+            <thead className="text-[11px] font-bold text-slate-400 bg-slate-50 border-b border-slate-100 uppercase">
+              <tr>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4">Original Punch</th>
+                <th className="py-3 px-4">Requested Punch</th>
+                <th className="py-3 px-4">Reason</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Manager Remarks</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredRequests.map((req) => (
+                <tr key={req.id} className="hover:bg-slate-50/70 transition">
+                  <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
+                    {req.attendanceDate} ({req.day.slice(0, 3)})
+                  </td>
+                  <td className="py-4 px-4 text-slate-500">
+                    <span className="block text-[11px]">{req.originalClockIn}</span>
+                    <span className="block text-[10px] text-slate-400">to {req.originalClockOut}</span>
+                  </td>
+                  <td className="py-4 px-4 font-semibold text-slate-800">
+                    <span className="block text-[11px] text-emerald-700">{req.requestedClockIn}</span>
+                    <span className="block text-[10px] text-slate-500">to {req.requestedClockOut}</span>
+                  </td>
+                  <td className="py-4 px-4 max-w-xs">
+                    <p className="font-semibold text-slate-900">{req.reasonType}</p>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{req.reasonDetails}</p>
+                  </td>
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <span
+                      className={clsx(
+                        'px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 w-max',
+                        req.status === 'Approved'
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                          : req.status === 'Pending'
+                          ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                          : 'bg-rose-50 text-rose-600 border border-rose-200'
+                      )}
+                    >
+                      {req.status === 'Approved' && <CheckCircle2 className="w-3 h-3" />}
+                      {req.status === 'Pending' && <Clock className="w-3 h-3" />}
+                      {req.status === 'Rejected' && <XCircle className="w-3 h-3" />}
+                      <span>{req.status}</span>
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 text-slate-500 italic max-w-xs truncate">
+                    {req.managerComment || 'Awaiting manager review'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Apply Regularization Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-display font-bold text-base">Regularize Attendance</h3>
+                <p className="text-white/90 text-xs mt-0.5">Submit time adjustment for manager approval</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Attendance Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Requested Clock In</label>
+                  <input
+                    type="time"
+                    required
+                    value={reqIn}
+                    onChange={(e) => setReqIn(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Requested Clock Out</label>
+                  <input
+                    type="time"
+                    required
+                    value={reqOut}
+                    onChange={(e) => setReqOut(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Discrepancy Reason Type *</label>
+                <select
+                  value={reasonType}
+                  onChange={(e) => setReasonType(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="Biometric / Scanner Issue">Biometric Scanner Failure / Network Glitch</option>
+                  <option value="On-site Client Meeting">On-site Client Meeting / Official Travel</option>
+                  <option value="Forgot to Clock In">Forgot to Clock In</option>
+                  <option value="System Maintenance / Outage">System Maintenance / Outage</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Detailed Explanation</label>
+                <textarea
+                  rows={3}
+                  value={reasonDetails}
+                  onChange={(e) => setReasonDetails(e.target.value)}
+                  placeholder="Describe context for your reporting manager..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] leading-relaxed">
+                  Regularization requests are routed directly to {user?.manager || 'Aditya Dhiman'} for verification.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition cursor-pointer shadow-xs"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
