@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 export default function VerifyEmployee() {
   const navigate = useNavigate();
@@ -56,11 +56,9 @@ export default function VerifyEmployee() {
     <div className="min-h-screen bg-primary-light flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/login" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-              <Zap className="h-7 w-7 text-white" />
-            </div>
-            <span className="font-display font-bold text-2xl text-primary">HRMS Portal</span>
+          <Link to="/login" className="inline-flex items-center gap-3 mb-6 bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-200">
+            <img src="/logo.png" alt="IntelliAttend Logo" className="h-9 w-auto object-contain" />
+            <span className="font-display font-bold text-xl text-slate-900 tracking-tight leading-none">IntelliAttend</span>
           </Link>
           <h1 className="font-display text-3xl font-bold text-primary mb-2">Verify Your Account</h1>
           <p className="text-muted">Complete your employee registration</p>

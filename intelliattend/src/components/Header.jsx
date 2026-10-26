@@ -86,12 +86,12 @@ export default function Header({ user, onToggleSidebar }) {
           <Menu className="h-6 w-6" />
         </button>
         <Link to="/dashboard" className="hidden lg:flex items-center gap-3">
-          <img src="/logo.svg" alt="HRMS Logo" className="h-8 w-auto rounded-lg" />
+          <img src="/logo.png" alt="IntelliAttend Logo" className="h-8 w-auto rounded-lg object-contain" />
           <div>
             <span className="font-display font-bold text-lg text-slate-900 leading-none block">
-              HRMS Portal
+              IntelliAttend
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">Enterprise Management</span>
+            <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">HRMS Portal</span>
           </div>
         </Link>
       </div>

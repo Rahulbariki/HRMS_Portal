@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function SuperAdminLoginPage() {
@@ -54,12 +54,10 @@ export default function SuperAdminLoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-200">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
-              <Shield className="h-6 w-6" />
-            </div>
+            <img src="/logo.png" alt="IntelliAttend Logo" className="h-10 w-auto object-contain" />
             <div className="text-left">
               <h1 className="font-display font-extrabold text-xl text-slate-900 tracking-tight leading-none">
-                HRMS Portal
+                IntelliAttend
               </h1>
               <p className="text-xs text-indigo-600 font-semibold">Super Administrator Console</p>
             </div>

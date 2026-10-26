@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Shield, Building2, Briefcase, User, Eye, EyeOff, Mail,
-  Lock, AlertCircle, CheckCircle, ArrowRight, Sparkles, Building
+  Lock, AlertCircle, CheckCircle, ArrowRight, Sparkles
 } from 'lucide-react';
 import { useAuth, DEMO_USERS } from '../contexts/AuthContext';
 import clsx from 'clsx';
@@ -152,14 +152,12 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-2xl">
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-200">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
-              <Building className="h-6 w-6" />
-            </div>
+            <img src="/logo.png" alt="IntelliAttend Logo" className="h-10 w-auto object-contain" />
             <div className="text-left">
               <h1 className="font-display font-extrabold text-xl text-slate-900 tracking-tight leading-none">
-                HRMS Portal
+                IntelliAttend
               </h1>
-              <p className="text-xs text-slate-500 font-medium">Enterprise Human Resource Management</p>
+              <p className="text-xs text-slate-500 font-medium">Enterprise HRMS Portal</p>
             </div>
           </div>
         </div>

@@ -111,16 +111,16 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
         <div className="h-16 flex items-center px-4 border-b border-slate-200">
           {!collapsed && (
             <div className="flex items-center gap-3">
-              <img src="/logo.svg" alt="HRMS Logo" className="h-8 w-auto rounded-lg" />
+              <img src="/logo.png" alt="IntelliAttend" className="h-8 w-auto rounded-lg object-contain" />
               <div>
-                <p className="font-display text-sm font-bold text-slate-900 leading-tight">HRMS Portal</p>
-                <p className="font-body text-xs text-slate-400 leading-tight">Workspace</p>
+                <p className="font-display text-sm font-bold text-slate-900 leading-tight">IntelliAttend</p>
+                <p className="font-body text-xs text-slate-400 leading-tight">HRMS Workspace</p>
               </div>
             </div>
           )}
           {collapsed && (
             <div className="flex justify-center w-full">
-              <img src="/logo.svg" alt="HRMS Logo" className="h-7 w-auto rounded-lg" />
+              <img src="/favicon.png" alt="IntelliAttend" className="h-7 w-7 rounded-lg object-contain" />
             </div>
           )}
         </div>

@@ -56,12 +56,10 @@ export default function CompanyLoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-200">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
-              <Building2 className="h-6 w-6" />
-            </div>
+            <img src="/logo.png" alt="IntelliAttend Logo" className="h-10 w-auto object-contain" />
             <div className="text-left">
               <h1 className="font-display font-extrabold text-xl text-slate-900 tracking-tight leading-none">
-                HRMS Portal
+                IntelliAttend
               </h1>
               <p className="text-xs text-blue-600 font-semibold">Client & Company HR Console</p>
             </div>
