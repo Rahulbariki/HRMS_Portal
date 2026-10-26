@@ -26,7 +26,8 @@ export default function EmployeeProfile() {
     lastName: 'Bariki',
     fullName: 'BARIKI RAHUL',
     employeeId: user?.id || 'SI0121',
-    email: user?.email || 'bariki@shnoor.com',
+    email: 'bariki@shnoor.com',
+    loginEmail: user?.loginEmail || 'rahulbariki.intelliattend@gmail.com',
     phone: '6281769923',
     emergencyPhone: '8374273126',
     emergencyContactName: 'B. Venkata Rao (Father)',
@@ -313,10 +314,18 @@ export default function EmployeeProfile() {
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Work Email</label>
+                    <label className="block font-semibold text-slate-700 mb-1">ID Card Email</label>
                     <div className="p-2.5 rounded-xl bg-slate-100/80 text-slate-600 font-mono text-[11px] flex items-center justify-between">
                       <span>{profileData.email}</span>
-                      <span className="text-[10px] font-bold text-slate-400">Verified</span>
+                      <span className="text-[10px] font-bold text-slate-400">ID Badge</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Portal Login Email</label>
+                    <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900 font-mono text-[11px] flex items-center justify-between">
+                      <span>{profileData.loginEmail}</span>
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Login ID</span>
                     </div>
                   </div>
 

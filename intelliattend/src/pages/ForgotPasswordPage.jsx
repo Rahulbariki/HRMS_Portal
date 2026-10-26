@@ -140,7 +140,7 @@ export default function ForgotPasswordPage() {
                     onChange={handleChange}
                     required
                     className="input-field pl-10"
-                    placeholder="you@company.com"
+                    placeholder="rahulbariki.intelliattend@gmail.com"
                     disabled={loading}
                   />
                 </div>

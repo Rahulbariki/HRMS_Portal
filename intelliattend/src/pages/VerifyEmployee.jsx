@@ -114,7 +114,7 @@ export default function VerifyEmployee() {
                     onChange={handleChange}
                     required
                     className="input-field pl-10"
-                    placeholder="employee@company.com"
+                    placeholder="rahulbariki.intelliattend@gmail.com"
                     disabled={status === 'loading'}
                   />
                 </div>

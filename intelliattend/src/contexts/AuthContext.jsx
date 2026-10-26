@@ -41,6 +41,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (credentials) => {
+    const email = (credentials.email || '').toLowerCase().trim();
+
+    // Enforce email format: must end with .intelliattend@gmail.com
+    const isValidFormat = email.endsWith('.intelliattend@gmail.com') || email.endsWith('@intelliattend.com');
+    if (!isValidFormat) {
+      return {
+        success: false,
+        message: 'Invalid login email format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. rahulbariki.intelliattend@gmail.com).',
+      };
+    }
+
     // 1. Try real backend API first if available
     try {
       const response = await api.post('/auth/login', credentials);
@@ -56,16 +67,15 @@ export function AuthProvider({ children }) {
       // Fallback to local demo HRMS authentication
     }
 
-    // 2. Resolve role from credentials
+    // 2. Resolve role from credentials or email
     let targetRole = credentials.role;
-    const email = (credentials.email || '').toLowerCase().trim();
 
     if (!targetRole) {
-      if (credentials.isSuperAdmin || email.includes('superadmin')) {
+      if (credentials.isSuperAdmin || email.includes('superadmin') || email.includes('alex')) {
         targetRole = 'superadmin';
-      } else if (email.includes('client') || email.includes('admin') || credentials.company) {
+      } else if (email.includes('client') || email.includes('admin') || email.includes('sarah') || credentials.company) {
         targetRole = 'client';
-      } else if (email.includes('manager') || email.includes('lead')) {
+      } else if (email.includes('manager') || email.includes('lead') || email.includes('aditya')) {
         targetRole = 'manager';
       } else {
         targetRole = 'employee';
@@ -75,20 +85,27 @@ export function AuthProvider({ children }) {
     const demoUser = DEMO_USERS[targetRole] || {
       id: `user-${Date.now()}`,
       name: email ? email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'HRMS User',
-      email: email || `${targetRole}@company.com`,
+      email: email,
+      loginEmail: email,
       role: targetRole,
       avatar: (email ? email[0] : targetRole[0]).toUpperCase(),
       designation: targetRole.toUpperCase(),
-      company: credentials.company || 'Enterprise HRMS',
+      company: credentials.company || 'SHNOOR INTERNATIONAL',
+    };
+
+    const activeUser = {
+      ...demoUser,
+      email: email || demoUser.email,
+      loginEmail: email || demoUser.loginEmail,
     };
 
     const token = `mock-hrms-token-${targetRole}-${Date.now()}`;
     localStorage.setItem('token', token);
-    localStorage.setItem('hrms_user', JSON.stringify(demoUser));
-    setUser(demoUser);
+    localStorage.setItem('hrms_user', JSON.stringify(activeUser));
+    setUser(activeUser);
     setIsLoggedIn(true);
 
-    return { success: true, user: demoUser };
+    return { success: true, user: activeUser };
   };
 
   const switchRole = (role) => {

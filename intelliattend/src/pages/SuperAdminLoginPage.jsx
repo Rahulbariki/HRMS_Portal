@@ -8,7 +8,7 @@ export default function SuperAdminLoginPage() {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: 'superadmin@hrms.com',
+    email: 'alexrivera.intelliattend@gmail.com',
     password: 'password123',
     remember: true,
   });
@@ -28,6 +28,13 @@ export default function SuperAdminLoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const emailTrimmed = (formData.email || '').toLowerCase().trim();
+    if (!emailTrimmed.endsWith('.intelliattend@gmail.com') && !emailTrimmed.endsWith('@intelliattend.com')) {
+      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. alexrivera.intelliattend@gmail.com).');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -83,9 +90,14 @@ export default function SuperAdminLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1">
-                Admin Email
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+                  Admin Email
+                </label>
+                <span className="text-[10px] font-mono text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                  *.intelliattend@gmail.com
+                </span>
+              </div>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
@@ -96,7 +108,7 @@ export default function SuperAdminLoginPage() {
                   onChange={handleChange}
                   required
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                  placeholder="superadmin@hrms.com"
+                  placeholder="alexrivera.intelliattend@gmail.com"
                   disabled={loading}
                 />
               </div>

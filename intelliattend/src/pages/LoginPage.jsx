@@ -9,40 +9,40 @@ import clsx from 'clsx';
 
 const ROLES_INFO = [
   {
-    role: 'superadmin',
-    title: 'Super Admin',
-    desc: 'Platform management, companies & subscriptions',
-    email: 'superadmin@hrms.com',
-    icon: Shield,
-    badgeColor: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    iconBg: 'bg-indigo-600 text-white',
-  },
-  {
-    role: 'client',
-    title: 'Client / Company Admin',
-    desc: 'Company management, policies & managers',
-    email: 'client@company.com',
-    icon: Building2,
-    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
-    iconBg: 'bg-blue-600 text-white',
+    role: 'employee',
+    title: 'Employee',
+    desc: 'Self-service leaves, attendance, ID card & salary',
+    email: 'rahulbariki.intelliattend@gmail.com',
+    icon: User,
+    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    iconBg: 'bg-emerald-600 text-white',
   },
   {
     role: 'manager',
     title: 'Manager',
     desc: 'Team attendance, leaves, tasks & approvals',
-    email: 'manager@company.com',
+    email: 'adityadhiman.intelliattend@gmail.com',
     icon: Briefcase,
     badgeColor: 'bg-amber-100 text-amber-700 border-amber-200',
     iconBg: 'bg-amber-600 text-white',
   },
   {
-    role: 'employee',
-    title: 'Employee',
-    desc: 'Self-service leaves, attendance & salary',
-    email: 'employee@company.com',
-    icon: User,
-    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    iconBg: 'bg-emerald-600 text-white',
+    role: 'client',
+    title: 'Client / Company Admin',
+    desc: 'Company management, policies & managers',
+    email: 'sarahjenkins.intelliattend@gmail.com',
+    icon: Building2,
+    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
+    iconBg: 'bg-blue-600 text-white',
+  },
+  {
+    role: 'superadmin',
+    title: 'Super Admin',
+    desc: 'Platform management, companies & subscriptions',
+    email: 'alexrivera.intelliattend@gmail.com',
+    icon: Shield,
+    badgeColor: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    iconBg: 'bg-indigo-600 text-white',
   },
 ];
 
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   const [selectedRole, setSelectedRole] = useState('employee');
   const [formData, setFormData] = useState({
-    email: 'employee@company.com',
+    email: 'rahulbariki.intelliattend@gmail.com',
     password: 'password123',
     remember: true,
   });
@@ -117,6 +117,13 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const emailTrimmed = (formData.email || '').toLowerCase().trim();
+    if (!emailTrimmed.endsWith('.intelliattend@gmail.com') && !emailTrimmed.endsWith('@intelliattend.com')) {
+      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. rahulbariki.intelliattend@gmail.com).');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -246,9 +253,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1">
-                Email Address
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+                  Email Address
+                </label>
+                <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  *.intelliattend@gmail.com
+                </span>
+              </div>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
                 <input
@@ -258,8 +270,8 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                  placeholder="name@company.com"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
+                  placeholder="rahulbariki.intelliattend@gmail.com"
                   disabled={loading}
                 />
               </div>

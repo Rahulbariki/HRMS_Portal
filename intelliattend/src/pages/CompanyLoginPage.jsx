@@ -10,9 +10,9 @@ export default function CompanyLoginPage() {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: 'client@company.com',
+    email: 'sarahjenkins.intelliattend@gmail.com',
     password: 'password123',
-    company: companySlug || 'Acme Enterprise',
+    company: companySlug || 'SHNOOR INTERNATIONAL',
     remember: true,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +31,13 @@ export default function CompanyLoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const emailTrimmed = (formData.email || '').toLowerCase().trim();
+    if (!emailTrimmed.endsWith('.intelliattend@gmail.com') && !emailTrimmed.endsWith('@intelliattend.com')) {
+      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. sarahjenkins.intelliattend@gmail.com).');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -105,9 +112,14 @@ export default function CompanyLoginPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1">
-                Work Email
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+                  Work Email
+                </label>
+                <span className="text-[10px] font-mono text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  *.intelliattend@gmail.com
+                </span>
+              </div>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
@@ -118,7 +130,7 @@ export default function CompanyLoginPage() {
                   onChange={handleChange}
                   required
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  placeholder="hr@company.com"
+                  placeholder="sarahjenkins.intelliattend@gmail.com"
                   disabled={loading}
                 />
               </div>
