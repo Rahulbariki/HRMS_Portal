@@ -1,0 +1,12 @@
+{
+  "name": "hrms-portal",
+  "private": true,
+  "version": "1.0.0",
+  "description": "HRMS Portal - Human Resource Management System",
+  "scripts": {
+    "dev": "npm --prefix intelliattend run dev",
+    "build": "npm --prefix intelliattend run build",
+    "preview": "npm --prefix intelliattend run preview",
+    "lint": "npm --prefix intelliattend run lint"
+  }
+}

@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0F172A;
+  --color-primary-hover: #1E293B;
+  --color-primary-light: #F8FAFC;
+  --color-muted: #64748B;
+  --color-accent: #2DD4BF;
+  --color-accent-hover: #14B8A6;
+  --color-accent-light: #F0FDFA;
+  --color-white: #FFFFFF;
+  --color-success: #16A34A;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+
+  --font-family-display: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-family-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-family-body);
+    background: var(--color-white);
+    color: var(--color-primary);
+  }
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    font-family: var(--font-family-display);
+    @apply w-full h-14 px-8 text-base font-semibold rounded-full bg-primary text-white hover:bg-primary-hover hover:scale-105 active:scale-95 transition-all duration-150 shadow-xl hover:shadow-2xl cursor-pointer;
+  }
+  .btn-secondary {
+    font-family: var(--font-family-display);
+    @apply w-full h-14 px-8 text-base font-semibold rounded-full border-2 border-primary text-primary hover:bg-primary hover:text-white hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer;
+  }
+  .btn-outline {
+    @apply rounded px-2 py-1 text-xs font-medium text-muted hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm;
+  }
+  .input-label {
+    @apply text-sm font-semibold text-primary mb-2 block;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden;
+  }
+  .card-elevated {
+    @apply bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden;
+  }
+  .card-header {
+    @apply px-6 py-4 border-b border-slate-100;
+  }
+  .card-body {
+    @apply p-6;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+  .badge-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+  .badge-primary {
+    @apply bg-primary-light text-primary;
+  }
+  .badge-accent {
+    @apply bg-accent-light text-teal-700;
+  }
+  .section-container {
+    @apply mx-auto max-w-7xl px-6 lg:px-8;
+  }
+  .page-title {
+    @apply text-4xl md:text-5xl font-bold text-primary leading-tight;
+  }
+  .page-subtitle {
+    @apply text-lg text-muted mt-4 max-w-2xl;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-family-display);
+  }
+  .font-body {
+    font-family: var(--font-family-body);
+  }
+  .text-primary {
+    color: var(--color-primary);
+  }
+  .text-muted {
+    color: var(--color-muted);
+  }
+  .text-accent {
+    color: var(--color-accent);
+  }
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+  .bg-primary-light {
+    background-color: var(--color-primary-light);
+  }
+  .bg-accent-light {
+    background-color: var(--color-accent-light);
+  }
+  .hover\:bg-primary\/10:hover {
+    background-color: rgb(15 23 42 / 0.1);
+  }
+  .focus\:ring-2:focus {
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  }
+  .focus\:ring-primary:focus {
+    --tw-ring-color: var(--color-primary);
+  }
+  .disabled\:opacity-40:disabled {
+    opacity: 0.4;
+  }
+  .disabled\:cursor-not-allowed:disabled {
+    cursor: not-allowed;
+  }
+  .hover\:scale-105:hover {
+    transform: scale(1.05);
+  }
+  .active\:scale-95:active {
+    transform: scale(0.95);
+  }
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
