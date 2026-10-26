@@ -156,9 +156,17 @@ export default function Header({ user, onToggleSidebar }) {
             className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-100 transition-colors"
             aria-label="User menu"
           >
-            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs border border-indigo-200">
-              {getInitials(user?.name)}
-            </div>
+            {user?.avatar && user.avatar.startsWith('/') ? (
+              <img
+                src={user.avatar}
+                alt={user?.name}
+                className="w-8 h-8 rounded-full object-cover border border-slate-200"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs border border-indigo-200">
+                {getInitials(user?.name)}
+              </div>
+            )}
             <div className="hidden md:block text-left">
               <p className="font-semibold text-xs text-slate-800 leading-tight">{user?.name || 'User'}</p>
               <p className="text-[11px] text-slate-400 leading-tight">{getRoleLabel(user?.role)}</p>

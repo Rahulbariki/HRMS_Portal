@@ -450,7 +450,7 @@ export default function EmployeeMail() {
           {/* User profile */}
           <div className="flex items-center gap-2 pl-1">
             <img
-              src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"
+              src="/avatar_rahul.png"
               alt="Rahul Bariki"
               className="w-8 h-8 rounded-full object-cover border border-slate-200"
             />

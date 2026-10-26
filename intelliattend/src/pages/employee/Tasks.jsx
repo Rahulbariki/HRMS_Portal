@@ -14,7 +14,7 @@ const INITIAL_TASKS = [
     subtitle: 'Go through Guides and setup git, GitHub workspace, clone repos, and configure local SSH keys.',
     scope: 'assignedToMe',
     assignees: [
-      { name: 'Rahul Bariki', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
+      { name: 'Rahul Bariki', avatar: '/avatar_rahul.png' },
       { name: 'Edara Saichand', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
       { name: 'Faisal Khan', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150' },
       { name: 'Pavani Geddala', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
@@ -47,7 +47,7 @@ const INITIAL_TASKS = [
     subtitle: 'Work on dashboards implementation in the panels of employee, manager, and client views.',
     scope: 'assignedToMe',
     assignees: [
-      { name: 'Rahul Bariki', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
+      { name: 'Rahul Bariki', avatar: '/avatar_rahul.png' },
       { name: 'Harish Gopal', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
       { name: 'Sri Lakshmi', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' },
       { name: 'Kalyan Babu', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150' },
@@ -80,7 +80,7 @@ const INITIAL_TASKS = [
     subtitle: 'Integrate MediaPipe camera feed for facial match check during punch in/out workflow.',
     scope: 'assignedToMe',
     assignees: [
-      { name: 'Rahul Bariki', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
+      { name: 'Rahul Bariki', avatar: '/avatar_rahul.png' },
       { name: 'Jashandeep Singh', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
     ],
     assignedBy: 'Aditya Dhiman',
@@ -226,7 +226,7 @@ export default function EmployeeTasks() {
       subtitle: newTaskSubtitle.trim() || newTaskTitle.trim(),
       scope: 'assignedByMe',
       assignees: [
-        { name: 'Rahul Bariki', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
+        { name: 'Rahul Bariki', avatar: '/avatar_rahul.png' },
       ],
       assignedBy: user?.name || 'Rahul Bariki',
       assignedDate: '2026-10-26',

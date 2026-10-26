@@ -35,7 +35,7 @@ const ORG_DATA = {
           department: 'Information Technology',
           email: 'rahul.bariki@intelliattend.com',
           phone: '+91 98765 43220',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+          avatar: '/avatar_rahul.png',
           isCurrentUser: true,
           totalReports: 0,
         },
