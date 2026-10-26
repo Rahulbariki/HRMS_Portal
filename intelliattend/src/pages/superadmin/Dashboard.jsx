@@ -36,13 +36,15 @@ const recentActivity = [
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState(statCards);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(localStorage.getItem('token') || '').startsWith('mock-'));
 
   useEffect(() => {
+    const token = localStorage.getItem('token') || '';
+    if (token.startsWith('mock-')) return;
     const fetchStats = async () => {
       try {
         const response = await api.get('/superadmin/dashboard/stats');
-        if (response.data.success) {
+        if (response.data?.success) {
           const data = response.data.data;
           setStats([
             { ...statCards[0], value: data.totalCompanies || '0' },
@@ -51,8 +53,8 @@ export default function SuperAdminDashboard() {
             { ...statCards[3], value: data.pendingRequests || '0' },
           ]);
         }
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
+      } catch {
+        // Retain default stats on error
       } finally {
         setLoading(false);
       }

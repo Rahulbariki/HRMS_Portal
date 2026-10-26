@@ -54,6 +54,8 @@ export default function NotificationBell() {
   const bellRef = useRef(null);
 
   const fetchNotifications = async (pageNum = 1, silent = false) => {
+    const token = localStorage.getItem('token') || '';
+    if (token.startsWith('mock-')) return;
     if (!silent) setLoading(true);
     try {
       const response = await api.get(`/notifications?page=${pageNum}`);

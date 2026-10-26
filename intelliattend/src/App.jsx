@@ -64,6 +64,7 @@ import EmployeeRegularization from './pages/employee/Regularization';
 import VerifyEmployee from './pages/VerifyEmployee';
 import CompanyLoginPage from './pages/CompanyLoginPage';
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { isLoggedIn, user, loading } = useAuth();
@@ -76,25 +77,25 @@ function ProtectedRoute({ children, allowedRoles }) {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || !user || !user.role) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     const roleRoutes = {
       superadmin: '/superadmin/dashboard',
       client: '/client/dashboard',
       manager: '/manager/dashboard',
       employee: '/employee/dashboard',
     };
-    return <Navigate to={roleRoutes[user?.role] || '/login'} replace />;
+    return <Navigate to={roleRoutes[user.role] || '/login'} replace />;
   }
 
   return children;
 }
 
 function PublicRoute({ children }) {
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -104,7 +105,7 @@ function PublicRoute({ children }) {
     );
   }
 
-  if (isLoggedIn) {
+  if (isLoggedIn && user?.role) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -113,17 +114,20 @@ function PublicRoute({ children }) {
 
 function RoleDashboardRedirect() {
   const { user } = useAuth();
+  if (!user || !user.role) {
+    return <Navigate to="/login" replace />;
+  }
   const roleRoutes = {
     superadmin: '/superadmin/dashboard',
     client: '/client/dashboard',
     manager: '/manager/dashboard',
     employee: '/employee/dashboard',
   };
-  return <Navigate to={roleRoutes[user?.role] || '/employee/dashboard'} replace />;
+  return <Navigate to={roleRoutes[user.role] || '/employee/dashboard'} replace />;
 }
 
 function RootRoute() {
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, user, loading } = useAuth();
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -131,7 +135,7 @@ function RootRoute() {
       </div>
     );
   }
-  if (isLoggedIn) {
+  if (isLoggedIn && user?.role) {
     return <RoleDashboardRedirect />;
   }
   return <LoginPage />;
@@ -293,10 +297,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

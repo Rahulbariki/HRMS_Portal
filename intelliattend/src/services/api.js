@@ -18,9 +18,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const token = localStorage.getItem('token') || '';
+    const isMockToken = token.startsWith('mock-');
+    const hasDemoUser = Boolean(localStorage.getItem('hrms_user'));
+
+    // Only redirect if it's an authenticated session from a real server that expired
+    if (error.response?.status === 401 && !isMockToken && !hasDemoUser) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('hrms_user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

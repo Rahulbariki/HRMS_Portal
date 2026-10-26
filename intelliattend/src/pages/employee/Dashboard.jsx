@@ -4,7 +4,7 @@ import {
   Calendar, ClipboardList, UserCheck, DollarSign, Award,
   FileText, LogOut, HelpCircle, FolderOpen, Newspaper,
   Clock, CheckCircle, AlertCircle, XCircle, Plus, Bell,
-  TrendingUp
+  TrendingUp, Settings, Building2
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,21 +43,19 @@ export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState(attendanceStatus);
   const [leaveBalance, setLeaveBalance] = useState({ annual: 15, sick: 8, casual: 5 });
-  const [_loading, setLoading] = useState(true);
-
   useEffect(() => {
+    const token = localStorage.getItem('token') || '';
+    if (token.startsWith('mock-')) return;
     const fetchData = async () => {
       try {
         const [attRes, leaveRes] = await Promise.all([
           api.get('/employee/attendance/summary'),
           api.get('/employee/leaves/balance'),
         ]);
-        if (attRes.data.success) setAttendance(attRes.data.data);
-        if (leaveRes.data.success) setLeaveBalance(leaveRes.data.data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setLoading(false);
+        if (attRes.data?.success) setAttendance(attRes.data.data);
+        if (leaveRes.data?.success) setLeaveBalance(leaveRes.data.data);
+      } catch {
+        // Keep initial demo state on API failure
       }
     };
     fetchData();

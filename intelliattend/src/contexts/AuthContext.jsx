@@ -11,21 +11,52 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const savedUserStr = localStorage.getItem('hrms_user');
-      return savedUserStr ? JSON.parse(savedUserStr) : null;
+      if (savedUserStr) {
+        const parsed = JSON.parse(savedUserStr);
+        if (parsed && parsed.role) return parsed;
+      }
+      return null;
     } catch {
       return null;
     }
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return Boolean(localStorage.getItem('token') || localStorage.getItem('hrms_user'));
+    try {
+      const savedUserStr = localStorage.getItem('hrms_user');
+      if (savedUserStr) {
+        const parsed = JSON.parse(savedUserStr);
+        return Boolean(parsed && parsed.role);
+      }
+      return false;
+    } catch {
+      return false;
+    }
   });
 
   const [loading] = useState(false);
 
+  const checkAuth = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || token.startsWith('mock-')) return Boolean(user);
+
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data?.success && response.data?.data) {
+        setUser(response.data.data);
+        localStorage.setItem('hrms_user', JSON.stringify(response.data.data));
+        setIsLoggedIn(true);
+        return true;
+      }
+    } catch {
+      // Retain local demo session
+    }
+    return Boolean(user);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token || token.startsWith('mock-')) return;
 
     api.get('/auth/me')
       .then(response => {
