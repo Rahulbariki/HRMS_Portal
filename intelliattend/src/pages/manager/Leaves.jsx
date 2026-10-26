@@ -5,15 +5,15 @@ import clsx from 'clsx';
 const INITIAL_TEAM_LEAVES = [
   {
     id: 1,
-    employeeName: 'Emily Watson',
-    employeeRole: 'Senior Software Engineer',
-    avatar: 'EW',
-    type: 'Casual Leave',
-    startDate: '2026-11-28',
-    endDate: '2026-11-29',
-    days: 2,
+    employeeName: 'Rahul Bariki',
+    employeeRole: 'Software Development Engineer',
+    avatar: 'RB',
+    type: 'Leave Without Pay',
+    startDate: '2026-10-28',
+    endDate: '2026-10-28',
+    days: 1,
     reason: 'Personal legal documentation and property paperwork',
-    appliedOn: '2026-10-25',
+    appliedOn: '2026-10-26',
     status: 'pending',
   },
   {

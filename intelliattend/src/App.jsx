@@ -149,11 +149,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/features" element={<Navigate to="/" replace />} />
-      <Route path="/pricing" element={<Navigate to="/" replace />} />
-      <Route path="/contact" element={<Navigate to="/" replace />} />
-      <Route path="/privacy" element={<Navigate to="/" replace />} />
-      <Route path="/terms" element={<Navigate to="/" replace />} />
       <Route path="/company/:slug" element={<CompanyLoginPage />} />
       <Route path="/verify-employee" element={<VerifyEmployee />} />
       <Route path="/company-login" element={<CompanyLoginPage />} />
