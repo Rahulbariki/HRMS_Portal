@@ -9,8 +9,8 @@ const INITIAL_TEAM_TASKS = [
   {
     id: 1,
     title: 'Migrate Core Services to PostgreSQL',
-    assignee: 'Emily Watson',
-    role: 'Senior Software Engineer',
+    assignee: 'Sarah Miller',
+    role: 'Lead Full Stack Engineer',
     dueDate: '2026-10-31',
     priority: 'high',
     status: 'in_progress',
@@ -40,7 +40,7 @@ const INITIAL_TEAM_TASKS = [
     id: 4,
     title: 'Design Dark Mode UI Assets for Mobile App',
     assignee: 'Sarah Miller',
-    role: 'UI/UX Designer',
+    role: 'Lead Full Stack Engineer',
     dueDate: '2026-11-02',
     priority: 'low',
     status: 'in_progress',
@@ -55,8 +55,8 @@ export default function ManagerTasks() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
-    assignee: 'Emily Watson',
-    role: 'Senior Software Engineer',
+    assignee: 'Sarah Miller',
+    role: 'Lead Full Stack Engineer',
     dueDate: '',
     priority: 'medium',
     description: '',
@@ -88,7 +88,13 @@ export default function ManagerTasks() {
       id: Date.now(),
       title: newTask.title,
       assignee: newTask.assignee,
-      role: newTask.assignee === 'Emily Watson' ? 'Senior Software Engineer' : 'Team Member',
+      role: newTask.assignee === 'Sarah Miller'
+        ? 'Lead Full Stack Engineer'
+        : newTask.assignee === 'Rahul Bariki'
+        ? 'Platform Architect'
+        : newTask.assignee === 'Alex Rivera'
+        ? 'Operations Director'
+        : 'Team Member',
       dueDate: newTask.dueDate,
       priority: newTask.priority,
       status: 'pending',
@@ -98,8 +104,8 @@ export default function ManagerTasks() {
     setTasks([created, ...tasks]);
     setNewTask({
       title: '',
-      assignee: 'Emily Watson',
-      role: 'Senior Software Engineer',
+      assignee: 'Sarah Miller',
+      role: 'Lead Full Stack Engineer',
       dueDate: '',
       priority: 'medium',
       description: '',
@@ -291,10 +297,10 @@ export default function ManagerTasks() {
                     onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
                     className="input-field text-sm"
                   >
-                    <option value="Emily Watson">Emily Watson</option>
-                    <option value="Alex Rivera">Alex Rivera</option>
-                    <option value="David Chen">David Chen</option>
-                    <option value="Sarah Miller">Sarah Miller</option>
+                    <option value="Sarah Miller">Sarah Miller (Lead Full Stack Engineer)</option>
+                    <option value="David Chen">David Chen (Engineering Manager)</option>
+                    <option value="Alex Rivera">Alex Rivera (Operations Director)</option>
+                    <option value="Rahul Bariki">Rahul Bariki (Platform Architect)</option>
                   </select>
                 </div>
                 <div>

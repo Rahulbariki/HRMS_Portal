@@ -110,10 +110,10 @@ export default function EmployeeRegularization() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Attendance Regularization
           </h1>
-          <p className="font-body mt-1 text-xs text-slate-500">
+          <p className="font-body mt-1 text-xs text-slate-500 dark:text-slate-400">
             Request corrections for missed punches or biometric discrepancies
           </p>
         </div>
@@ -121,54 +121,54 @@ export default function EmployeeRegularization() {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4 text-teal-400" />
+          <Plus className="w-4 h-4 text-teal-400 dark:text-white" />
           <span>Apply Regularization</span>
         </button>
       </div>
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 font-medium">Pending Requests</p>
-            <p className="font-display text-2xl font-bold text-slate-900 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Requests</p>
+            <p className="font-display text-2xl font-bold text-slate-900 dark:text-white mt-1">
               {requests.filter(r => r.status === 'Pending').length}
             </p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 font-medium">Approved This Month</p>
-            <p className="font-display text-2xl font-bold text-emerald-600 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Approved This Month</p>
+            <p className="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
               {requests.filter(r => r.status === 'Approved').length}
             </p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 font-medium">Monthly Regularization Limit</p>
-            <p className="font-display text-2xl font-bold text-slate-900 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Monthly Regularization Limit</p>
+            <p className="font-display text-2xl font-bold text-slate-900 dark:text-white mt-1">
               {requests.length} / 5
             </p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
             <RefreshCw className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="relative flex-1 w-full sm:max-w-xs">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -176,7 +176,7 @@ export default function EmployeeRegularization() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search regularizations..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 dark:focus:border-teal-500"
           />
         </div>
 
@@ -189,8 +189,8 @@ export default function EmployeeRegularization() {
               className={clsx(
                 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer',
                 filterStatus === status
-                  ? 'bg-slate-900 text-teal-300 shadow-2xs'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  ? 'bg-slate-900 dark:bg-teal-600 text-teal-300 dark:text-white shadow-2xs font-bold'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
               )}
             >
               {status}
@@ -200,10 +200,10 @@ export default function EmployeeRegularization() {
       </div>
 
       {/* Requests Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="text-[11px] font-bold text-slate-400 bg-slate-50 border-b border-slate-100 uppercase">
+          <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+            <thead className="text-[11px] font-bold text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 uppercase">
               <tr>
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Original Punch</th>
@@ -213,22 +213,22 @@ export default function EmployeeRegularization() {
                 <th className="py-3 px-4">Manager Remarks</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredRequests.map((req) => (
-                <tr key={req.id} className="hover:bg-slate-50/70 transition">
-                  <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
+                <tr key={req.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                  <td className="py-4 px-4 font-bold text-slate-900 dark:text-white whitespace-nowrap">
                     {req.attendanceDate} ({req.day.slice(0, 3)})
                   </td>
-                  <td className="py-4 px-4 text-slate-500">
+                  <td className="py-4 px-4 text-slate-500 dark:text-slate-400">
                     <span className="block text-[11px]">{req.originalClockIn}</span>
                     <span className="block text-[10px] text-slate-400">to {req.originalClockOut}</span>
                   </td>
-                  <td className="py-4 px-4 font-semibold text-slate-800">
-                    <span className="block text-[11px] text-emerald-700">{req.requestedClockIn}</span>
-                    <span className="block text-[10px] text-slate-500">to {req.requestedClockOut}</span>
+                  <td className="py-4 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="block text-[11px] text-emerald-700 dark:text-emerald-400">{req.requestedClockIn}</span>
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">to {req.requestedClockOut}</span>
                   </td>
                   <td className="py-4 px-4 max-w-xs">
-                    <p className="font-semibold text-slate-900">{req.reasonType}</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">{req.reasonType}</p>
                     <p className="text-[11px] text-slate-400 truncate mt-0.5">{req.reasonDetails}</p>
                   </td>
                   <td className="py-4 px-4 whitespace-nowrap">
@@ -236,10 +236,10 @@ export default function EmployeeRegularization() {
                       className={clsx(
                         'px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 w-max',
                         req.status === 'Approved'
-                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                           : req.status === 'Pending'
-                          ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                          : 'bg-rose-50 text-rose-600 border border-rose-200'
+                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                          : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
                       )}
                     >
                       {req.status === 'Approved' && <CheckCircle2 className="w-3 h-3" />}
@@ -248,7 +248,7 @@ export default function EmployeeRegularization() {
                       <span>{req.status}</span>
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-slate-500 italic max-w-xs truncate">
+                  <td className="py-4 px-4 text-slate-500 dark:text-slate-400 italic max-w-xs truncate">
                     {req.managerComment || 'Awaiting manager review'}
                   </td>
                 </tr>
@@ -260,8 +260,8 @@ export default function EmployeeRegularization() {
 
       {/* Apply Regularization Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
             <div className="bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] p-5 text-white flex items-center justify-between">
               <div>
                 <h3 className="font-display font-bold text-base flex items-center gap-2">
@@ -281,45 +281,45 @@ export default function EmployeeRegularization() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Attendance Date *</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Attendance Date *</label>
                 <input
                   type="date"
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 dark:focus:border-teal-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Requested Clock In</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Requested Clock In</label>
                   <input
                     type="time"
                     required
                     value={reqIn}
                     onChange={(e) => setReqIn(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 dark:focus:border-teal-500"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Requested Clock Out</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Requested Clock Out</label>
                   <input
                     type="time"
                     required
                     value={reqOut}
                     onChange={(e) => setReqOut(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 dark:focus:border-teal-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Discrepancy Reason Type *</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Discrepancy Reason Type *</label>
                 <select
                   value={reasonType}
                   onChange={(e) => setReasonType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500/20"
                 >
                   <option value="Biometric / Scanner Issue">Biometric Scanner Failure / Network Glitch</option>
                   <option value="On-site Client Meeting">On-site Client Meeting / Official Travel</option>
@@ -329,34 +329,34 @@ export default function EmployeeRegularization() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Detailed Explanation</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Detailed Explanation</label>
                 <textarea
                   rows={3}
                   value={reasonDetails}
                   onChange={(e) => setReasonDetails(e.target.value)}
                   placeholder="Describe context for your reporting manager..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 dark:focus:border-teal-500"
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 text-teal-900 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800 text-teal-900 dark:text-teal-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-teal-600 dark:text-teal-400 flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed">
-                  Regularization requests are routed directly to {user?.manager || 'Aditya Dhiman'} for verification.
+                  Regularization requests are routed directly to {user?.manager || 'David Chen'} for verification.
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition cursor-pointer shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white font-bold transition cursor-pointer shadow-xs"
                 >
                   Submit Request
                 </button>

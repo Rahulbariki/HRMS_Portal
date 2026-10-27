@@ -12,27 +12,27 @@ import { useAuth } from '../../contexts/AuthContext';
 const INITIAL_EMAILS = [
   {
     id: 1,
-    sender: 'HRMS',
-    senderEmail: 'hrms-notifications@intelliattend.com',
-    senderInitial: 'U',
+    sender: 'HRMS Automated',
+    senderEmail: 'hrms-notifications@intelliattend.io',
+    senderInitial: 'IA',
     isSystem: true,
-    subject: 'Leave request Approved: Leave Without Pay',
-    snippet: 'Dear Rahul Bariki, Your leave request has been Approved. Request Details: Leave Type: Leave Without Pay (LWP), From: 28 Oct 2026, To: 28 Oct 2026.',
-    body: `Dear Rahul Bariki,
+    subject: 'Annual Leave Approved: Tech Delivery Milestone',
+    snippet: 'Your annual leave request has been approved by your Reporting Manager David Chen.',
+    body: `Dear Team Member,
 
-Your leave request has been Approved by your Reporting Manager.
+Your leave request has been officially approved by David Chen (Lead Engineering Manager).
 
 Request Summary:
-• Leave Type: Leave Without Pay (LWP)
-• Start Date: 28 Oct 2026
-• End Date: 28 Oct 2026
-• Total Days: 1.0 Day
-• Reason: Personal Commitment
+• Leave Type: Annual Leave (Paid)
+• Start Date: 12 Nov 2026
+• End Date: 15 Nov 2026
+• Total Days: 4.0 Days
+• Status: Approved & Logged in Neon DB
 
-Your attendance records and payroll calculations have been updated accordingly.
+Your attendance records and payroll calculation have been synchronized accordingly.
 
 Regards,
-Human Resources Team
+Human Resources & People Operations
 IntelliAttend Workspace`,
     folder: 'inbox',
     isUnread: true,
@@ -44,53 +44,52 @@ IntelliAttend Workspace`,
   },
   {
     id: 2,
-    sender: 'HRMS',
-    senderEmail: 'hrms-notifications@intelliattend.com',
-    senderInitial: 'U',
-    isSystem: true,
-    subject: 'Leave request received: Leave Without Pay',
-    snippet: 'Dear Rahul Bariki, Your leave request has been submitted and is awaiting approval from your reporting manager Aditya Dhiman.',
-    body: `Dear Rahul Bariki,
+    sender: 'David Chen',
+    senderEmail: 'manager.intelliattend@gmail.com',
+    senderInitial: 'DC',
+    isSystem: false,
+    subject: 'Architecture Review: Neon DB & Connection Pooling',
+    snippet: 'Hi, please ensure the pool configuration uses the Direct Connection endpoint with SSL rejectUnauthorized set to false.',
+    body: `Hi,
 
-Your leave application has been logged into the system and forwarded to your manager for review.
+Great progress on the backend migrations. A few quick reminders for the upcoming release:
+1. Ensure the PostgreSQL connection string uses our Neon cloud credentials.
+2. Confirm Cloudinary storage tokens handle receipts and KYC document buffers directly without saving to disk.
+3. Validate that only our 4 production accounts have access to administrative routes.
 
-Leave Details:
-• Type: Leave Without Pay
-• Applied On: 26 Oct 2026
-• Duration: 1 Day
+Let me know once the verification tests pass.
 
-You will receive an automated notification once your manager approves or comments on this request.
-
-Regards,
-IntelliAttend HRMS System`,
+Best regards,
+David Chen
+Lead Engineering Manager`,
     folder: 'inbox',
     isUnread: true,
-    isStarred: false,
+    isStarred: true,
     hasAttachment: false,
     time: '15:02',
     date: 'Today',
-    label: 'HR & Leaves',
+    label: 'Tasks',
   },
   {
     id: 3,
-    sender: 'HRMS',
-    senderEmail: 'tasks@intelliattend.com',
-    senderInitial: 'U',
+    sender: 'HRMS Automated',
+    senderEmail: 'tasks@intelliattend.io',
+    senderInitial: 'TK',
     isSystem: true,
-    subject: 'Task Status Update: Work on dashboards implementation in the panels of yo...',
-    snippet: 'Dear Rahul, Assignee Status has been updated for task #2: Work on dashboards implementation in the panels of employee, manager, and client views.',
-    body: `Dear Rahul,
+    subject: 'Task Completed: Multi-Tenant Schema Validation',
+    snippet: 'Task #102 "Verify corporate tenant isolation & Razorpay payment logging" marked completed.',
+    body: `Hello,
 
 Task status update:
-• Task ID: #2
-• Title: Work on dashboards implementation
+• Task ID: #102
+• Title: Multi-Tenant Schema Validation
 • Status: Completed (100%)
-• Reviewer: Aditya Dhiman
+• Reviewer: David Chen (manager.intelliattend@gmail.com)
 
-Great job finishing the responsive layouts and metric charts on time.
+All test suites and database migration scripts executed successfully with zero regressions.
 
 Regards,
-Task Management Service`,
+IntelliAttend Task Engine`,
     folder: 'inbox',
     isUnread: false,
     isStarred: true,
@@ -101,103 +100,52 @@ Task Management Service`,
   },
   {
     id: 4,
-    sender: 'HRMS',
-    senderEmail: 'tasks@intelliattend.com',
-    senderInitial: 'U',
+    sender: 'Corporate Communications',
+    senderEmail: 'announcements@intelliattend.io',
+    senderInitial: 'CC',
     isSystem: true,
-    subject: 'Task Status Update: Work on dashboards implementation in the panels of yo...',
-    snippet: 'Dear Rahul, Assignee Status notification. New comments were posted on the discussion thread.',
-    body: `Dear Rahul,
+    subject: 'Gazetted Holiday Calendar 2026 Released',
+    snippet: "We are pleased to inform you that the complete 2026 Indian national holiday calendar is now live in the portal.",
+    body: `Dear Team,
 
-Aditya Dhiman added a comment on Task #2:
-"Ensure responsiveness on tablets and mobile screens for all quick action widgets."
+We are pleased to announce that the official 2026 Corporate Holiday Schedule is published:
+• Republic Day - Monday, 26 Jan 2026
+• Holi - Wednesday, 04 Mar 2026
+• Independence Day - Saturday, 15 Aug 2026
+• Gandhi Jayanti - Friday, 02 Oct 2026
+• Diwali - Sunday, 08 Nov 2026
 
-You can reply directly in the portal under My Tasks.
+Please check your Holidays tab for full regional observances.
 
-Regards,
-Task Tracker`,
+Warm Regards,
+People & Culture Operations`,
     folder: 'inbox',
     isUnread: false,
     isStarred: false,
     hasAttachment: false,
     time: '23 Oct',
     date: '23 Oct 2026',
-    label: 'Tasks',
+    label: 'Announcements',
   },
   {
     id: 5,
-    sender: 'HRMS',
-    senderEmail: 'announcements@intelliattend.com',
-    senderInitial: 'U',
-    isSystem: true,
-    subject: 'New Holiday Added - Diwali',
-    snippet: "Dear Team, We're pleased to inform you that a new holiday has been added to the company calendar for Diwali (Deepavali) on Sunday, 08 Nov 2026.",
-    body: `Dear Team,
-
-We are pleased to inform you that a new company holiday has been added to the calendar:
-
-• Holiday: Diwali (Deepavali)
-• Date: 08 November 2026
-• Day: Sunday
-• Type: Gazetted Paid Holiday
-
-Wishing everyone a joyous and safe festival season!
-
-Warm Regards,
-Management & People Ops`,
-    folder: 'inbox',
-    isUnread: false,
-    isStarred: false,
-    hasAttachment: false,
-    time: '23 Oct',
-    date: '23 Oct 2026',
-    label: 'Announcements',
-  },
-  {
-    id: 6,
-    sender: 'HRMS',
-    senderEmail: 'announcements@intelliattend.com',
-    senderInitial: 'U',
-    isSystem: true,
-    subject: 'New Holiday Added - Choti Diwali',
-    snippet: "Dear Team, We're pleased to inform you that a new holiday has been added to the calendar for Choti Diwali.",
-    body: `Dear Team,
-
-The holiday calendar has been updated to mark Choti Diwali observances.
-
-Please check your Holidays tab for complete regional holiday lists.
-
-Regards,
-HR Operations`,
-    folder: 'inbox',
-    isUnread: false,
-    isStarred: false,
-    hasAttachment: false,
-    time: '23 Oct',
-    date: '23 Oct 2026',
-    label: 'Announcements',
-  },
-  {
-    id: 7,
     sender: 'Payroll Operations',
-    senderEmail: 'payroll@intelliattend.com',
+    senderEmail: 'payroll@intelliattend.io',
     senderInitial: 'PO',
     isSystem: false,
-    subject: 'Monthly Payslip Generated - October 2026',
-    snippet: 'Dear Rahul Bariki, Your monthly payslip for October 2026 is now generated and ready to download in your Salary tab.',
-    body: `Dear Rahul Bariki,
+    subject: 'Monthly Payslip Available - October 2026',
+    snippet: 'Your salary payslip for October 2026 is finalized and available for download.',
+    body: `Hello,
 
-Your salary slip for October 2026 has been finalized and credited:
+Your monthly compensation slip for October 2026 has been generated and disbursed:
+• Gross CTC: Calculated as per Indian Tax Norms
+• Direct Bank Credit: Processed via HDFC Corporate Banking
+• PDF Slip: Available in your Salary module
 
-• Basic: ₹55,000.00
-• HRA: ₹22,000.00
-• Special Allowance: ₹18,000.00
-• Net Pay: ₹91,400.00
-
-You can download the password-protected PDF slip anytime under the Salary menu.
+Please review your payslip and reach out to the payroll helpdesk for any clarifications.
 
 Best regards,
-Payroll Department`,
+Finance & Accounts Department`,
     folder: 'inbox',
     isUnread: false,
     isStarred: true,
@@ -205,34 +153,6 @@ Payroll Department`,
     time: '22 Oct',
     date: '22 Oct 2026',
     label: 'Finance',
-  },
-  {
-    id: 8,
-    sender: 'Aditya Dhiman',
-    senderEmail: 'aditya.dhiman@intelliattend.com',
-    senderInitial: 'AD',
-    isSystem: false,
-    subject: 'Sprint Retrospective & Code Review Sync',
-    snippet: 'Hi Rahul, Please prepare the walkthrough for the new Attendance regularizations and camera verification module.',
-    body: `Hi Rahul,
-
-Let's connect this Wednesday at 4:30 PM for our sprint review. Please ensure the following:
-1. Demo of the MediaPipe face match flow
-2. Attendance regularization submission & manager approval test cases
-3. Zero warnings on oxlint
-
-See you in the team space!
-
-Regards,
-Aditya Dhiman
-Lead Engineering Manager`,
-    folder: 'inbox',
-    isUnread: false,
-    isStarred: true,
-    hasAttachment: false,
-    time: '21 Oct',
-    date: '21 Oct 2026',
-    label: 'Tasks',
   },
 ];
 
