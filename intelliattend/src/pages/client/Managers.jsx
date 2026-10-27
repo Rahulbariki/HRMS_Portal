@@ -98,7 +98,7 @@ export default function ClientManagers() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-xs transition-all self-start sm:self-auto cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           <span>Assign New Manager</span>
@@ -113,7 +113,7 @@ export default function ClientManagers() {
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <p className="text-xs font-semibold text-slate-500">Departments Covered</p>
-          <p className="text-2xl font-bold text-blue-700 mt-1">
+          <p className="text-2xl font-bold text-teal-700 mt-1">
             {new Set(managers.map(m => m.department)).size}
           </p>
         </div>
@@ -138,7 +138,7 @@ export default function ClientManagers() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by manager name, department or email..."
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
           />
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function ClientManagers() {
         {filtered.map((m) => (
           <div key={m.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start justify-between">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-sm border border-blue-100 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-sm border border-teal-500/30 shadow-xs">
                 {m.avatar}
               </div>
               <div className="space-y-1">
@@ -158,7 +158,7 @@ export default function ClientManagers() {
                     {m.status}
                   </span>
                 </div>
-                <p className="text-xs text-blue-600 font-medium">{m.title} • {m.department}</p>
+                <p className="text-xs text-teal-700 font-medium">{m.title} • {m.department}</p>
                 <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-1">
                   <Mail className="h-3.5 w-3.5" />
                   <span>{m.email}</span>
@@ -192,7 +192,7 @@ export default function ClientManagers() {
                   value={newManager.name}
                   onChange={(e) => setNewManager({ ...newManager, name: e.target.value })}
                   placeholder="e.g. Jordan Miller"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                 />
               </div>
 
@@ -203,8 +203,8 @@ export default function ClientManagers() {
                   required
                   value={newManager.email}
                   onChange={(e) => setNewManager({ ...newManager, email: e.target.value })}
-                  placeholder="j.miller@company.com"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="j.miller@intelliattend.com"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                 />
               </div>
 
@@ -214,7 +214,7 @@ export default function ClientManagers() {
                   <select
                     value={newManager.department}
                     onChange={(e) => setNewManager({ ...newManager, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                   >
                     <option value="Engineering">Engineering</option>
                     <option value="Product Management">Product</option>
@@ -229,7 +229,7 @@ export default function ClientManagers() {
                     type="number"
                     value={newManager.directReports}
                     onChange={(e) => setNewManager({ ...newManager, directReports: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
               </div>
@@ -241,7 +241,7 @@ export default function ClientManagers() {
                   value={newManager.title}
                   onChange={(e) => setNewManager({ ...newManager, title: e.target.value })}
                   placeholder="e.g. Engineering Manager"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                 />
               </div>
 
@@ -255,7 +255,7 @@ export default function ClientManagers() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow"
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs cursor-pointer"
                 >
                   Save Manager
                 </button>

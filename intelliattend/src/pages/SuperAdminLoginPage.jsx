@@ -8,7 +8,7 @@ export default function SuperAdminLoginPage() {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: 'alexrivera.intelliattend@gmail.com',
+    email: 'rahulbariki.intelliattend@gmail.com',
     password: 'password123',
     remember: true,
   });
@@ -31,7 +31,7 @@ export default function SuperAdminLoginPage() {
 
     const emailTrimmed = (formData.email || '').toLowerCase().trim();
     if (!emailTrimmed.endsWith('.intelliattend@gmail.com') && !emailTrimmed.endsWith('@intelliattend.com')) {
-      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. alexrivera.intelliattend@gmail.com).');
+      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. rahulbariki.intelliattend@gmail.com).');
       return;
     }
 
@@ -66,7 +66,7 @@ export default function SuperAdminLoginPage() {
               <h1 className="font-display font-extrabold text-xl text-slate-900 tracking-tight leading-none">
                 IntelliAttend
               </h1>
-              <p className="text-xs text-indigo-600 font-semibold">Super Administrator Console</p>
+              <p className="text-xs text-teal-600 font-semibold">Super Administrator Console</p>
             </div>
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function SuperAdminLoginPage() {
                 <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
                   Admin Email
                 </label>
-                <span className="text-[10px] font-mono text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                <span className="text-[10px] font-mono text-teal-900 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
                   *.intelliattend@gmail.com
                 </span>
               </div>
@@ -107,8 +107,8 @@ export default function SuperAdminLoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                  placeholder="alexrivera.intelliattend@gmail.com"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
+                  placeholder="rahulbariki.intelliattend@gmail.com"
                   disabled={loading}
                 />
               </div>
@@ -119,7 +119,7 @@ export default function SuperAdminLoginPage() {
                 <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                <Link to="/forgot-password" className="text-xs font-semibold text-teal-600 hover:text-teal-700">
                   Forgot password?
                 </Link>
               </div>
@@ -132,7 +132,7 @@ export default function SuperAdminLoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                   placeholder="••••••••"
                   disabled={loading}
                 />
@@ -154,7 +154,7 @@ export default function SuperAdminLoginPage() {
                   type="checkbox"
                   checked={formData.remember}
                   onChange={handleChange}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                 />
                 <span className="text-sm text-slate-600">Remember session</span>
               </label>
@@ -163,7 +163,7 @@ export default function SuperAdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 shadow-md transition-all disabled:opacity-50 group"
             >
               {loading ? (
                 <>
@@ -173,17 +173,17 @@ export default function SuperAdminLoginPage() {
               ) : (
                 <>
                   <span>Sign In as Super Admin</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 text-teal-400 group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <Link to="/login" className="hover:text-indigo-600 font-medium">
+            <Link to="/login" className="hover:text-teal-600 font-medium">
               ← Back to Portal Login
             </Link>
-            <Link to="/company-login" className="hover:text-indigo-600 font-medium">
+            <Link to="/company-login" className="hover:text-teal-600 font-medium">
               Client Portal
             </Link>
           </div>

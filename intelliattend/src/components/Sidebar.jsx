@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, CreditCard, FileText, Settings,
-  Calendar, ClipboardList, DollarSign, Shield, Mail,
+  Calendar, ClipboardList, IndianRupee, Shield, Mail,
   FolderOpen, Newspaper, LogOut, ChevronLeft, ChevronRight,
   Building, UserCheck, HelpCircle, FileCheck, Award, Zap,
   MessageSquare, CalendarDays, Clock, RefreshCw, Network, Globe
@@ -15,7 +15,7 @@ const menuItems = {
     { label: 'Dashboard', path: '/superadmin/dashboard', icon: LayoutDashboard },
     { label: 'Companies', path: '/superadmin/companies', icon: Building2 },
     { label: 'Plan Management', path: '/superadmin/plan-management', icon: CreditCard },
-    { label: 'Transactions', path: '/superadmin/transactions', icon: DollarSign },
+    { label: 'Transactions', path: '/superadmin/transactions', icon: IndianRupee },
     { label: 'Invoices', path: '/superadmin/invoices', icon: FileText },
     { label: 'Admin Management', path: '/superadmin/admin-management', icon: Users },
     { label: 'Clients', path: '/superadmin/clients', icon: Building },
@@ -33,7 +33,7 @@ const menuItems = {
     { label: 'Dashboard', path: '/client/dashboard', icon: LayoutDashboard },
     { label: 'Managers', path: '/client/managers', icon: Users },
     { label: 'Policies', path: '/client/policies', icon: FileCheck },
-    { label: 'Billings', path: '/client/billings', icon: DollarSign },
+    { label: 'Billings', path: '/client/billings', icon: IndianRupee },
     { label: 'Support', path: '/client/support', icon: HelpCircle },
     { label: 'Settings', path: '/client/settings', icon: Settings },
     { label: 'Profile', path: '/client/profile', icon: UserCheck },
@@ -49,7 +49,7 @@ const menuItems = {
     { label: 'Holidays', path: '/manager/holidays', icon: CalendarDays },
     { label: 'Attendance', path: '/manager/attendance', icon: Clock },
     { label: 'Regularization', path: '/manager/regularization', icon: RefreshCw },
-    { label: 'Expenses', path: '/manager/expenses', icon: DollarSign },
+    { label: 'Expenses', path: '/manager/expenses', icon: IndianRupee },
     { label: 'Salary', path: '/manager/salary', icon: Award },
     { label: 'Letters', path: '/manager/letters', icon: FileText },
     { label: 'Offboarding', path: '/manager/offboarding', icon: LogOut },
@@ -70,7 +70,7 @@ const menuItems = {
     { label: 'Holidays', path: '/employee/holidays', icon: CalendarDays },
     { label: 'Attendance', path: '/employee/attendance', icon: Clock },
     { label: 'Regularization', path: '/employee/regularization', icon: RefreshCw },
-    { label: 'Expenses', path: '/employee/expenses', icon: DollarSign },
+    { label: 'Expenses', path: '/employee/expenses', icon: IndianRupee },
     { label: 'Salary', path: '/employee/salary', icon: Award },
     { label: 'Letters', path: '/employee/letters', icon: FileText },
     { label: 'Offboarding', path: '/employee/offboarding', icon: LogOut },
@@ -140,17 +140,21 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
                   to={item.path}
                   onClick={() => setMobileOpen(false)}
                   className={({ isActive }) => clsx(
-                    'font-display flex items-center gap-3 px-3 py-2.5 mx-1 rounded-lg text-sm font-medium transition-all duration-200',
+                    'group font-display flex items-center gap-3 px-3 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-primary-light text-primary'
-                      : 'text-muted hover:bg-slate-50 hover:text-primary',
+                      ? 'bg-slate-900 text-white shadow-sm font-semibold'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                     collapsed && 'justify-center px-2'
                   )}
                   title={collapsed ? item.label : undefined}
                   aria-label={collapsed ? item.label : undefined}
                 >
-                  <item.icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                  {!collapsed && <span>{item.label}</span>}
+                  {({ isActive }) => (
+                    <>
+                      <item.icon className={clsx("h-5 w-5 flex-shrink-0 transition-colors", isActive ? "text-teal-400" : "text-slate-400 group-hover:text-slate-600")} aria-hidden="true" />
+                      {!collapsed && <span>{item.label}</span>}
+                    </>
+                  )}
                 </NavLink>
               </li>
             ))}
@@ -159,19 +163,19 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
 
         <div className="p-3 border-t border-slate-200">
           {!collapsed ? (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50">
-              <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center flex-shrink-0">
-                <Zap className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900 text-white shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-4 w-4 text-teal-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-xs text-primary truncate">HRMS Enterprise</p>
-                <p className="text-[11px] text-muted truncate">People & Workspace</p>
+                <p className="font-semibold text-xs text-white truncate">HRMS Enterprise</p>
+                <p className="text-[11px] text-teal-300/80 truncate">People & Workspace</p>
               </div>
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
-                <Zap className="h-4 w-4 text-primary" />
+              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-teal-500/30 flex items-center justify-center">
+                <Zap className="h-4 w-4 text-teal-400" />
               </div>
             </div>
           )}

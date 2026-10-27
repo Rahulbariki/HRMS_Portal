@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   Calendar, ClipboardList, FileCheck, FolderOpen, Newspaper,
-  DollarSign, Award, LogOut, FileText, HelpCircle, Settings, User
+  IndianRupee, Award, LogOut, FileText, HelpCircle, Settings, User
 } from 'lucide-react';
 
 const pages = [
@@ -12,7 +12,7 @@ const pages = [
   { label: 'News', path: '/manager/news', icon: Newspaper, desc: 'Company announcements' },
   { label: 'Holidays', path: '/manager/holidays', icon: Calendar, desc: 'Holiday calendar' },
   { label: 'Attendance', path: '/manager/attendance', icon: User, desc: 'Team attendance tracking' },
-  { label: 'Expenses', path: '/manager/expenses', icon: DollarSign, desc: 'Expense approvals' },
+  { label: 'Expenses', path: '/manager/expenses', icon: IndianRupee, desc: 'Expense approvals' },
   { label: 'Salary', path: '/manager/salary', icon: Award, desc: 'Salary management' },
   { label: 'Offboarding', path: '/manager/offboarding', icon: LogOut, desc: 'Exit management' },
   { label: 'Letters', path: '/manager/letters', icon: FileText, desc: 'Generate letters' },

@@ -314,7 +314,7 @@ export default function EmployeeOrgChart() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, designation or department"
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all placeholder:text-slate-400"
+            className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 transition-all placeholder:text-slate-400"
           />
           {searchQuery && (
             <button
@@ -340,7 +340,7 @@ export default function EmployeeOrgChart() {
             className={clsx(
               'px-3 py-1.5 rounded-lg border font-medium transition cursor-pointer shadow-xs',
               showOnlyMyBranch
-                ? 'border-amber-500 bg-amber-50 text-amber-700 font-semibold'
+                ? 'border-slate-900 bg-slate-900 text-teal-300 font-semibold shadow-xs'
                 : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
             )}
           >
@@ -480,8 +480,8 @@ export default function EmployeeOrgChart() {
                   style={{ paddingLeft: `${emp.depth * 28 + 16}px` }}
                   className={clsx(
                     'py-3 pr-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer',
-                    isMatch && 'bg-amber-50/70',
-                    isCurrentUser && 'bg-orange-50/50'
+                    isMatch && 'bg-teal-50/70',
+                    isCurrentUser && 'bg-teal-50/40'
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -493,12 +493,12 @@ export default function EmployeeOrgChart() {
                           className="w-9 h-9 rounded-full object-cover border border-slate-200"
                         />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-xs border border-amber-200">
+                        <div className="w-9 h-9 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-xs border border-teal-500/30">
                           {emp.initials || emp.name.slice(0, 2).toUpperCase()}
                         </div>
                       )}
                       {isCurrentUser && (
-                        <span className="absolute -top-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 ring-1 ring-white">
+                        <span className="absolute -top-1 -right-1 bg-teal-500 text-slate-950 rounded-full p-0.5 ring-1 ring-white">
                           <Check className="w-2.5 h-2.5" />
                         </span>
                       )}
@@ -509,7 +509,7 @@ export default function EmployeeOrgChart() {
                           {emp.name}
                         </span>
                         {isCurrentUser && (
-                          <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">
+                          <span className="px-1.5 py-0.2 bg-teal-50 text-teal-800 border border-teal-200 rounded text-[10px] font-bold">
                             You
                           </span>
                         )}
@@ -564,7 +564,7 @@ export default function EmployeeOrgChart() {
                 doj: '05-10-2026',
                 bloodGroup: 'O+',
                 avatar: selectedNode.avatar,
-                company: 'SHNOOR INTERNATIONAL',
+                company: 'IntelliAttend',
               }}
               showActions={true}
             />
@@ -604,16 +604,16 @@ function OrgTreeNode({
         className={clsx(
           'w-64 bg-white rounded-xl border p-3.5 shadow-sm transition-all duration-200 cursor-pointer relative z-10 flex flex-col items-center text-center group hover:shadow-md hover:-translate-y-0.5',
           isSelected
-            ? 'border-amber-500 ring-2 ring-amber-500/20'
+            ? 'border-slate-900 ring-2 ring-teal-500/30 shadow-md'
             : isCurrentUser
-            ? 'border-amber-400 bg-amber-50/20'
+            ? 'border-teal-400 bg-teal-50/20'
             : matchesSearch
-            ? 'border-amber-400 ring-2 ring-amber-200'
+            ? 'border-teal-400 ring-2 ring-teal-200'
             : 'border-slate-200 hover:border-slate-300'
         )}
       >
         {isCurrentUser && (
-          <span className="absolute -top-2.5 bg-amber-500 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow-xs">
+          <span className="absolute -top-2.5 bg-slate-900 text-teal-300 font-bold text-[10px] px-2 py-0.5 rounded-full shadow-xs border border-teal-500/30">
             You
           </span>
         )}
@@ -627,14 +627,14 @@ function OrgTreeNode({
               className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-xs"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-sm border-2 border-white shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-sm border-2 border-white shadow-xs">
               {node.initials || node.name.slice(0, 2).toUpperCase()}
             </div>
           )}
         </div>
 
         {/* Name & Designation */}
-        <p className="font-semibold text-xs text-slate-900 group-hover:text-amber-600 transition truncate max-w-full">
+        <p className="font-semibold text-xs text-slate-900 group-hover:text-teal-600 transition truncate max-w-full">
           {node.name}
         </p>
         <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{node.designation}</p>
@@ -652,7 +652,7 @@ function OrgTreeNode({
               e.stopPropagation();
               onToggleCollapse(node.id);
             }}
-            className="mt-2.5 flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-full transition"
+            className="mt-2.5 flex items-center gap-1 text-[10px] font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-0.5 rounded-full transition"
           >
             <span>{node.totalReports} direct reports</span>
             {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}

@@ -117,7 +117,7 @@ export default function ManagerLeaves() {
             className={clsx(
               'px-4 py-2 rounded-xl text-xs font-semibold transition-all',
               activeTab === tab.id
-                ? 'bg-indigo-600 text-white shadow'
+                ? 'bg-slate-900 text-teal-300 shadow font-bold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             )}
           >
@@ -140,7 +140,7 @@ export default function ManagerLeaves() {
               <div>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+                    <div className="w-10 h-10 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-xs border border-teal-500/20">
                       {req.avatar}
                     </div>
                     <div>

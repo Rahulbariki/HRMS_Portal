@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Calendar, ClipboardList, UserCheck, DollarSign, Award,
+  Calendar, ClipboardList, UserCheck, IndianRupee, Award,
   FileText, LogOut, HelpCircle, FolderOpen, Newspaper,
   Clock, CheckCircle, AlertCircle, XCircle, Plus, Bell,
   TrendingUp, Settings, Building2
@@ -13,7 +13,7 @@ const menuItems = [
   { label: 'Leaves', path: '/employee/leaves', icon: Calendar, color: 'primary', count: 3 },
   { label: 'Tasks', path: '/employee/tasks', icon: ClipboardList, color: 'accent', count: 5 },
   { label: 'Attendance', path: '/employee/attendance', icon: UserCheck, color: 'success', count: 0 },
-  { label: 'Expenses', path: '/employee/expenses', icon: DollarSign, color: 'warning', count: 2 },
+  { label: 'Expenses', path: '/employee/expenses', icon: IndianRupee, color: 'warning', count: 2 },
   { label: 'Salary', path: '/employee/salary', icon: Award, color: 'primary', count: 0 },
   { label: 'Policies', path: '/employee/policies', icon: FileText, color: 'accent', count: 0 },
   { label: 'Documents', path: '/employee/documents', icon: FolderOpen, color: 'success', count: 0 },
@@ -33,7 +33,7 @@ const attendanceStatus = [
 
 const recentActivity = [
   { type: 'leave_approved', title: 'Leave Request Approved', description: 'Annual Leave - Dec 20-22', time: '2 hours ago', status: 'success' },
-  { type: 'expense_submitted', title: 'Expense Submitted', description: 'Travel - Client Meeting $245.00', time: '5 hours ago', status: 'pending' },
+  { type: 'expense_submitted', title: 'Expense Submitted', description: 'Travel - Client Meeting ₹245.00', time: '5 hours ago', status: 'pending' },
   { type: 'task_assigned', title: 'New Task Assigned', description: 'Q4 Report Preparation', time: '1 day ago', status: 'info' },
   { type: 'payslip_available', title: 'Payslip Available', description: 'November 2024 payslip ready', time: '2 days ago', status: 'success' },
   { type: 'document_shared', title: 'Document Shared', description: 'Employee Handbook v2.1', time: '3 days ago', status: 'info' },

@@ -10,9 +10,9 @@ export default function CompanyLoginPage() {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: 'sarahjenkins.intelliattend@gmail.com',
+    email: 'clientadmin.intelliattend@gmail.com',
     password: 'password123',
-    company: companySlug || 'SHNOOR INTERNATIONAL',
+    company: companySlug || 'IntelliAttend',
     remember: true,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +34,7 @@ export default function CompanyLoginPage() {
 
     const emailTrimmed = (formData.email || '').toLowerCase().trim();
     if (!emailTrimmed.endsWith('.intelliattend@gmail.com') && !emailTrimmed.endsWith('@intelliattend.com')) {
-      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. sarahjenkins.intelliattend@gmail.com).');
+      setError('Invalid login format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. clientadmin.intelliattend@gmail.com).');
       return;
     }
 
@@ -68,7 +68,7 @@ export default function CompanyLoginPage() {
               <h1 className="font-display font-extrabold text-xl text-slate-900 tracking-tight leading-none">
                 IntelliAttend
               </h1>
-              <p className="text-xs text-blue-600 font-semibold">Client & Company HR Console</p>
+              <p className="text-xs text-teal-600 font-semibold">Client & Company HR Console</p>
             </div>
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function CompanyLoginPage() {
                   value={formData.company}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                   placeholder="Your Company Name"
                   disabled={loading}
                 />
@@ -116,7 +116,7 @@ export default function CompanyLoginPage() {
                 <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
                   Work Email
                 </label>
-                <span className="text-[10px] font-mono text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                <span className="text-[10px] font-mono text-teal-900 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
                   *.intelliattend@gmail.com
                 </span>
               </div>
@@ -129,8 +129,8 @@ export default function CompanyLoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  placeholder="sarahjenkins.intelliattend@gmail.com"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
+                  placeholder="clientadmin.intelliattend@gmail.com"
                   disabled={loading}
                 />
               </div>
@@ -141,7 +141,7 @@ export default function CompanyLoginPage() {
                 <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                <Link to="/forgot-password" className="text-xs font-semibold text-teal-600 hover:text-teal-700">
                   Forgot password?
                 </Link>
               </div>
@@ -154,14 +154,14 @@ export default function CompanyLoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                   placeholder="••••••••"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -176,7 +176,7 @@ export default function CompanyLoginPage() {
                   type="checkbox"
                   checked={formData.remember}
                   onChange={handleChange}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-teal-500"
                 />
                 <span className="text-sm text-slate-600">Remember session</span>
               </label>
@@ -185,7 +185,7 @@ export default function CompanyLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -195,17 +195,17 @@ export default function CompanyLoginPage() {
               ) : (
                 <>
                   <span>Sign In to Company Portal</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 text-teal-400" />
                 </>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <Link to="/login" className="hover:text-blue-600 font-medium">
+            <Link to="/login" className="hover:text-teal-600 font-medium">
               ← Back to Portal Login
             </Link>
-            <Link to="/superadmin/login" className="hover:text-blue-600 font-medium">
+            <Link to="/superadmin/login" className="hover:text-teal-600 font-medium">
               Super Admin Console
             </Link>
           </div>

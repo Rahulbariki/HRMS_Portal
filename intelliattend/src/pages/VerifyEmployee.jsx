@@ -41,7 +41,7 @@ export default function VerifyEmployee() {
         }, 1500);
       } else {
         setStatus('error');
-        setMessage('Invalid code. Try 123456 for demo.');
+        setMessage('Invalid verification code. Please check your email.');
       }
     } else {
       setStatus('success');

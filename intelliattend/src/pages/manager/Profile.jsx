@@ -17,16 +17,16 @@ export default function ManagerProfile() {
   const [selectedEmpId, setSelectedEmpId] = useState('mgr-self');
 
   const [profileData, setProfileData] = useState({
-    firstName: 'Aditya',
-    lastName: 'Dhiman',
-    fullName: 'ADITYA DHIMAN',
-    employeeId: user?.id || 'SI0010',
-    email: user?.email || 'aditya.dhiman@shnoor.com',
+    firstName: user?.name ? user.name.split(' ')[0] : 'Engineering',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : 'Manager',
+    fullName: user?.name ? user.name.toUpperCase() : 'ENGINEERING MANAGER',
+    employeeId: user?.id || 'IA-MG-001',
+    email: user?.email || 'manager.intelliattend@gmail.com',
     phone: '9876543211',
     emergencyPhone: '9876543299',
     designation: 'LEAD ENGINEERING MANAGER – INFORMATION TECHNOLOGY',
     department: 'Information Technology',
-    manager: 'Vivek S P (CTO)',
+    manager: 'Rahul Bariki (Super Admin)',
     doj: '12-04-2024',
     bloodGroup: 'B+',
     address: 'Hill View Enclave, Banjara Hills, Hyderabad, TS 500034',
@@ -35,8 +35,8 @@ export default function ManagerProfile() {
     panNumber: 'BNMKL9876P',
     bankAccount: '•••• •••• 1029 (ICICI Bank)',
     pfNumber: 'PF/HYD/10927711',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80',
-    company: 'SHNOOR INTERNATIONAL',
+    avatar: user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80',
+    company: 'IntelliAttend',
   });
 
   const handleInputChange = (field, value) => {
@@ -83,7 +83,7 @@ export default function ManagerProfile() {
         doj: found.doj,
         bloodGroup: found.bloodGroup,
         avatar: found.avatar,
-        company: found.company || 'SHNOOR INTERNATIONAL',
+        company: found.company || 'IntelliAttend',
       };
     }
     return {
@@ -131,7 +131,7 @@ export default function ManagerProfile() {
               <button
                 type="button"
                 onClick={handleSaveProfile}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Changes</span>

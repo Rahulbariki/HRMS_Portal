@@ -185,7 +185,7 @@ export default function SuperAdminPlanManagement() {
               <div className="mt-5 pb-5 border-b border-slate-100">
                 <div className="flex items-baseline gap-1">
                   <span className="font-display text-3xl font-extrabold text-primary">
-                    ${billingCycle === 'monthly' ? plan.priceMonthly : plan.priceAnnual}
+                    ₹{billingCycle === 'monthly' ? plan.priceMonthly : plan.priceAnnual}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
                     / {billingCycle === 'monthly' ? 'month' : 'year'}
@@ -252,7 +252,7 @@ export default function SuperAdminPlanManagement() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Monthly Price ($)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Monthly Price (₹)</label>
                   <input
                     type="number"
                     required
@@ -263,7 +263,7 @@ export default function SuperAdminPlanManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Annual Price ($)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Annual Price (₹)</label>
                   <input
                     type="number"
                     placeholder="1400"

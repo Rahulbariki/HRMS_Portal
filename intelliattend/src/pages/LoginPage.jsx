@@ -9,40 +9,40 @@ import clsx from 'clsx';
 
 const ROLES_INFO = [
   {
+    role: 'superadmin',
+    title: 'Super Admin',
+    desc: 'Platform management, companies & subscriptions',
+    email: 'rahulbariki.intelliattend@gmail.com',
+    icon: Shield,
+    badgeColor: 'bg-slate-900 text-teal-300 border-slate-700',
+    iconBg: 'bg-[#0F172A] text-teal-400',
+  },
+  {
     role: 'employee',
     title: 'Employee',
     desc: 'Self-service leaves, attendance, ID card & salary',
-    email: 'rahulbariki.intelliattend@gmail.com',
+    email: 'employee.intelliattend@gmail.com',
     icon: User,
-    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    iconBg: 'bg-emerald-600 text-white',
+    badgeColor: 'bg-teal-50 text-teal-800 border-teal-200',
+    iconBg: 'bg-[#0F172A] text-teal-300',
   },
   {
     role: 'manager',
     title: 'Manager',
     desc: 'Team attendance, leaves, tasks & approvals',
-    email: 'adityadhiman.intelliattend@gmail.com',
+    email: 'manager.intelliattend@gmail.com',
     icon: Briefcase,
-    badgeColor: 'bg-amber-100 text-amber-700 border-amber-200',
-    iconBg: 'bg-amber-600 text-white',
+    badgeColor: 'bg-slate-100 text-slate-800 border-slate-300',
+    iconBg: 'bg-slate-900 text-teal-400',
   },
   {
     role: 'client',
     title: 'Client / Company Admin',
     desc: 'Company management, policies & managers',
-    email: 'sarahjenkins.intelliattend@gmail.com',
+    email: 'clientadmin.intelliattend@gmail.com',
     icon: Building2,
-    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
-    iconBg: 'bg-blue-600 text-white',
-  },
-  {
-    role: 'superadmin',
-    title: 'Super Admin',
-    desc: 'Platform management, companies & subscriptions',
-    email: 'alexrivera.intelliattend@gmail.com',
-    icon: Shield,
-    badgeColor: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    iconBg: 'bg-indigo-600 text-white',
+    badgeColor: 'bg-teal-50 text-teal-800 border-teal-200',
+    iconBg: 'bg-slate-800 text-teal-300',
   },
 ];
 
@@ -52,7 +52,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
 
-  const [selectedRole, setSelectedRole] = useState('employee');
+  const [selectedRole, setSelectedRole] = useState('superadmin');
   const [formData, setFormData] = useState({
     email: 'rahulbariki.intelliattend@gmail.com',
     password: 'password123',
@@ -181,11 +181,11 @@ export default function LoginPage() {
         {/* Quick Demo Access Bar */}
         <div className="mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3 px-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              Quick Demo Access (1-Click Login)
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-teal-500" />
+              Enterprise Portals (Direct 1-Click Access)
             </span>
-            <span className="text-xs text-slate-400 font-medium">Click to test any portal</span>
+            <span className="text-xs text-slate-400 font-medium">Production Credentials</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {ROLES_INFO.map((item) => (
@@ -197,7 +197,7 @@ export default function LoginPage() {
                 className={clsx(
                   'group flex flex-col items-center text-center p-3 rounded-xl border transition-all text-xs font-medium',
                   selectedRole === item.role
-                    ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
+                    ? 'border-slate-900 bg-teal-50/50 shadow-sm ring-1 ring-teal-500/30'
                     : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                 )}
               >
@@ -205,7 +205,7 @@ export default function LoginPage() {
                   <item.icon className="h-4 w-4" />
                 </div>
                 <span className="font-semibold text-slate-800 leading-tight">{item.title.split('/')[0]}</span>
-                <span className="text-[10px] text-slate-400 mt-0.5">Click to enter →</span>
+                <span className="text-[10px] text-teal-600 font-medium mt-0.5">Click to enter →</span>
               </button>
             ))}
           </div>
@@ -214,8 +214,8 @@ export default function LoginPage() {
         {/* Main Login Card */}
         <div className="bg-white py-8 px-6 shadow-xl rounded-2xl sm:px-10 border border-slate-200">
           {success && (
-            <div className="mb-6 flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm">
-              <CheckCircle className="h-5 w-5 flex-shrink-0 text-emerald-600" />
+            <div className="mb-6 flex items-center gap-3 p-4 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 text-sm">
+              <CheckCircle className="h-5 w-5 flex-shrink-0 text-teal-600" />
               <span className="font-medium">{success}</span>
             </div>
           )}
@@ -241,7 +241,7 @@ export default function LoginPage() {
                   className={clsx(
                     'py-2 px-1 text-center rounded-lg transition-all',
                     selectedRole === r.role
-                      ? 'bg-white text-indigo-700 shadow-sm'
+                      ? 'bg-slate-900 text-teal-300 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
@@ -257,7 +257,7 @@ export default function LoginPage() {
                 <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
                   Email Address
                 </label>
-                <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                <span className="text-[10px] font-mono text-teal-950 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
                   *.intelliattend@gmail.com
                 </span>
               </div>
@@ -270,7 +270,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                   placeholder="rahulbariki.intelliattend@gmail.com"
                   disabled={loading}
                 />
@@ -282,7 +282,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                <Link to="/forgot-password" className="text-xs font-semibold text-teal-600 hover:text-teal-700">
                   Forgot password?
                 </Link>
               </div>
@@ -295,14 +295,14 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                   placeholder="••••••••"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -317,7 +317,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={formData.remember}
                   onChange={handleChange}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-teal-500"
                 />
                 <span className="text-sm text-slate-600">Keep me signed in</span>
               </label>
@@ -327,29 +327,29 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <span>Authenticating...</span>
               ) : (
                 <>
                   <span>Sign In as {ROLES_INFO.find(r => r.role === selectedRole)?.title || 'User'}</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 text-teal-400" />
                 </>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-            <Link to="/verify-employee" className="hover:text-indigo-600 font-medium">
+            <Link to="/verify-employee" className="hover:text-teal-600 font-medium">
               Verify Employee Account
             </Link>
             <div className="flex items-center gap-4">
-              <Link to="/company-login" className="hover:text-indigo-600 font-medium">
+              <Link to="/company-login" className="hover:text-teal-600 font-medium">
                 Client Portal Login
               </Link>
               <span>•</span>
-              <Link to="/superadmin/login" className="hover:text-indigo-600 font-medium">
+              <Link to="/superadmin/login" className="hover:text-teal-600 font-medium">
                 Super Admin Login
               </Link>
             </div>

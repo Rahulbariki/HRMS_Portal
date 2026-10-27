@@ -369,9 +369,9 @@ export default function EmployeeMail() {
           <div className="flex items-center gap-2 pl-2">
             <img src="/logo.png" alt="Logo" className="h-6 w-auto object-contain" />
             <span className="font-display font-bold text-xs sm:text-sm text-slate-900 tracking-tight uppercase">
-              SHNOOR INTERNATIONAL LLC
+              IntelliAttend
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white font-bold text-[10px]">
+            <span className="px-2 py-0.5 rounded-md bg-teal-500 text-white font-bold text-[10px]">
               Mail
             </span>
           </div>
@@ -386,7 +386,7 @@ export default function EmployeeMail() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search in mail"
-              className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 placeholder:text-slate-400"
+              className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 placeholder:text-slate-400"
             />
             <button
               type="button"
@@ -442,7 +442,7 @@ export default function EmployeeMail() {
           {/* Enable chat notifications button */}
           <button
             type="button"
-            className="hidden lg:inline-flex items-center px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+            className="hidden lg:inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-teal-300 font-bold text-xs transition cursor-pointer shadow-2xs border border-teal-500/20"
           >
             Enable chat notifications
           </button>
@@ -468,10 +468,10 @@ export default function EmployeeMail() {
         <div className="w-16 bg-slate-50 border-r border-slate-200 flex flex-col items-center py-4 gap-4 flex-shrink-0">
           <Link
             to="/employee/mail"
-            className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex flex-col items-center justify-center font-bold text-[10px] transition shadow-xs"
+            className="w-10 h-10 rounded-xl bg-slate-900 text-teal-300 flex flex-col items-center justify-center font-bold text-[10px] transition shadow-xs border border-teal-500/20"
             title="Mail"
           >
-            <MailIcon className="w-4 h-4 mb-0.5" />
+            <MailIcon className="w-4 h-4 mb-0.5 text-teal-400" />
             <span>Mail</span>
           </Link>
           <Link
@@ -490,9 +490,9 @@ export default function EmployeeMail() {
           <button
             type="button"
             onClick={() => setIsComposeOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 hover:border-amber-400 bg-white hover:bg-amber-50/50 text-slate-800 font-bold text-xs shadow-xs transition cursor-pointer mb-4"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 hover:border-teal-400 bg-white hover:bg-teal-50/50 text-slate-800 font-bold text-xs shadow-xs transition cursor-pointer mb-4"
           >
-            <PenSquare className="w-4 h-4 text-amber-600" />
+            <PenSquare className="w-4 h-4 text-teal-600" />
             <span>Compose</span>
           </button>
 
@@ -520,16 +520,16 @@ export default function EmployeeMail() {
                   className={clsx(
                     'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer',
                     isActive
-                      ? 'bg-amber-50 text-amber-900 font-bold'
+                      ? 'bg-teal-50 text-teal-900 font-bold'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   )}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className={clsx('w-4 h-4', isActive ? 'text-amber-600' : 'text-slate-400')} />
+                    <Icon className={clsx('w-4 h-4', isActive ? 'text-teal-600' : 'text-slate-400')} />
                     <span>{folder.label}</span>
                   </div>
                   {folder.count !== null && folder.count > 0 && (
-                    <span className={clsx('text-[11px] font-bold px-1.5 py-0.2 rounded-full', isActive ? 'bg-amber-200 text-amber-900' : 'text-slate-400')}>
+                    <span className={clsx('text-[11px] font-bold px-1.5 py-0.2 rounded-full', isActive ? 'bg-teal-200 text-teal-900' : 'text-slate-400')}>
                       {folder.count}
                     </span>
                   )}
@@ -551,7 +551,7 @@ export default function EmployeeMail() {
             <div className="space-y-1 text-xs">
               {['HR & Leaves', 'Tasks', 'Announcements', 'Finance'].map((label) => (
                 <div key={label} className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span className="w-2 h-2 rounded-full bg-teal-500" />
                   <span>{label}</span>
                 </div>
               ))}
@@ -607,7 +607,7 @@ export default function EmployeeMail() {
                     {selectedEmail.subject}
                   </h2>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
                       {selectedEmail.label || 'Inbox'}
                     </span>
                   </div>
@@ -616,7 +616,7 @@ export default function EmployeeMail() {
                 {/* Sender details */}
                 <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                    <div className="w-10 h-10 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-sm shadow-xs border border-teal-500/20">
                       {selectedEmail.senderInitial}
                     </div>
                     <div>
@@ -679,7 +679,7 @@ export default function EmployeeMail() {
                     title="Select all"
                   >
                     {selectedIds.length > 0 && selectedIds.length === filteredEmails.length ? (
-                      <CheckSquare className="w-4 h-4 text-amber-600" />
+                      <CheckSquare className="w-4 h-4 text-teal-600" />
                     ) : (
                       <Square className="w-4 h-4 text-slate-400" />
                     )}
@@ -702,11 +702,11 @@ export default function EmployeeMail() {
                       className={clsx(
                         'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer',
                         unreadOnly
-                          ? 'bg-amber-500 text-white border-amber-500'
+                          ? 'bg-slate-900 text-teal-300 border-slate-700'
                           : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                       )}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                       <span>Unread</span>
                     </button>
                     <button
@@ -715,11 +715,11 @@ export default function EmployeeMail() {
                       className={clsx(
                         'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer',
                         attachmentsOnly
-                          ? 'bg-amber-500 text-white border-amber-500'
+                          ? 'bg-slate-900 text-teal-300 border-slate-700'
                           : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                       )}
                     >
-                      <Paperclip className="w-3 h-3" />
+                      <Paperclip className="w-3 h-3 text-teal-400" />
                       <span>Attachments</span>
                     </button>
                   </div>
@@ -762,7 +762,7 @@ export default function EmployeeMail() {
                         className={clsx(
                           'flex items-center px-4 py-3 gap-3.5 hover:bg-slate-50 transition cursor-pointer select-none group',
                           email.isUnread ? 'bg-white font-bold' : 'bg-slate-50/30 font-normal',
-                          isSelected && 'bg-amber-50/50'
+                          isSelected && 'bg-teal-50/50'
                         )}
                       >
                         {/* Checkbox */}
@@ -774,7 +774,7 @@ export default function EmployeeMail() {
                           className="text-slate-400 hover:text-slate-700"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-amber-600" />
+                            <CheckSquare className="w-4 h-4 text-teal-600" />
                           ) : (
                             <Square className="w-4 h-4 text-slate-300 group-hover:text-slate-400" />
                           )}
@@ -858,7 +858,7 @@ export default function EmployeeMail() {
                   value={composeTo}
                   onChange={(e) => setComposeTo(e.target.value)}
                   placeholder="To (recipients)"
-                  className="w-full px-3 py-2 border-b border-slate-200 focus:outline-none focus:border-amber-500 font-medium text-xs"
+                  className="w-full px-3 py-2 border-b border-slate-200 focus:outline-none focus:border-slate-900 font-medium text-xs"
                 />
               </div>
               <div>
@@ -868,7 +868,7 @@ export default function EmployeeMail() {
                   value={composeSubject}
                   onChange={(e) => setComposeSubject(e.target.value)}
                   placeholder="Subject"
-                  className="w-full px-3 py-2 border-b border-slate-200 focus:outline-none focus:border-amber-500 font-bold text-xs"
+                  className="w-full px-3 py-2 border-b border-slate-200 focus:outline-none focus:border-slate-900 font-bold text-xs"
                 />
               </div>
               <div className="flex-1 min-h-[160px]">
@@ -877,7 +877,7 @@ export default function EmployeeMail() {
                   value={composeBody}
                   onChange={(e) => setComposeBody(e.target.value)}
                   placeholder="Write your email here..."
-                  className="w-full h-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none text-xs"
+                  className="w-full h-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 resize-none text-xs"
                 />
               </div>
 
@@ -897,7 +897,7 @@ export default function EmployeeMail() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition"
+                    className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition"
                   >
                     Send
                   </button>

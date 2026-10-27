@@ -2,11 +2,28 @@
   "name": "hrms-portal",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "HRMS Portal - Human Resource Management System",
   "scripts": {
     "dev": "npm --prefix intelliattend run dev",
     "build": "npm --prefix intelliattend run build",
     "preview": "npm --prefix intelliattend run preview",
-    "lint": "npm --prefix intelliattend run lint"
+    "lint": "npm --prefix intelliattend run lint",
+    "server": "node server/index.js",
+    "migrate": "node server/migrate.js",
+    "test:db": "node server/test-neon.js"
+  },
+  "dependencies": {
+    "@neon/config": "^1.9.4",
+    "@neon/env": "^1.6.5",
+    "@neondatabase/serverless": "^1.2.0",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.5.0",
+    "undici": "^8.12.3"
   }
 }

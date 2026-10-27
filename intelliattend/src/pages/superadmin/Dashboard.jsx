@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Building2, Users, DollarSign, Clock,
+  Building2, Users, IndianRupee, Clock,
   ArrowUpRight, ArrowDownRight, Plus,
   CheckCircle, XCircle, AlertCircle,
   CreditCard, Shield, Mail, BarChart3
@@ -12,14 +12,14 @@ import { useAuth } from '../../contexts/AuthContext';
 const statCards = [
   { title: 'Total Companies', value: '0', change: '+12%', trend: 'up', icon: Building2, color: 'primary', bg: 'primary-light' },
   { title: 'Active Users', value: '0', change: '+8%', trend: 'up', icon: Users, color: 'accent', bg: 'accent-light' },
-  { title: 'Revenue (Monthly)', value: '$0', change: '+23%', trend: 'up', icon: DollarSign, color: 'success', bg: 'green-100' },
+  { title: 'Revenue (Monthly)', value: '₹0', change: '+23%', trend: 'up', icon: IndianRupee, color: 'success', bg: 'green-100' },
   { title: 'Pending Requests', value: '0', change: '-5%', trend: 'down', icon: Clock, color: 'warning', bg: 'yellow-100' },
 ];
 
 const quickActions = [
   { label: 'Add Company', icon: Plus, href: '/superadmin/companies', color: 'primary' },
   { label: 'Create Plan', icon: CreditCard, href: '/superadmin/plan-management', color: 'accent' },
-  { label: 'View Transactions', icon: DollarSign, href: '/superadmin/transactions', color: 'success' },
+  { label: 'View Transactions', icon: IndianRupee, href: '/superadmin/transactions', color: 'success' },
   { label: 'Manage Admins', icon: Users, href: '/superadmin/admin-management', color: 'warning' },
   { label: 'Support Tickets', icon: Mail, href: '/superadmin/support-tickets', color: 'error' },
   { label: 'Audit Logs', icon: Shield, href: '/superadmin/audit-logs', color: 'primary' },
@@ -27,7 +27,7 @@ const quickActions = [
 
 const recentActivity = [
   { id: 1, type: 'company_created', title: 'New company registered', description: 'TechCorp Inc. signed up for Enterprise plan', time: '2 hours ago', status: 'success' },
-  { id: 2, type: 'payment_received', title: 'Payment received', description: '$12,500 from Global University', time: '4 hours ago', status: 'success' },
+  { id: 2, type: 'payment_received', title: 'Payment received', description: '₹12,500 from Global University', time: '4 hours ago', status: 'success' },
   { id: 3, type: 'subdomain_request', title: 'Subdomain request', description: 'New request from Metro School District', time: '6 hours ago', status: 'pending' },
   { id: 4, type: 'support_ticket', title: 'Support ticket created', description: 'Billing inquiry from Client #2847', time: '8 hours ago', status: 'info' },
   { id: 5, type: 'plan_upgrade', title: 'Plan upgraded', description: 'Startup Labs upgraded to Professional', time: '1 day ago', status: 'success' },
@@ -49,7 +49,7 @@ export default function SuperAdminDashboard() {
           setStats([
             { ...statCards[0], value: data.totalCompanies || '0' },
             { ...statCards[1], value: data.activeUsers || '0' },
-            { ...statCards[2], value: `$${data.monthlyRevenue || '0'}` },
+            { ...statCards[2], value: `₹${data.monthlyRevenue || '0'}` },
             { ...statCards[3], value: data.pendingRequests || '0' },
           ]);
         }

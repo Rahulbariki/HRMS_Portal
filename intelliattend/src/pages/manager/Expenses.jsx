@@ -1,6 +1,6 @@
 import PlaceholderPage from '../PlaceholderPage';
-import { DollarSign } from 'lucide-react';
+import { IndianRupee } from 'lucide-react';
 
 export default function ManagerExpenses() {
-  return <PlaceholderPage title="Expenses" description="Expense approvals" icon={DollarSign} href="/manager/dashboard" />;
+  return <PlaceholderPage title="Expenses" description="Expense approvals" icon={IndianRupee} href="/manager/dashboard" />;
 }

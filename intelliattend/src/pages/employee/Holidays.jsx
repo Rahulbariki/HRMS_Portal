@@ -330,7 +330,7 @@ export default function EmployeeHolidays() {
                 <h2 className="font-display text-lg font-bold text-slate-900">
                   {MONTH_NAMES[currentMonth]} {currentYear}
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
                   {monthHolidays.length} Holidays
                 </span>
               </div>
@@ -367,13 +367,13 @@ export default function EmployeeHolidays() {
 
             {/* Weekdays Labels Header */}
             <div className="grid grid-cols-7 gap-1 text-center font-bold text-[11px] tracking-wider py-2 border-b border-slate-100">
-              <span className="text-amber-500">SUN</span>
+              <span className="text-teal-600">SUN</span>
               <span className="text-slate-600">MON</span>
               <span className="text-slate-600">TUE</span>
               <span className="text-slate-600">WED</span>
               <span className="text-slate-600">THU</span>
               <span className="text-slate-600">FRI</span>
-              <span className="text-amber-500">SAT</span>
+              <span className="text-teal-600">SAT</span>
             </div>
 
             {/* Days Grid */}
@@ -391,7 +391,7 @@ export default function EmployeeHolidays() {
                       'min-h-[76px] sm:min-h-[88px] p-2 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none relative',
                       cell.isCurrentMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300',
                       isSelected
-                        ? 'border-blue-400 bg-blue-50/30 ring-2 ring-blue-500/20'
+                        ? 'border-teal-500 bg-teal-50/30 ring-2 ring-teal-500/20'
                         : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50/50'
                     )}
                   >
@@ -402,7 +402,7 @@ export default function EmployeeHolidays() {
                           'text-xs font-semibold',
                           cell.isCurrentMonth ? 'text-slate-700' : 'text-slate-300',
                           isToday &&
-                            'w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs'
+                            'w-6 h-6 rounded-full bg-slate-900 text-teal-300 flex items-center justify-center font-bold shadow-xs'
                         )}
                       >
                         {cell.dayNum}
@@ -410,7 +410,7 @@ export default function EmployeeHolidays() {
 
                       {/* Small holiday dot indicator */}
                       {hasHoliday && (
-                        <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 animate-pulse" />
+                        <span className="w-2 h-2 rounded-full bg-teal-500 flex-shrink-0 animate-pulse" />
                       )}
                     </div>
 
@@ -422,10 +422,10 @@ export default function EmployeeHolidays() {
                           setSelectedDate(cell.dateStr);
                           setModalHoliday(cell.holiday);
                         }}
-                        className="mt-1 p-1 sm:p-1.5 rounded-lg bg-amber-50/90 border border-amber-200/90 hover:bg-amber-100 transition shadow-2xs group"
+                        className="mt-1 p-1 sm:p-1.5 rounded-lg bg-teal-50/90 border border-teal-200/90 hover:bg-teal-100 transition shadow-2xs group"
                         title={cell.holiday.name}
                       >
-                        <p className="text-[10px] sm:text-[11px] font-semibold text-amber-900 truncate">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-teal-900 truncate">
                           {cell.holiday.shortName || cell.holiday.name}
                         </p>
                       </div>
@@ -443,8 +443,8 @@ export default function EmployeeHolidays() {
               {selectedHoliday ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-teal-600">
                       {selectedHoliday.type}
                     </span>
                   </div>
@@ -466,14 +466,14 @@ export default function EmployeeHolidays() {
                   <button
                     type="button"
                     onClick={() => setModalHoliday(selectedHoliday)}
-                    className="w-full mt-2 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition cursor-pointer shadow-xs"
+                    className="w-full mt-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition cursor-pointer shadow-xs"
                   >
                     View Complete Details
                   </button>
                 </div>
               ) : (
                 <div className="text-center py-6 px-4">
-                  <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-3">
                     <Sparkles className="w-5 h-5" />
                   </div>
                   <h3 className="font-display font-bold text-sm text-slate-800">
@@ -502,7 +502,7 @@ export default function EmployeeHolidays() {
                   {monthHolidays.map((holiday) => (
                     <div
                       key={holiday.id}
-                      className="p-3.5 rounded-xl border border-amber-200/80 bg-amber-50/40 hover:bg-amber-50 transition flex items-center justify-between group"
+                      className="p-3.5 rounded-xl border border-teal-200/80 bg-teal-50/40 hover:bg-teal-50 transition flex items-center justify-between group"
                     >
                       <div className="min-w-0 pr-2">
                         <p className="font-semibold text-xs text-slate-900 truncate">
@@ -515,7 +515,7 @@ export default function EmployeeHolidays() {
                       <button
                         type="button"
                         onClick={() => setModalHoliday(holiday)}
-                        className="text-xs font-bold text-amber-600 hover:text-amber-700 px-2.5 py-1 rounded-lg hover:bg-amber-100 transition cursor-pointer flex-shrink-0"
+                        className="text-xs font-bold text-teal-600 hover:text-teal-700 px-2.5 py-1 rounded-lg hover:bg-teal-100 transition cursor-pointer flex-shrink-0"
                       >
                         View
                       </button>
@@ -542,14 +542,14 @@ export default function EmployeeHolidays() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search holidays..."
-                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
               />
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               >
                 <option value="All">All Holiday Types</option>
                 <option value="National Holiday">National Holidays</option>
@@ -584,8 +584,8 @@ export default function EmployeeHolidays() {
                         className={clsx(
                           'px-2.5 py-0.5 rounded-full text-[10px] font-semibold border',
                           holiday.type === 'National Holiday'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                            ? 'bg-teal-50 text-teal-800 border-teal-200'
+                            : 'bg-slate-100 text-slate-800 border-slate-200'
                         )}
                       >
                         {holiday.type}
@@ -598,7 +598,7 @@ export default function EmployeeHolidays() {
                       <button
                         type="button"
                         onClick={() => setModalHoliday(holiday)}
-                        className="text-xs font-bold text-amber-600 hover:text-amber-700 px-2 py-1 rounded hover:bg-amber-50 transition cursor-pointer"
+                        className="text-xs font-bold text-teal-600 hover:text-teal-700 px-2 py-1 rounded hover:bg-teal-50 transition cursor-pointer"
                       >
                         View
                       </button>
@@ -615,7 +615,7 @@ export default function EmployeeHolidays() {
       {modalHoliday && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in-0 zoom-in-95">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white relative">
+            <div className="bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] p-6 text-white relative">
               <button
                 type="button"
                 onClick={() => setModalHoliday(null)}
@@ -624,7 +624,7 @@ export default function EmployeeHolidays() {
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs">
+                <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs">
                   {modalHoliday.type}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/80 text-[10px] font-bold uppercase tracking-wider">
@@ -634,7 +634,7 @@ export default function EmployeeHolidays() {
               <h3 className="font-display font-bold text-2xl leading-tight">
                 {modalHoliday.name}
               </h3>
-              <p className="text-white/90 text-xs mt-1">
+              <p className="text-slate-300 text-xs mt-1">
                 {modalHoliday.day}, {modalHoliday.date}
               </p>
             </div>
@@ -649,14 +649,14 @@ export default function EmployeeHolidays() {
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5">
-                  <Clock className="w-4 h-4 text-amber-500" />
+                  <Clock className="w-4 h-4 text-teal-600" />
                   <div>
                     <p className="text-[10px] text-slate-400">Duration</p>
                     <p className="font-bold text-slate-800">Full Day Off</p>
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5">
-                  <MapPin className="w-4 h-4 text-amber-500" />
+                  <MapPin className="w-4 h-4 text-teal-600" />
                   <div>
                     <p className="text-[10px] text-slate-400">Applicable To</p>
                     <p className="font-bold text-slate-800">All Offices</p>
@@ -664,8 +664,8 @@ export default function EmployeeHolidays() {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 text-amber-800 flex items-start gap-2.5">
-                <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200 text-teal-900 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed">
                   Employees working on official holidays are eligible for compensatory off (comp-off) or overtime compensation per HR policy.
                 </p>

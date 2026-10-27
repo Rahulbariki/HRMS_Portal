@@ -17,35 +17,35 @@ export default function EmployeeProfile() {
   const [directorySearch, setDirectorySearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
 
-  // Currently selected employee for the ID card display (default: Rahul Bariki / logged-in user)
-  const [selectedEmpId, setSelectedEmpId] = useState(user?.id || 'SI0121');
+  // Currently selected employee for the ID card display
+  const [selectedEmpId, setSelectedEmpId] = useState(user?.id || 'IA-EM-001');
 
-  // Editable Profile Information initialized to Rahul Bariki's official details
+  // Editable Profile Information
   const [profileData, setProfileData] = useState({
-    firstName: 'Rahul',
-    lastName: 'Bariki',
-    fullName: 'BARIKI RAHUL',
-    employeeId: user?.id || 'SI0121',
-    email: 'bariki@shnoor.com',
-    loginEmail: user?.loginEmail || 'rahulbariki.intelliattend@gmail.com',
-    phone: '6281769923',
-    emergencyPhone: '8374273126',
-    emergencyContactName: 'B. Venkata Rao (Father)',
-    designation: 'INTERN – SOFTWARE DEVELOPMENT ENGINEER – INFORMATION TECHNOLOGY',
-    department: 'Information Technology',
-    manager: 'Aditya Dhiman',
-    doj: '05-10-2026',
+    firstName: user?.name ? user.name.split(' ')[0] : 'IntelliAttend',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : 'Employee',
+    fullName: user?.name ? user.name.toUpperCase() : 'INTELLIATTEND EMPLOYEE',
+    employeeId: user?.id || 'IA-EM-001',
+    email: user?.corporateEmail || 'employee@intelliattend.com',
+    loginEmail: user?.loginEmail || user?.email || 'employee.intelliattend@gmail.com',
+    phone: user?.phone || '9876543220',
+    emergencyPhone: user?.emergencyPhone || '9876543299',
+    emergencyContactName: 'B. Venkata Rao',
+    designation: user?.designation || 'SOFTWARE DEVELOPMENT ENGINEER – INFORMATION TECHNOLOGY',
+    department: user?.department || 'Information Technology',
+    manager: user?.manager || 'Engineering Manager',
+    doj: user?.doj || '01-01-2026',
     bloodGroup: 'O+',
     address: 'Flat 304, Silicon Heights, Madhapur, Hyderabad, TS 500081',
     dob: '15-08-2001',
     gender: 'Male',
     workLocation: 'Hyderabad Campus (Hybrid)',
-    employmentType: 'Full-time Intern',
+    employmentType: 'Full-time Permanent',
     shift: 'General Day (09:00 AM - 06:30 PM)',
     panNumber: 'ABCDE1234F',
     bankAccount: '•••• •••• 4892 (HDFC Bank)',
     pfNumber: 'PF/HYD/10928374',
-    avatar: user?.avatar || '/avatar_rahul.png',
+    avatar: user?.avatar || 'IE',
   });
 
   const handleInputChange = (field, value) => {
@@ -79,7 +79,7 @@ export default function EmployeeProfile() {
         doj: profileData.doj,
         bloodGroup: profileData.bloodGroup,
         avatar: profileData.avatar,
-        company: 'SHNOOR INTERNATIONAL',
+        company: 'IntelliAttend',
         department: profileData.department,
         manager: profileData.manager,
       };
@@ -96,7 +96,7 @@ export default function EmployeeProfile() {
         doj: found.doj,
         bloodGroup: found.bloodGroup,
         avatar: found.avatar,
-        company: found.company || 'SHNOOR INTERNATIONAL',
+        company: found.company || 'IntelliAttend',
         department: found.department,
         manager: found.manager,
       };
@@ -111,7 +111,7 @@ export default function EmployeeProfile() {
       doj: profileData.doj,
       bloodGroup: profileData.bloodGroup,
       avatar: profileData.avatar,
-      company: 'SHNOOR INTERNATIONAL',
+      company: 'IntelliAttend',
       department: profileData.department,
       manager: profileData.manager,
     };
@@ -152,7 +152,7 @@ export default function EmployeeProfile() {
               <button
                 type="button"
                 onClick={handleSaveProfile}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Changes</span>

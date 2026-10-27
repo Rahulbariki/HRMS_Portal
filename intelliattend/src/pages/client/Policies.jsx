@@ -181,14 +181,14 @@ const policies = [
       
       <h3>2. Approval Limits</h3>
       <ul>
-        <li>Up to $100: Manager approval</li>
-        <li>$100 - $500: Director approval</li>
-        <li>$500 - $2,000: VP approval</li>
-        <li>Over $2,000: CFO approval</li>
+        <li>Up to ₹100: Manager approval</li>
+        <li>₹100 - ₹500: Director approval</li>
+        <li>₹500 - ₹2,000: VP approval</li>
+        <li>Over ₹2,000: CFO approval</li>
       </ul>
       
       <h3>3. Documentation</h3>
-      <p>Original receipts required for all expenses over $25. Digital copies accepted via mobile app.</p>
+      <p>Original receipts required for all expenses over ₹25. Digital copies accepted via mobile app.</p>
       
       <h3>4. Reimbursement Timeline</h3>
       <p>Approved expenses reimbursed within 5 business days via payroll.</p>

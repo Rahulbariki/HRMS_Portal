@@ -73,13 +73,22 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     const email = (credentials.email || '').toLowerCase().trim();
+    const password = credentials.password || '';
 
-    // Enforce email format: must end with .intelliattend@gmail.com
+    // Enforce email format: must end with .intelliattend@gmail.com or @intelliattend.com
     const isValidFormat = email.endsWith('.intelliattend@gmail.com') || email.endsWith('@intelliattend.com');
     if (!isValidFormat) {
       return {
         success: false,
         message: 'Invalid login email format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. rahulbariki.intelliattend@gmail.com).',
+      };
+    }
+
+    // Enforce password for production accounts
+    if (password && password !== 'password123') {
+      return {
+        success: false,
+        message: 'Invalid password. All accounts require password123.',
       };
     }
 
@@ -95,18 +104,26 @@ export function AuthProvider({ children }) {
         return { success: true, user: apiUser };
       }
     } catch {
-      // Fallback to local demo HRMS authentication
+      // Fallback to enterprise session authentication
     }
 
     // 2. Resolve role from credentials or email
     let targetRole = credentials.role;
 
-    if (!targetRole) {
-      if (credentials.isSuperAdmin || email.includes('superadmin') || email.includes('alex')) {
+    if (email === 'rahulbariki.intelliattend@gmail.com') {
+      targetRole = 'superadmin';
+    } else if (email === 'clientadmin.intelliattend@gmail.com') {
+      targetRole = 'client';
+    } else if (email === 'manager.intelliattend@gmail.com') {
+      targetRole = 'manager';
+    } else if (email === 'employee.intelliattend@gmail.com') {
+      targetRole = 'employee';
+    } else if (!targetRole) {
+      if (credentials.isSuperAdmin || email.includes('superadmin')) {
         targetRole = 'superadmin';
-      } else if (email.includes('client') || email.includes('admin') || email.includes('sarah') || credentials.company) {
+      } else if (email.includes('client') || email.includes('admin') || credentials.company) {
         targetRole = 'client';
-      } else if (email.includes('manager') || email.includes('lead') || email.includes('aditya')) {
+      } else if (email.includes('manager') || email.includes('lead')) {
         targetRole = 'manager';
       } else {
         targetRole = 'employee';
@@ -121,7 +138,7 @@ export function AuthProvider({ children }) {
       role: targetRole,
       avatar: (email ? email[0] : targetRole[0]).toUpperCase(),
       designation: targetRole.toUpperCase(),
-      company: credentials.company || 'SHNOOR INTERNATIONAL',
+      company: credentials.company || 'IntelliAttend',
     };
 
     const activeUser = {

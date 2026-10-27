@@ -121,9 +121,9 @@ export default function EmployeeRegularization() {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 text-teal-400" />
           <span>Apply Regularization</span>
         </button>
       </div>
@@ -133,11 +133,11 @@ export default function EmployeeRegularization() {
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs text-slate-500 font-medium">Pending Requests</p>
-            <p className="font-display text-2xl font-bold text-amber-600 mt-1">
+            <p className="font-display text-2xl font-bold text-slate-900 mt-1">
               {requests.filter(r => r.status === 'Pending').length}
             </p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function EmployeeRegularization() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search regularizations..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
           />
         </div>
 
@@ -189,7 +189,7 @@ export default function EmployeeRegularization() {
               className={clsx(
                 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer',
                 filterStatus === status
-                  ? 'bg-amber-600 text-white shadow-2xs'
+                  ? 'bg-slate-900 text-teal-300 shadow-2xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
               )}
             >
@@ -262,10 +262,13 @@ export default function EmployeeRegularization() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white flex items-center justify-between">
+            <div className="bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] p-5 text-white flex items-center justify-between">
               <div>
-                <h3 className="font-display font-bold text-base">Regularize Attendance</h3>
-                <p className="text-white/90 text-xs mt-0.5">Submit time adjustment for manager approval</p>
+                <h3 className="font-display font-bold text-base flex items-center gap-2">
+                  <span>Regularize Attendance</span>
+                  <span className="w-2 h-2 rounded-full bg-teal-400"></span>
+                </h3>
+                <p className="text-slate-300 text-xs mt-0.5">Submit time adjustment for manager approval</p>
               </div>
               <button
                 type="button"
@@ -284,7 +287,7 @@ export default function EmployeeRegularization() {
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                 />
               </div>
 
@@ -296,7 +299,7 @@ export default function EmployeeRegularization() {
                     required
                     value={reqIn}
                     onChange={(e) => setReqIn(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
                 <div>
@@ -306,7 +309,7 @@ export default function EmployeeRegularization() {
                     required
                     value={reqOut}
                     onChange={(e) => setReqOut(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
               </div>
@@ -316,7 +319,7 @@ export default function EmployeeRegularization() {
                 <select
                   value={reasonType}
                   onChange={(e) => setReasonType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-teal-500/20"
                 >
                   <option value="Biometric / Scanner Issue">Biometric Scanner Failure / Network Glitch</option>
                   <option value="On-site Client Meeting">On-site Client Meeting / Official Travel</option>
@@ -332,12 +335,12 @@ export default function EmployeeRegularization() {
                   value={reasonDetails}
                   onChange={(e) => setReasonDetails(e.target.value)}
                   placeholder="Describe context for your reporting manager..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-800 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 text-teal-900 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed">
                   Regularization requests are routed directly to {user?.manager || 'Aditya Dhiman'} for verification.
                 </p>
@@ -353,7 +356,7 @@ export default function EmployeeRegularization() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition cursor-pointer shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition cursor-pointer shadow-xs"
                 >
                   Submit Request
                 </button>

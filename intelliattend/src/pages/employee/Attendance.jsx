@@ -131,7 +131,7 @@ export default function EmployeeAttendance() {
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <span className="text-xs font-semibold text-slate-500">Remote / WFH</span>
             <div>
-              <p className="text-2xl font-bold text-indigo-600">3</p>
+              <p className="text-2xl font-bold text-slate-900">3</p>
               <p className="text-[11px] text-slate-400 mt-0.5">Approved days</p>
             </div>
           </div>
@@ -145,14 +145,14 @@ export default function EmployeeAttendance() {
           </div>
 
           {/* Shift Schedule Box */}
-          <div className="col-span-2 sm:col-span-4 bg-indigo-50/70 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
+          <div className="col-span-2 sm:col-span-4 bg-teal-50/70 p-4 rounded-2xl border border-teal-200/80 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-slate-900 text-teal-300 flex items-center justify-center">
                 <Calendar className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-indigo-950">Assigned Shift: Standard Day (General)</p>
-                <p className="text-[11px] text-indigo-700">09:00 AM – 06:00 PM • 1 Hour Mandatory Lunch Break</p>
+                <p className="text-xs font-bold text-teal-950">Assigned Shift: Standard Day (General)</p>
+                <p className="text-[11px] text-teal-800">09:00 AM – 06:00 PM • 1 Hour Mandatory Lunch Break</p>
               </div>
             </div>
             <span className="hidden sm:inline-block text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
@@ -206,7 +206,7 @@ export default function EmployeeAttendance() {
                     <span className={clsx(
                       'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize',
                       log.status === 'present' ? 'bg-emerald-100 text-emerald-800'
-                        : log.status === 'wfh' ? 'bg-indigo-100 text-indigo-800'
+                        : log.status === 'wfh' ? 'bg-teal-50 text-teal-800 border border-teal-200'
                         : 'bg-amber-100 text-amber-800'
                     )}>
                       {log.status}

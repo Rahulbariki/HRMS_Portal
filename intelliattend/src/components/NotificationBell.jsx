@@ -150,7 +150,7 @@ export default function NotificationBell() {
               <button
                 type="button"
                 onClick={markAllRead}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
+                className="text-xs font-semibold text-teal-700 hover:text-teal-800 transition"
               >
                 Mark all read
               </button>
@@ -170,13 +170,13 @@ export default function NotificationBell() {
                   onClick={() => handleNotificationClick(notification)}
                   className={clsx(
                     'flex w-full gap-3 px-4 py-3 text-left transition hover:bg-slate-50 focus:outline-none',
-                    notification.read_at ? 'bg-white' : 'bg-indigo-50/40'
+                    notification.read_at ? 'bg-white' : 'bg-teal-50/50'
                   )}
                 >
                   <span
                     className={clsx(
                       'mt-1.5 h-2 w-2 flex-shrink-0 rounded-full',
-                      notification.read_at ? 'bg-slate-300' : 'bg-indigo-600'
+                      notification.read_at ? 'bg-slate-300' : 'bg-teal-500'
                     )}
                   />
                   <span className="min-w-0 flex-1">

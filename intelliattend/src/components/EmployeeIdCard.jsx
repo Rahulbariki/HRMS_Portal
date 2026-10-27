@@ -3,15 +3,15 @@ import { Download, Printer, RotateCw, QrCode, User } from 'lucide-react';
 
 export default function EmployeeIdCard({
   employee = {
-    name: 'BARIKI RAHUL',
-    designation: 'INTERN – SOFTWARE DEVELOPMENT ENGINEER – INFORMATION TECHNOLOGY',
-    employeeId: 'SI0121',
-    email: 'bariki@shnoor.com',
-    phone: '6281769923',
-    emergencyPhone: '8374273126',
-    doj: '05-10-2026',
+    name: 'INTELLIATTEND EMPLOYEE',
+    designation: 'SOFTWARE DEVELOPMENT ENGINEER – INFORMATION TECHNOLOGY',
+    employeeId: 'IA-EM-001',
+    email: 'employee@intelliattend.com',
+    phone: '9876543220',
+    emergencyPhone: '9876543299',
+    doj: '01-01-2026',
     bloodGroup: 'O+',
-    avatar: '/avatar_rahul.png',
+    avatar: 'IE',
     company: 'IntelliAttend',
   },
   showActions = true,
@@ -260,7 +260,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">ID NO</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-sm font-sans">
-                    {employee.employeeId || 'SI0121'}
+                    {employee.employeeId || 'IA-EM-001'}
                   </span>
                 </div>
 
@@ -269,7 +269,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">E-MAIL</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-normal text-xs font-sans truncate">
-                    {employee.email || 'bariki@shnoor.com'}
+                    {employee.email || 'employee@intelliattend.com'}
                   </span>
                 </div>
 
@@ -278,7 +278,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">PHONE</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-xs sm:text-[13px] font-sans">
-                    {employee.phone || '6281769923'}
+                    {employee.phone || '9876543220'}
                   </span>
                 </div>
 
@@ -287,7 +287,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">EMG.NO.</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-xs sm:text-[13px] font-sans">
-                    {employee.emergencyPhone || '8374273126'}
+                    {employee.emergencyPhone || '9876543299'}
                   </span>
                 </div>
 
@@ -296,7 +296,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">DOJ</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-xs sm:text-[13px] font-sans">
-                    {employee.doj || '05-10-2026'}
+                    {employee.doj || '01-01-2026'}
                   </span>
                 </div>
               </div>

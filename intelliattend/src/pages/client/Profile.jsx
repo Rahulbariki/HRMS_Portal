@@ -17,16 +17,16 @@ export default function ClientProfile() {
   const [selectedEmpId, setSelectedEmpId] = useState('client-admin');
 
   const [profileData, setProfileData] = useState({
-    firstName: 'Sarah',
-    lastName: 'Jenkins',
-    fullName: 'SARAH JENKINS',
-    employeeId: user?.id || 'SI0008',
-    email: user?.email || 'sarah.j@shnoor.com',
+    firstName: user?.name ? user.name.split(' ')[0] : 'Client',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : 'Administrator',
+    fullName: user?.name ? user.name.toUpperCase() : 'CLIENT ADMINISTRATOR',
+    employeeId: user?.id || 'IA-CA-001',
+    email: user?.email || 'clientadmin.intelliattend@gmail.com',
     phone: '9876543212',
     emergencyPhone: '9876543288',
-    designation: 'HR & PEOPLE OPERATIONS DIRECTOR – HUMAN RESOURCES',
+    designation: 'CLIENT ADMINISTRATOR & OPERATIONS DIRECTOR',
     department: 'Human Resources & Executive Admin',
-    manager: 'Board of Directors',
+    manager: 'Rahul Bariki (Super Admin)',
     doj: '15-02-2024',
     bloodGroup: 'A-',
     address: 'Plot 42, Jubilee Hills, Hyderabad, TS 500033',
@@ -35,8 +35,8 @@ export default function ClientProfile() {
     panNumber: 'ERTY56789X',
     bankAccount: '•••• •••• 6610 (HDFC Bank)',
     pfNumber: 'PF/HYD/10920008',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=250&auto=format&fit=crop&q=80',
-    company: 'SHNOOR INTERNATIONAL',
+    avatar: user?.avatar || 'CA',
+    company: 'IntelliAttend',
   });
 
   const handleInputChange = (field, value) => {
@@ -83,7 +83,7 @@ export default function ClientProfile() {
         doj: found.doj,
         bloodGroup: found.bloodGroup,
         avatar: found.avatar,
-        company: found.company || 'SHNOOR INTERNATIONAL',
+        company: found.company || 'IntelliAttend',
       };
     }
     return {
@@ -131,7 +131,7 @@ export default function ClientProfile() {
               <button
                 type="button"
                 onClick={handleSaveProfile}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Changes</span>

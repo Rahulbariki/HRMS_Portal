@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 
 const INVOICE_HISTORY = [
-  { id: 'INV-2026-009', date: 'Oct 01, 2026', amount: '$4,800.00', status: 'paid', description: 'Enterprise Annual Tier (500 Seats)' },
-  { id: 'INV-2025-009', date: 'Oct 01, 2025', amount: '$4,800.00', status: 'paid', description: 'Enterprise Annual Tier (500 Seats)' },
-  { id: 'INV-2024-009', date: 'Oct 01, 2024', amount: '$4,500.00', status: 'paid', description: 'Enterprise Annual Tier (500 Seats)' },
+  { id: 'INV-2026-009', date: 'Oct 01, 2026', amount: '₹4,800.00', status: 'paid', description: 'Enterprise Annual Tier (500 Seats)' },
+  { id: 'INV-2025-009', date: 'Oct 01, 2025', amount: '₹4,800.00', status: 'paid', description: 'Enterprise Annual Tier (500 Seats)' },
+  { id: 'INV-2024-009', date: 'Oct 01, 2024', amount: '₹4,500.00', status: 'paid', description: 'Enterprise Annual Tier (500 Seats)' },
 ];
 
 export default function ClientBillings() {
@@ -45,7 +45,7 @@ export default function ClientBillings() {
               <p className="text-sm text-slate-500">Billed annually on Oct 01, 2027</p>
             </div>
             <div className="text-right">
-              <span className="font-display text-3xl font-extrabold text-primary">$4,800</span>
+              <span className="font-display text-3xl font-extrabold text-primary">₹4,800</span>
               <span className="text-sm text-slate-400 font-medium"> / year</span>
             </div>
           </div>

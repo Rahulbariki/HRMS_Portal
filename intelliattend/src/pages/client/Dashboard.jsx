@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Users, FileCheck, DollarSign, HelpCircle, Settings, User } from 'lucide-react';
+import { Users, FileCheck, IndianRupee, HelpCircle, Settings, User } from 'lucide-react';
 
 const pages = [
   { label: 'Managers', path: '/client/managers', icon: Users, desc: 'Manage company managers' },
   { label: 'Policies', path: '/client/policies', icon: FileCheck, desc: 'View and manage policies' },
-  { label: 'Billings', path: '/client/billings', icon: DollarSign, desc: 'Billing and subscription info' },
+  { label: 'Billings', path: '/client/billings', icon: IndianRupee, desc: 'Billing and subscription info' },
   { label: 'Support', path: '/client/support', icon: HelpCircle, desc: 'Contact support team' },
   { label: 'Settings', path: '/client/settings', icon: Settings, desc: 'Company settings' },
   { label: 'Profile', path: '/client/profile', icon: User, desc: 'Manage your profile' },

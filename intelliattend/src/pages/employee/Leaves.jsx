@@ -103,9 +103,9 @@ export default function EmployeeLeaves() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-md transition-all self-start sm:self-auto"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 text-teal-400" />
           <span>Apply for Leave</span>
         </button>
       </div>
@@ -123,12 +123,12 @@ export default function EmployeeLeaves() {
             </div>
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
               <div
-                className="bg-indigo-600 h-full rounded-full"
+                className="bg-teal-500 h-full rounded-full"
                 style={{ width: `${((balances.annual.total - balances.annual.used) / balances.annual.total) * 100}%` }}
               />
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
             <CalendarCheck className="h-6 w-6" />
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function EmployeeLeaves() {
                 className={clsx(
                   'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                   activeTab === tab.id
-                    ? 'bg-indigo-50 text-indigo-700'
+                    ? 'bg-slate-900 text-teal-300 shadow-2xs font-bold'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                 )}
               >
@@ -297,7 +297,7 @@ export default function EmployeeLeaves() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                 >
                   <option value="Annual Leave">Annual Leave ({balances.annual.total - balances.annual.used} days left)</option>
                   <option value="Sick Leave">Sick Leave ({balances.sick.total - balances.sick.used} days left)</option>
@@ -313,7 +313,7 @@ export default function EmployeeLeaves() {
                     required
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
                 <div>
@@ -323,7 +323,7 @@ export default function EmployeeLeaves() {
                     required
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
               </div>
@@ -336,7 +336,7 @@ export default function EmployeeLeaves() {
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                   placeholder="Provide context for your team lead..."
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 resize-none"
                 />
               </div>
 
@@ -350,7 +350,7 @@ export default function EmployeeLeaves() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow"
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow"
                 >
                   Submit Request
                 </button>

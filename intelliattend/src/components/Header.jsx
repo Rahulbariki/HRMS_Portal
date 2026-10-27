@@ -64,10 +64,10 @@ export default function Header({ user, onToggleSidebar }) {
 
   const getRoleBadgeClass = (role) => {
     switch (role) {
-      case 'superadmin': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-      case 'client': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'manager': return 'bg-amber-100 text-amber-700 border-amber-200';
-      default: return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'superadmin': return 'bg-slate-900 text-teal-300 border-slate-700';
+      case 'client': return 'bg-slate-800 text-slate-100 border-slate-700';
+      case 'manager': return 'bg-teal-50 text-teal-800 border-teal-200';
+      default: return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     }
   };
 
@@ -125,11 +125,11 @@ export default function Header({ user, onToggleSidebar }) {
                     onClick={() => handleSwitchRole(key)}
                     className={clsx(
                       'w-full text-left px-3 py-2 flex items-center justify-between text-xs transition-colors',
-                      isActive ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-700 hover:bg-slate-50'
+                      isActive ? 'bg-teal-50 font-bold text-teal-900' : 'text-slate-700 hover:bg-slate-50'
                     )}
                   >
                     <span>{getRoleLabel(key)}</span>
-                    {isActive && <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded">Active</span>}
+                    {isActive && <span className="text-[10px] bg-teal-200 text-teal-900 font-bold px-1.5 py-0.5 rounded">Active</span>}
                   </button>
                 );
               })}
@@ -163,7 +163,7 @@ export default function Header({ user, onToggleSidebar }) {
                 className="w-8 h-8 rounded-full object-cover border border-slate-200"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs border border-indigo-200">
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-xs border border-teal-500/20">
                 {getInitials(user?.name)}
               </div>
             )}
