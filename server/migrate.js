@@ -79,11 +79,65 @@ async function migrate() {
         check_in VARCHAR(20),
         check_out VARCHAR(20),
         total_hours VARCHAR(20),
-        status VARCHAR(20) NOT NULL,
-        mode VARCHAR(50)
+        work_seconds INT DEFAULT 0,
+        status VARCHAR(20) NOT NULL DEFAULT 'present',
+        mode VARCHAR(50) DEFAULT 'Office',
+        verified_by VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
-    console.log('✓ Table "attendance_records" verified');
+
+    await sql`
+      DO $$
+      BEGIN
+        ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS work_seconds INT DEFAULT 0;
+        ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS verified_by VARCHAR(100);
+        ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      END
+      $$;
+    `;
+
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance_records (user_id, punch_date);
+    `;
+    console.log('✓ Table "attendance_records" verified and indexed');
+
+    // 4b. Leave requests table
+    await sql`
+      CREATE TABLE IF NOT EXISTS leave_requests (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        user_role VARCHAR(100),
+        department VARCHAR(100),
+        avatar_url TEXT,
+        leave_type VARCHAR(50) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        days INT NOT NULL DEFAULT 1,
+        reason TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        approved_by VARCHAR(100) DEFAULT 'Awaiting Manager Review',
+        applied_on DATE NOT NULL DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "leave_requests" verified');
+
+    // 4c. Leave balances table
+    await sql`
+      CREATE TABLE IF NOT EXISTS leave_balances (
+        user_id VARCHAR(50) PRIMARY KEY,
+        annual_total INT DEFAULT 20,
+        annual_used INT DEFAULT 0,
+        sick_total INT DEFAULT 10,
+        sick_used INT DEFAULT 0,
+        casual_total INT DEFAULT 6,
+        casual_used INT DEFAULT 0,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "leave_balances" verified');
 
     // 5. Transactions table
     await sql`
@@ -325,6 +379,80 @@ async function migrate() {
       ON CONFLICT (id) DO NOTHING;
     `;
     console.log('✓ Financial transactions seeded in INR (₹)');
+
+    // Clean up any unauthorized or dummy attendance/leave records
+    await sql`
+      DELETE FROM attendance_records
+      WHERE user_id NOT IN ('IA-SA-001', 'IA-CA-001', 'IA-MG-001', 'IA-EM-001');
+    `;
+    await sql`
+      DELETE FROM leave_requests
+      WHERE user_id NOT IN ('IA-SA-001', 'IA-CA-001', 'IA-MG-001', 'IA-EM-001');
+    `;
+
+    // Seed leave balances
+    const initialBalances = [
+      { user_id: 'IA-SA-001', annual_total: 24, annual_used: 0, sick_total: 12, sick_used: 0, casual_total: 6, casual_used: 0 },
+      { user_id: 'IA-CA-001', annual_total: 22, annual_used: 3, sick_total: 10, sick_used: 1, casual_total: 6, casual_used: 1 },
+      { user_id: 'IA-MG-001', annual_total: 20, annual_used: 4, sick_total: 10, sick_used: 2, casual_total: 6, casual_used: 2 },
+      { user_id: 'IA-EM-001', annual_total: 20, annual_used: 5, sick_total: 10, sick_used: 2, casual_total: 6, casual_used: 2 },
+    ];
+    for (const b of initialBalances) {
+      await sql`
+        INSERT INTO leave_balances (user_id, annual_total, annual_used, sick_total, sick_used, casual_total, casual_used)
+        VALUES (${b.user_id}, ${b.annual_total}, ${b.annual_used}, ${b.sick_total}, ${b.sick_used}, ${b.casual_total}, ${b.casual_used})
+        ON CONFLICT (user_id) DO UPDATE SET
+          annual_total = ${b.annual_total},
+          annual_used = ${b.annual_used},
+          sick_total = ${b.sick_total},
+          sick_used = ${b.sick_used},
+          casual_total = ${b.casual_total},
+          casual_used = ${b.casual_used};
+      `;
+    }
+    console.log('✓ Leave balances initialized for production personnel');
+
+    // Seed initial production leave requests for employee Sarah Miller
+    await sql`
+      INSERT INTO leave_requests (id, user_id, user_name, user_role, department, avatar_url, leave_type, start_date, end_date, days, reason, status, approved_by, applied_on)
+      VALUES 
+        (101, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology', '', 'Annual Leave', '2026-11-12', '2026-11-15', 4, 'Family vacation & travel', 'approved', 'David Chen (Engineering Director)', '2026-10-20'),
+        (102, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology', '', 'Sick Leave', '2026-10-24', '2026-10-24', 1, 'Viral fever and doctor consultation', 'approved', 'David Chen (Engineering Director)', '2026-10-23'),
+        (103, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology', '', 'Casual Leave', '2026-11-28', '2026-11-29', 2, 'Personal legal documentation', 'pending', 'Awaiting Manager Review', '2026-10-25')
+      ON CONFLICT (id) DO NOTHING;
+    `;
+    console.log('✓ Production leave requests seeded');
+
+    // Seed realistic attendance records for recent workdays
+    const attendanceData = [
+      { user_id: 'IA-EM-001', user_name: 'Sarah Miller', department: 'Engineering & Technology', punch_date: '2026-10-27', check_in: '09:02 AM', check_out: '', total_hours: 'Calculating...', work_seconds: 18420, status: 'present', mode: 'Office' },
+      { user_id: 'IA-EM-001', user_name: 'Sarah Miller', department: 'Engineering & Technology', punch_date: '2026-10-26', check_in: '09:05 AM', check_out: '06:12 PM', total_hours: '8h 07m', work_seconds: 29220, status: 'present', mode: 'Office' },
+      { user_id: 'IA-EM-001', user_name: 'Sarah Miller', department: 'Engineering & Technology', punch_date: '2026-10-25', check_in: '09:28 AM', check_out: '06:30 PM', total_hours: '8h 02m', work_seconds: 28920, status: 'late', mode: 'Office' },
+      { user_id: 'IA-EM-001', user_name: 'Sarah Miller', department: 'Engineering & Technology', punch_date: '2026-10-24', check_in: '08:55 AM', check_out: '05:58 PM', total_hours: '8h 03m', work_seconds: 28980, status: 'wfh', mode: 'Remote / WFH' },
+      { user_id: 'IA-EM-001', user_name: 'Sarah Miller', department: 'Engineering & Technology', punch_date: '2026-10-23', check_in: '09:01 AM', check_out: '06:05 PM', total_hours: '8h 04m', work_seconds: 29040, status: 'present', mode: 'Office' },
+
+      { user_id: 'IA-MG-001', user_name: 'David Chen', department: 'Engineering & Technology', punch_date: '2026-10-27', check_in: '08:50 AM', check_out: '', total_hours: 'Calculating...', work_seconds: 19140, status: 'present', mode: 'Office' },
+      { user_id: 'IA-MG-001', user_name: 'David Chen', department: 'Engineering & Technology', punch_date: '2026-10-26', check_in: '08:55 AM', check_out: '06:20 PM', total_hours: '8h 25m', work_seconds: 30300, status: 'present', mode: 'Office' },
+
+      { user_id: 'IA-CA-001', user_name: 'Client Administrator', department: 'Human Resources & Corporate Governance', punch_date: '2026-10-27', check_in: '09:15 AM', check_out: '', total_hours: 'Calculating...', work_seconds: 17640, status: 'present', mode: 'Office' },
+
+      { user_id: 'IA-SA-001', user_name: 'Bariki Rahul', department: 'Platform Administration & Security', punch_date: '2026-10-27', check_in: '08:30 AM', check_out: '', total_hours: 'Calculating...', work_seconds: 20340, status: 'present', mode: 'Corporate HQ' },
+    ];
+
+    for (const a of attendanceData) {
+      await sql`
+        INSERT INTO attendance_records (user_id, user_name, department, punch_date, check_in, check_out, total_hours, work_seconds, status, mode)
+        VALUES (${a.user_id}, ${a.user_name}, ${a.department}, ${a.punch_date}, ${a.check_in}, ${a.check_out}, ${a.total_hours}, ${a.work_seconds}, ${a.status}, ${a.mode})
+        ON CONFLICT (user_id, punch_date) DO UPDATE SET
+          check_in = ${a.check_in},
+          check_out = ${a.check_out},
+          total_hours = ${a.total_hours},
+          work_seconds = ${a.work_seconds},
+          status = ${a.status},
+          mode = ${a.mode};
+      `;
+    }
+    console.log('✓ Attendance records synchronized for production personnel');
 
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {

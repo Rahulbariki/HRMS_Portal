@@ -1,22 +1,61 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Play, Square, History } from 'lucide-react';
+import { Calendar, Play, Square, History, Loader2, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
-
-const ATTENDANCE_LOGS = [
-  { date: '2026-10-26 (Today)', in: '09:02 AM', out: '—', hours: 'Calculating...', status: 'present', location: 'Office' },
-  { date: '2026-10-25', in: '09:05 AM', out: '06:12 PM', hours: '8h 07m', status: 'present', location: 'Office' },
-  { date: '2026-10-24', in: '09:28 AM', out: '06:30 PM', hours: '8h 02m', status: 'late', location: 'Office' },
-  { date: '2026-10-23', in: '08:55 AM', out: '05:58 PM', hours: '8h 03m', status: 'wfh', location: 'Remote / WFH' },
-  { date: '2026-10-22', in: '09:01 AM', out: '06:05 PM', hours: '8h 04m', status: 'present', location: 'Office' },
-  { date: '2026-10-21', in: '09:10 AM', out: '06:15 PM', hours: '8h 05m', status: 'present', location: 'Office' },
-];
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
 export default function EmployeeAttendance() {
-  const [clockedIn, setClockedIn] = useState(true);
-  const [clockInTime, setClockInTime] = useState('09:02 AM');
-  const [currentTime, setCurrentTime] = useState(() => new Date().toLocaleTimeString());
-  const [workSeconds, setWorkSeconds] = useState(18420); // ~5h 07m
+  const { user } = useAuth();
+  const userId = user?.id || 'IA-EM-001';
 
+  const [clockedIn, setClockedIn] = useState(false);
+  const [clockInTime, setClockInTime] = useState('—');
+  const [currentTime, setCurrentTime] = useState(() => new Date().toLocaleTimeString());
+  const [workSeconds, setWorkSeconds] = useState(0);
+  const [punchLoading, setPunchLoading] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [logs, setLogs] = useState([]);
+  const [summary, setSummary] = useState({ present: 18, absent: 0, late: 1, wfh: 1 });
+  const [locationMode, setLocationMode] = useState('Headquarters (Office)');
+
+  // 1. Fetch live attendance status, logs, and summary from Neon PostgreSQL
+  const loadAttendanceData = async () => {
+    try {
+      const [todayRes, logsRes, sumRes] = await Promise.all([
+        api.get(`/attendance/today?userId=${userId}`),
+        api.get(`/attendance/logs?userId=${userId}`),
+        api.get(`/employee/attendance/summary?userId=${userId}`)
+      ]);
+
+      if (todayRes.data?.success && todayRes.data?.data) {
+        const d = todayRes.data.data;
+        setClockedIn(d.clockedIn);
+        setClockInTime(d.clockInTime || '—');
+        setWorkSeconds(d.workSeconds || 0);
+        setLocationMode(d.location || 'Headquarters (Office)');
+      }
+
+      if (logsRes.data?.success && Array.isArray(logsRes.data?.data)) {
+        setLogs(logsRes.data.data);
+      }
+
+      if (sumRes.data?.success && Array.isArray(sumRes.data?.data)) {
+        const p = sumRes.data.data.find(s => s.label === 'Present')?.value || 0;
+        const a = sumRes.data.data.find(s => s.label === 'Absent')?.value || 0;
+        const l = sumRes.data.data.find(s => s.label === 'Late')?.value || 0;
+        const w = sumRes.data.data.find(s => s.label === 'WFH')?.value || 0;
+        setSummary({ present: Number(p), absent: Number(a), late: Number(l), wfh: Number(w) });
+      }
+    } catch (err) {
+      console.error('Error loading attendance data:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadAttendanceData();
+  }, [userId]);
+
+  // Live seconds ticker
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString());
@@ -34,12 +73,33 @@ export default function EmployeeAttendance() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleToggleClock = () => {
-    if (clockedIn) {
-      setClockedIn(false);
-    } else {
-      setClockedIn(true);
-      setClockInTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const handleToggleClock = async () => {
+    setPunchLoading(true);
+    try {
+      const mode = locationMode.includes('Remote') ? 'Remote / WFH' : 'Office';
+      const res = await api.post('/attendance/punch', {
+        userId,
+        mode,
+        currentWorkSeconds: workSeconds
+      });
+
+      if (res.data?.success && res.data?.data) {
+        const d = res.data.data;
+        setClockedIn(d.clockedIn);
+        setClockInTime(d.clockInTime);
+        if (d.workSeconds) setWorkSeconds(d.workSeconds);
+        setFeedback(res.data.message || (d.clockedIn ? 'Clocked in successfully!' : 'Clocked out successfully!'));
+        setTimeout(() => setFeedback(''), 4000);
+        // Refresh history table
+        const logsRes = await api.get(`/attendance/logs?userId=${userId}`);
+        if (logsRes.data?.success && Array.isArray(logsRes.data?.data)) {
+          setLogs(logsRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Punch toggle failed:', err);
+    } finally {
+      setPunchLoading(false);
     }
   };
 
@@ -49,12 +109,24 @@ export default function EmployeeAttendance() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-900 tracking-tight">Attendance & Time Tracker</h1>
-          <p className="text-sm text-slate-500 mt-1">Daily clock-in/out records, shift compliance, and work hours</p>
+          <p className="text-sm text-slate-500 mt-1">Daily clock-in/out records, shift compliance, and work hours synchronized with Neon PostgreSQL</p>
         </div>
         <div className="text-xs text-slate-500 font-medium bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm self-start sm:self-auto">
           Current System Time: <span className="font-mono font-bold text-slate-900">{currentTime}</span>
         </div>
       </div>
+
+      {feedback && (
+        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-teal-600" />
+            <span className="font-semibold">{feedback}</span>
+          </div>
+          <button type="button" onClick={() => setFeedback('')} className="text-teal-600 font-bold">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Clock-In Widget & Shift Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -83,19 +155,22 @@ export default function EmployeeAttendance() {
           <div className="space-y-3">
             <div className="flex justify-between text-xs text-slate-500 px-1">
               <span>Clock-in: <strong className="text-slate-800">{clockInTime}</strong></span>
-              <span>Location: <strong className="text-slate-800">Headquarters (Office)</strong></span>
+              <span>Location: <strong className="text-slate-800">{locationMode}</strong></span>
             </div>
 
             <button
               onClick={handleToggleClock}
+              disabled={punchLoading}
               className={clsx(
-                'w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white shadow-md transition-all',
+                'w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white shadow-md transition-all cursor-pointer disabled:opacity-50',
                 clockedIn
                   ? 'bg-rose-600 hover:bg-rose-700'
                   : 'bg-emerald-600 hover:bg-emerald-700'
               )}
             >
-              {clockedIn ? (
+              {punchLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : clockedIn ? (
                 <>
                   <Square className="h-4 w-4" />
                   <span>Clock Out for the Day</span>
@@ -115,7 +190,7 @@ export default function EmployeeAttendance() {
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <span className="text-xs font-semibold text-slate-500">Days Present</span>
             <div>
-              <p className="text-2xl font-bold text-emerald-700">18</p>
+              <p className="text-2xl font-bold text-emerald-700">{summary.present}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">This month</p>
             </div>
           </div>
@@ -123,7 +198,7 @@ export default function EmployeeAttendance() {
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <span className="text-xs font-semibold text-slate-500">Late Arrivals</span>
             <div>
-              <p className="text-2xl font-bold text-amber-600">1</p>
+              <p className="text-2xl font-bold text-amber-600">{summary.late}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">Grace limit: 3/mo</p>
             </div>
           </div>
@@ -131,7 +206,7 @@ export default function EmployeeAttendance() {
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <span className="text-xs font-semibold text-slate-500">Remote / WFH</span>
             <div>
-              <p className="text-2xl font-bold text-slate-900">3</p>
+              <p className="text-2xl font-bold text-slate-900">{summary.wfh}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">Approved days</p>
             </div>
           </div>
@@ -151,8 +226,8 @@ export default function EmployeeAttendance() {
                 <Calendar className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-teal-950">Assigned Shift: Standard Day (General)</p>
-                <p className="text-[11px] text-teal-800">09:00 AM – 06:00 PM • 1 Hour Mandatory Lunch Break</p>
+                <p className="text-xs font-bold text-teal-950">Assigned Shift: General Day (Standard)</p>
+                <p className="text-[11px] text-teal-800">09:00 AM – 06:30 PM • 1 Hour Mandatory Lunch Break</p>
               </div>
             </div>
             <span className="hidden sm:inline-block text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
@@ -167,9 +242,9 @@ export default function EmployeeAttendance() {
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-slate-500" />
-            <h3 className="font-semibold text-sm text-slate-900">Recent Attendance Logs</h3>
+            <h3 className="font-semibold text-sm text-slate-900">Live Attendance Logs (PostgreSQL)</h3>
           </div>
-          <span className="text-xs text-slate-400 font-medium">October 2026</span>
+          <span className="text-xs text-slate-400 font-medium">{logs.length} Records</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -185,8 +260,8 @@ export default function EmployeeAttendance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {ATTENDANCE_LOGS.map((log, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+              {logs.map((log, idx) => (
+                <tr key={log.id || idx} className="hover:bg-slate-50/70 transition-colors">
                   <td className="px-6 py-4 font-semibold text-slate-900">
                     {log.date}
                   </td>

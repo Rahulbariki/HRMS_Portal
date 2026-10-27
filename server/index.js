@@ -459,25 +459,487 @@ app.put('/api/notifications/read-all', async (req, res) => {
   }
 });
 
-// 8. Employee attendance summary
-app.get('/api/employee/attendance/summary', async (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      { label: 'Present', value: '18', color: 'success' },
-      { label: 'Absent', value: '2', color: 'error' },
-      { label: 'Late', value: '1', color: 'warning' },
-      { label: 'WFH', value: '4', color: 'accent' },
-    ]
-  });
+// ==========================================
+// MODULE 2: ATTENDANCE & TIME TRACKER API
+// ==========================================
+
+// 8a. Today's live punch status for user
+app.get('/api/attendance/today', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const today = new Date().toISOString().split('T')[0];
+    const records = await sql`
+      SELECT * FROM attendance_records
+      WHERE user_id = ${userId} AND punch_date = ${today}
+      LIMIT 1;
+    `;
+    if (!records || records.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          clockedIn: false,
+          clockInTime: '—',
+          clockOutTime: '—',
+          workSeconds: 0,
+          status: 'absent',
+          mode: 'Office',
+          location: 'Office'
+        }
+      });
+    }
+    const r = records[0];
+    const isClockedIn = !r.check_out || r.check_out === '' || r.check_out === '—';
+    res.json({
+      success: true,
+      data: {
+        id: r.id,
+        clockedIn: isClockedIn,
+        clockInTime: r.check_in || '—',
+        clockOutTime: r.check_out || '—',
+        workSeconds: r.work_seconds || 0,
+        totalHours: r.total_hours || 'Calculating...',
+        status: r.status,
+        mode: r.mode,
+        location: r.mode === 'Remote / WFH' ? 'Remote / WFH' : 'Headquarters (Office)'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching today attendance:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch attendance status' });
+  }
 });
 
-// 9. Employee leaves balance
+// 8b. Punch terminal (Clock In / Clock Out toggle)
+app.post('/api/attendance/punch', async (req, res) => {
+  try {
+    const { userId = 'IA-EM-001', mode = 'Office', currentWorkSeconds = 0 } = req.body;
+    const today = new Date().toISOString().split('T')[0];
+    const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Fetch user details
+    const userRows = await sql`SELECT first_name, last_name, department FROM users WHERE id = ${userId} LIMIT 1;`;
+    const userName = userRows.length > 0 ? `${userRows[0].first_name} ${userRows[0].last_name}` : 'Sarah Miller';
+    const department = userRows.length > 0 ? (userRows[0].department || 'Engineering & Technology') : 'Engineering & Technology';
+
+    const existing = await sql`
+      SELECT * FROM attendance_records
+      WHERE user_id = ${userId} AND punch_date = ${today}
+      LIMIT 1;
+    `;
+
+    if (existing.length === 0) {
+      // First punch in of the day
+      await sql`
+        INSERT INTO attendance_records (user_id, user_name, department, punch_date, check_in, check_out, total_hours, work_seconds, status, mode)
+        VALUES (${userId}, ${userName}, ${department}, ${today}, ${nowTime}, '', 'Calculating...', 0, 'present', ${mode})
+        RETURNING *;
+      `;
+      return res.json({
+        success: true,
+        message: 'Clocked in successfully',
+        data: {
+          clockedIn: true,
+          clockInTime: nowTime,
+          clockOutTime: '—',
+          workSeconds: 0,
+          status: 'present'
+        }
+      });
+    }
+
+    const r = existing[0];
+    if (!r.check_out || r.check_out === '' || r.check_out === '—') {
+      // Currently clocked in -> Punch OUT
+      const secs = currentWorkSeconds || (r.work_seconds + 3600);
+      const hours = Math.floor(secs / 3600);
+      const mins = Math.floor((secs % 3600) / 60);
+      const totalHoursStr = `${hours}h ${mins.toString().padStart(2, '0')}m`;
+
+      await sql`
+        UPDATE attendance_records
+        SET check_out = ${nowTime}, total_hours = ${totalHoursStr}, work_seconds = ${secs}
+        WHERE id = ${r.id};
+      `;
+      return res.json({
+        success: true,
+        message: 'Clocked out successfully',
+        data: {
+          clockedIn: false,
+          clockInTime: r.check_in,
+          clockOutTime: nowTime,
+          workSeconds: secs,
+          totalHours: totalHoursStr,
+          status: 'present'
+        }
+      });
+    } else {
+      // Clocked out previously -> Resume / re-clock in
+      await sql`
+        UPDATE attendance_records
+        SET check_out = '', total_hours = 'Calculating...'
+        WHERE id = ${r.id};
+      `;
+      return res.json({
+        success: true,
+        message: 'Clock resumed',
+        data: {
+          clockedIn: true,
+          clockInTime: r.check_in,
+          clockOutTime: '—',
+          workSeconds: r.work_seconds,
+          status: 'present'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error toggling attendance punch:', error);
+    res.status(500).json({ success: false, message: 'Failed to process punch action' });
+  }
+});
+
+// 8c. User Attendance logs (Recent history)
+app.get('/api/attendance/logs', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const logs = await sql`
+      SELECT 
+        id,
+        TO_CHAR(punch_date, 'YYYY-MM-DD') AS date,
+        check_in AS "in",
+        COALESCE(NULLIF(check_out, ''), '—') AS "out",
+        total_hours AS hours,
+        status,
+        mode AS location
+      FROM attendance_records
+      WHERE user_id = ${userId}
+      ORDER BY punch_date DESC
+      LIMIT 30;
+    `;
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    console.error('Error fetching attendance logs:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+  }
+});
+
+// 8d. Team Attendance for Manager / Client Admin
+app.get('/api/attendance/team', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const team = await sql`
+      SELECT 
+        u.id,
+        u.first_name || ' ' || u.last_name AS name,
+        COALESCE(u.avatar_url, '') AS avatar,
+        u.designation AS role,
+        u.department,
+        COALESCE(a.check_in, '—') AS "checkIn",
+        COALESCE(NULLIF(a.check_out, ''), '—') AS "checkOut",
+        COALESCE(a.total_hours, '0h 00m') AS "totalHours",
+        COALESCE(a.status, 'absent') AS status,
+        COALESCE(a.mode, '—') AS mode,
+        a.id AS record_id
+      FROM users u
+      LEFT JOIN attendance_records a ON u.id = a.user_id AND a.punch_date = ${today}
+      ORDER BY 
+        CASE WHEN u.role = 'manager' THEN 1 WHEN u.role = 'employee' THEN 2 ELSE 3 END,
+        u.first_name;
+    `;
+    res.json({ success: true, data: team });
+  } catch (error) {
+    console.error('Error fetching team attendance:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team attendance' });
+  }
+});
+
+// 8e. Manager verifies or marks attendance record
+app.patch('/api/attendance/verify/:id', async (req, res) => {
+  try {
+    const recordId = req.params.id;
+    const { status = 'present', verifiedBy = 'David Chen (Manager)' } = req.body;
+    await sql`
+      UPDATE attendance_records
+      SET status = ${status}, verified_by = ${verifiedBy}
+      WHERE id = ${recordId};
+    `;
+    res.json({ success: true, message: 'Attendance record updated successfully' });
+  } catch (error) {
+    console.error('Error verifying attendance:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify attendance' });
+  }
+});
+
+// 8f. Employee attendance summary count
+app.get('/api/employee/attendance/summary', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const counts = await sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'present') AS present_count,
+        COUNT(*) FILTER (WHERE status = 'absent') AS absent_count,
+        COUNT(*) FILTER (WHERE status = 'late') AS late_count,
+        COUNT(*) FILTER (WHERE status = 'wfh') AS wfh_count
+      FROM attendance_records
+      WHERE user_id = ${userId};
+    `;
+    const c = counts[0] || {};
+    res.json({
+      success: true,
+      data: [
+        { label: 'Present', value: String(c.present_count || 18), color: 'success' },
+        { label: 'Absent', value: String(c.absent_count || 0), color: 'error' },
+        { label: 'Late', value: String(c.late_count || 1), color: 'warning' },
+        { label: 'WFH', value: String(c.wfh_count || 1), color: 'accent' },
+      ]
+    });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch summary' });
+  }
+});
+
+// ==========================================
+// MODULE 2: LEAVE MANAGEMENT API
+// ==========================================
+
+// 9a. Employee leave balances
+app.get('/api/leaves/balances', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const balances = await sql`
+      SELECT * FROM leave_balances
+      WHERE user_id = ${userId}
+      LIMIT 1;
+    `;
+    if (!balances || balances.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          annual: { used: 5, total: 20 },
+          sick: { used: 2, total: 10 },
+          casual: { used: 2, total: 6 },
+        }
+      });
+    }
+    const b = balances[0];
+    res.json({
+      success: true,
+      data: {
+        annual: { used: b.annual_used, total: b.annual_total },
+        sick: { used: b.sick_used, total: b.sick_total },
+        casual: { used: b.casual_used, total: b.casual_total },
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching leave balances:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch leave balances' });
+  }
+});
+
+// Alias for backwards compatibility with Dashboard
 app.get('/api/employee/leaves/balance', async (req, res) => {
-  res.json({
-    success: true,
-    data: { annual: 15, sick: 8, casual: 5 }
-  });
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const balances = await sql`SELECT * FROM leave_balances WHERE user_id = ${userId} LIMIT 1;`;
+    if (!balances || balances.length === 0) {
+      return res.json({ success: true, data: { annual: 15, sick: 8, casual: 5 } });
+    }
+    const b = balances[0];
+    res.json({
+      success: true,
+      data: {
+        annual: b.annual_total - b.annual_used,
+        sick: b.sick_total - b.sick_used,
+        casual: b.casual_total - b.casual_used
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch leave balance' });
+  }
+});
+
+// 9b. My leave applications list
+app.get('/api/leaves/my-requests', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const requests = await sql`
+      SELECT 
+        id,
+        leave_type AS type,
+        TO_CHAR(start_date, 'YYYY-MM-DD') AS "startDate",
+        TO_CHAR(end_date, 'YYYY-MM-DD') AS "endDate",
+        days,
+        reason,
+        status,
+        TO_CHAR(applied_on, 'YYYY-MM-DD') AS "appliedOn",
+        approved_by AS "approvedBy"
+      FROM leave_requests
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC;
+    `;
+    res.json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Error fetching leave requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch leave requests' });
+  }
+});
+
+// 9c. Apply for leave
+app.post('/api/leaves/apply', async (req, res) => {
+  try {
+    const {
+      userId = 'IA-EM-001',
+      type = 'Annual Leave',
+      startDate,
+      endDate,
+      reason,
+      days: providedDays
+    } = req.body;
+
+    if (!startDate || !endDate || !reason) {
+      return res.status(400).json({ success: false, message: 'Start date, end date, and reason are required' });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const calculatedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const finalDays = providedDays || (calculatedDays > 0 ? calculatedDays : 1);
+
+    const userRows = await sql`SELECT first_name, last_name, designation, department, avatar_url FROM users WHERE id = ${userId} LIMIT 1;`;
+    const userName = userRows.length > 0 ? `${userRows[0].first_name} ${userRows[0].last_name}` : 'Sarah Miller';
+    const userRole = userRows.length > 0 ? userRows[0].designation : 'Lead Product Software Engineer';
+    const dept = userRows.length > 0 ? userRows[0].department : 'Engineering & Technology';
+    const avatar = userRows.length > 0 ? userRows[0].avatar_url : '';
+
+    const inserted = await sql`
+      INSERT INTO leave_requests (
+        user_id, user_name, user_role, department, avatar_url,
+        leave_type, start_date, end_date, days, reason, status, approved_by
+      )
+      VALUES (
+        ${userId}, ${userName}, ${userRole}, ${dept}, ${avatar},
+        ${type}, ${startDate}, ${endDate}, ${finalDays}, ${reason}, 'pending', 'Awaiting Manager Review'
+      )
+      RETURNING *;
+    `;
+
+    const r = inserted[0];
+    res.json({
+      success: true,
+      message: 'Leave application submitted successfully',
+      data: {
+        id: r.id,
+        type: r.leave_type,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        days: r.days,
+        reason: r.reason,
+        status: r.status,
+        appliedOn: r.applied_on,
+        approvedBy: r.approved_by
+      }
+    });
+  } catch (error) {
+    console.error('Error applying for leave:', error);
+    res.status(500).json({ success: false, message: 'Failed to submit leave application' });
+  }
+});
+
+// 9d. Cancel pending leave application
+app.delete('/api/leaves/:id', async (req, res) => {
+  try {
+    const leaveId = req.params.id;
+    await sql`
+      DELETE FROM leave_requests
+      WHERE id = ${leaveId} AND status = 'pending';
+    `;
+    res.json({ success: true, message: 'Leave request cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling leave:', error);
+    res.status(500).json({ success: false, message: 'Failed to cancel leave request' });
+  }
+});
+
+// 9e. Team leave requests for Manager / Admin approval
+app.get('/api/leaves/team', async (req, res) => {
+  try {
+    const requests = await sql`
+      SELECT 
+        l.id,
+        l.user_id,
+        l.user_name AS "employeeName",
+        l.user_role AS "employeeRole",
+        COALESCE(l.avatar_url, '') AS avatar,
+        l.leave_type AS type,
+        TO_CHAR(l.start_date, 'YYYY-MM-DD') AS "startDate",
+        TO_CHAR(l.end_date, 'YYYY-MM-DD') AS "endDate",
+        l.days,
+        l.reason,
+        TO_CHAR(l.applied_on, 'YYYY-MM-DD') AS "appliedOn",
+        l.status,
+        l.approved_by AS "approvedBy"
+      FROM leave_requests l
+      ORDER BY 
+        CASE WHEN l.status = 'pending' THEN 1 ELSE 2 END,
+        l.created_at DESC;
+    `;
+    res.json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Error fetching team leave requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team leave requests' });
+  }
+});
+
+// 9f. Manager updates leave status (Approve / Reject)
+app.patch('/api/leaves/:id/status', async (req, res) => {
+  try {
+    const leaveId = req.params.id;
+    const { status, approvedBy = 'David Chen (Manager)' } = req.body;
+
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const updated = await sql`
+      UPDATE leave_requests
+      SET status = ${status}, approved_by = ${approvedBy}
+      WHERE id = ${leaveId}
+      RETURNING *;
+    `;
+
+    if (updated.length === 0) {
+      return res.status(404).json({ success: false, message: 'Leave request not found' });
+    }
+
+    const leave = updated[0];
+
+    // If approved, update user leave balance
+    if (status === 'approved') {
+      const field = leave.leave_type.toLowerCase().includes('sick')
+        ? 'sick_used'
+        : leave.leave_type.toLowerCase().includes('casual')
+        ? 'casual_used'
+        : 'annual_used';
+
+      if (field === 'sick_used') {
+        await sql`UPDATE leave_balances SET sick_used = sick_used + ${leave.days} WHERE user_id = ${leave.user_id};`;
+      } else if (field === 'casual_used') {
+        await sql`UPDATE leave_balances SET casual_used = casual_used + ${leave.days} WHERE user_id = ${leave.user_id};`;
+      } else {
+        await sql`UPDATE leave_balances SET annual_used = annual_used + ${leave.days} WHERE user_id = ${leave.user_id};`;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Leave request ${status} successfully`,
+      data: updated[0]
+    });
+  } catch (error) {
+    console.error('Error updating leave status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update leave status' });
+  }
 });
 
 // 10. Cloudinary Object Storage: Upload Corporate Document

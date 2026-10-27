@@ -1,50 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, Plus, CheckCircle2, Clock, XCircle,
-  CalendarCheck, X
+  CalendarCheck, X, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
-
-const INITIAL_LEAVES = [
-  {
-    id: 1,
-    type: 'Annual Leave',
-    startDate: '2026-11-12',
-    endDate: '2026-11-15',
-    days: 4,
-    reason: 'Family vacation & travel',
-    status: 'approved',
-    appliedOn: '2026-10-20',
-    approvedBy: 'David Chen (Manager)',
-  },
-  {
-    id: 2,
-    type: 'Sick Leave',
-    startDate: '2026-10-24',
-    endDate: '2026-10-24',
-    days: 1,
-    reason: 'Viral fever and doctor consultation',
-    status: 'approved',
-    appliedOn: '2026-10-23',
-    approvedBy: 'David Chen (Manager)',
-  },
-  {
-    id: 3,
-    type: 'Casual Leave',
-    startDate: '2026-11-28',
-    endDate: '2026-11-29',
-    days: 2,
-    reason: 'Personal legal documentation',
-    status: 'pending',
-    appliedOn: '2026-10-25',
-    approvedBy: 'Awaiting Manager Review',
-  },
-];
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
 export default function EmployeeLeaves() {
-  const [leaves, setLeaves] = useState(INITIAL_LEAVES);
+  const { user } = useAuth();
+  const userId = user?.id || 'IA-EM-001';
+
+  const [leaves, setLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [balances, setBalances] = useState({
+    annual: { used: 5, total: 20 },
+    sick: { used: 2, total: 10 },
+    casual: { used: 2, total: 6 },
+  });
+
   const [formData, setFormData] = useState({
     type: 'Annual Leave',
     startDate: '',
@@ -52,40 +30,61 @@ export default function EmployeeLeaves() {
     reason: '',
   });
 
-  const balances = {
-    annual: { used: 5, total: 20 },
-    sick: { used: 2, total: 10 },
-    casual: { used: 2, total: 6 },
+  const fetchLeaveData = async () => {
+    try {
+      const [reqRes, balRes] = await Promise.all([
+        api.get(`/leaves/my-requests?userId=${userId}`),
+        api.get(`/leaves/balances?userId=${userId}`)
+      ]);
+      if (reqRes.data?.success && Array.isArray(reqRes.data?.data)) {
+        setLeaves(reqRes.data.data);
+      }
+      if (balRes.data?.success && balRes.data?.data) {
+        setBalances(balRes.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching leave data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleApplyLeave = (e) => {
+  useEffect(() => {
+    fetchLeaveData();
+  }, [userId]);
+
+  const handleApplyLeave = async (e) => {
     e.preventDefault();
     if (!formData.startDate || !formData.endDate || !formData.reason) return;
-
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    const newRequest = {
-      id: Date.now(),
-      type: formData.type,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      days: diffDays > 0 ? diffDays : 1,
-      reason: formData.reason,
-      status: 'pending',
-      appliedOn: new Date().toISOString().split('T')[0],
-      approvedBy: 'Awaiting Manager Review',
-    };
-
-    setLeaves([newRequest, ...leaves]);
-    setIsModalOpen(false);
-    setFormData({ type: 'Annual Leave', startDate: '', endDate: '', reason: '' });
+    setSubmitting(true);
+    try {
+      const res = await api.post('/leaves/apply', {
+        ...formData,
+        userId
+      });
+      if (res.data?.success) {
+        setFeedback('Leave request submitted successfully for manager approval!');
+        setTimeout(() => setFeedback(''), 4000);
+        setIsModalOpen(false);
+        setFormData({ type: 'Annual Leave', startDate: '', endDate: '', reason: '' });
+        fetchLeaveData();
+      }
+    } catch (err) {
+      console.error('Failed to submit leave:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleCancelLeave = (id) => {
-    setLeaves(leaves.filter(l => l.id !== id));
+  const handleCancelLeave = async (id) => {
+    try {
+      await api.delete(`/leaves/${id}`);
+      setLeaves(leaves.filter(l => l.id !== id));
+      setFeedback('Pending leave application cancelled successfully.');
+      setTimeout(() => setFeedback(''), 4000);
+    } catch (err) {
+      console.error('Failed to cancel leave:', err);
+    }
   };
 
   const filteredLeaves = leaves.filter(l => {
@@ -99,16 +98,28 @@ export default function EmployeeLeaves() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-900 tracking-tight">Leave Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Check remaining balances and submit leave applications</p>
+          <p className="text-sm text-slate-500 mt-1">Check remaining balances and submit leave applications to Neon PostgreSQL</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-md transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
         >
           <Plus className="h-4 w-4 text-teal-400" />
           <span>Apply for Leave</span>
         </button>
       </div>
+
+      {feedback && (
+        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-teal-600" />
+            <span className="font-semibold">{feedback}</span>
+          </div>
+          <button type="button" onClick={() => setFeedback('')} className="text-teal-600 font-bold">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Balances Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -124,7 +135,7 @@ export default function EmployeeLeaves() {
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
               <div
                 className="bg-teal-500 h-full rounded-full"
-                style={{ width: `${((balances.annual.total - balances.annual.used) / balances.annual.total) * 100}%` }}
+                style={{ width: `${Math.max(0, ((balances.annual.total - balances.annual.used) / balances.annual.total) * 100)}%` }}
               />
             </div>
           </div>
@@ -145,7 +156,7 @@ export default function EmployeeLeaves() {
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
               <div
                 className="bg-emerald-600 h-full rounded-full"
-                style={{ width: `${((balances.sick.total - balances.sick.used) / balances.sick.total) * 100}%` }}
+                style={{ width: `${Math.max(0, ((balances.sick.total - balances.sick.used) / balances.sick.total) * 100)}%` }}
               />
             </div>
           </div>
@@ -166,7 +177,7 @@ export default function EmployeeLeaves() {
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
               <div
                 className="bg-amber-600 h-full rounded-full"
-                style={{ width: `${((balances.casual.total - balances.casual.used) / balances.casual.total) * 100}%` }}
+                style={{ width: `${Math.max(0, ((balances.casual.total - balances.casual.used) / balances.casual.total) * 100)}%` }}
               />
             </div>
           </div>
@@ -191,7 +202,7 @@ export default function EmployeeLeaves() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={clsx(
-                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                   activeTab === tab.id
                     ? 'bg-slate-900 text-teal-300 shadow-2xs font-bold'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
@@ -205,72 +216,79 @@ export default function EmployeeLeaves() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-3.5">Leave Type</th>
-                <th className="px-6 py-3.5">Duration</th>
-                <th className="px-6 py-3.5">Days</th>
-                <th className="px-6 py-3.5">Reason</th>
-                <th className="px-6 py-3.5">Status</th>
-                <th className="px-6 py-3.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredLeaves.length === 0 ? (
+          {loading ? (
+            <div className="p-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+              <p className="text-xs">Loading live leave applications...</p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
-                  <td colSpan="6" className="text-center py-12 text-slate-400 text-xs">
-                    No leave requests found in this view.
-                  </td>
+                  <th className="px-6 py-3.5">Leave Type</th>
+                  <th className="px-6 py-3.5">Duration</th>
+                  <th className="px-6 py-3.5">Days</th>
+                  <th className="px-6 py-3.5">Reason</th>
+                  <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5 text-right">Action</th>
                 </tr>
-              ) : (
-                filteredLeaves.map((l) => (
-                  <tr key={l.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{l.type}</div>
-                      <div className="text-xs text-slate-400">Applied on {l.appliedOn}</div>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-700">
-                      {l.startDate} → {l.endDate}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-bold">
-                        {l.days} {l.days === 1 ? 'day' : 'days'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-600 max-w-xs truncate">
-                      {l.reason}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={clsx(
-                        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize',
-                        l.status === 'approved' ? 'bg-emerald-100 text-emerald-800'
-                          : l.status === 'pending' ? 'bg-amber-100 text-amber-800'
-                          : 'bg-rose-100 text-rose-800'
-                      )}>
-                        {l.status === 'approved' ? <CheckCircle2 className="h-3 w-3" />
-                          : l.status === 'pending' ? <Clock className="h-3 w-3" />
-                          : <XCircle className="h-3 w-3" />}
-                        {l.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {l.status === 'pending' ? (
-                        <button
-                          onClick={() => handleCancelLeave(l.id)}
-                          className="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 transition"
-                        >
-                          Cancel
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {filteredLeaves.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-12 text-slate-400 text-xs">
+                      No leave requests found in this view.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredLeaves.map((l) => (
+                    <tr key={l.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-slate-900">{l.type}</div>
+                        <div className="text-xs text-slate-400">Applied on {l.appliedOn}</div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-mono text-slate-700">
+                        {l.startDate} → {l.endDate}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-bold">
+                          {l.days} {l.days === 1 ? 'day' : 'days'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-600 max-w-xs truncate">
+                        {l.reason}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={clsx(
+                          'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize',
+                          l.status === 'approved' ? 'bg-emerald-100 text-emerald-800'
+                            : l.status === 'pending' ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800'
+                        )}>
+                          {l.status === 'approved' ? <CheckCircle2 className="h-3 w-3" />
+                            : l.status === 'pending' ? <Clock className="h-3 w-3" />
+                            : <XCircle className="h-3 w-3" />}
+                          {l.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {l.status === 'pending' ? (
+                          <button
+                            onClick={() => handleCancelLeave(l.id)}
+                            className="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -285,7 +303,7 @@ export default function EmployeeLeaves() {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -297,7 +315,7 @@ export default function EmployeeLeaves() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 bg-white"
                 >
                   <option value="Annual Leave">Annual Leave ({balances.annual.total - balances.annual.used} days left)</option>
                   <option value="Sick Leave">Sick Leave ({balances.sick.total - balances.sick.used} days left)</option>
@@ -313,7 +331,7 @@ export default function EmployeeLeaves() {
                     required
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
                 <div>
@@ -323,7 +341,7 @@ export default function EmployeeLeaves() {
                     required
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                   />
                 </div>
               </div>
@@ -336,7 +354,7 @@ export default function EmployeeLeaves() {
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                   placeholder="Provide context for your team lead..."
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 resize-none"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 resize-none"
                 />
               </div>
 
@@ -344,15 +362,17 @@ export default function EmployeeLeaves() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow"
+                  disabled={submitting}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  Submit Request
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{submitting ? 'Submitting...' : 'Submit Request'}</span>
                 </button>
               </div>
             </form>
