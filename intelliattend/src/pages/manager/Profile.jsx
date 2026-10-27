@@ -1,43 +1,75 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   User, Briefcase, ShieldCheck, Edit3, CheckCircle2,
-  Save, CreditCard, AlertCircle, Users, Search, ChevronDown
+  Save, CreditCard, AlertCircle, Users, Search, ChevronDown,
+  Camera, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
-import { ALL_EMPLOYEES } from '../../contexts/companyEmployees';
+import api from '../../services/api';
 
 export default function ManagerProfile() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { user, updateUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'employment' | 'compliance' | 'all_employees'
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [directorySearch, setDirectorySearch] = useState('');
-  const [selectedEmpId, setSelectedEmpId] = useState('mgr-self');
+  const [directory, setDirectory] = useState([]);
+  const [selectedEmpId, setSelectedEmpId] = useState(user?.id || 'IA-MG-001');
+  const avatarInputRef = useRef(null);
 
   const [profileData, setProfileData] = useState({
-    firstName: user?.name ? user.name.split(' ')[0] : 'Engineering',
-    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : 'Manager',
-    fullName: user?.name ? user.name.toUpperCase() : 'ENGINEERING MANAGER',
+    firstName: user?.name ? user.name.split(' ')[0] : 'David',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : 'Chen',
+    fullName: user?.name ? user.name.toUpperCase() : 'DAVID CHEN',
     employeeId: user?.id || 'IA-MG-001',
-    email: user?.email || 'manager.intelliattend@gmail.com',
-    phone: '9876543211',
-    emergencyPhone: '9876543299',
-    designation: 'LEAD ENGINEERING MANAGER – INFORMATION TECHNOLOGY',
-    department: 'Information Technology',
-    manager: 'Rahul Bariki (Super Admin)',
-    doj: '12-04-2024',
-    bloodGroup: 'B+',
-    address: 'Hill View Enclave, Banjara Hills, Hyderabad, TS 500034',
-    employmentType: 'Full-time Permanent',
-    shift: 'General Day (09:00 AM - 06:30 PM)',
-    panNumber: 'BNMKL9876P',
-    bankAccount: '•••• •••• 1029 (ICICI Bank)',
-    pfNumber: 'PF/HYD/10927711',
+    email: user?.corporateEmail || 'manager@intelliattend.com',
+    loginEmail: user?.loginEmail || user?.email || 'manager.intelliattend@gmail.com',
+    phone: user?.phone || '9876543211',
+    emergencyPhone: user?.emergencyPhone || '9876543299',
+    emergencyContactName: user?.emergencyContactName || 'Operations Lead',
+    designation: user?.designation || 'LEAD ENGINEERING & DELIVERY DIRECTOR',
+    department: user?.department || 'Engineering & Technology',
+    manager: user?.manager || 'Client Administrator',
+    doj: user?.doj || '12-04-2024',
+    bloodGroup: user?.bloodGroup || 'B+',
+    address: user?.address || 'Hill View Enclave, Banjara Hills, Hyderabad, TS 500034',
+    dob: user?.dob || '22-09-1988',
+    gender: user?.gender || 'Male',
+    workLocation: user?.workLocation || 'Hyderabad Campus (On-site)',
+    employmentType: user?.employmentType || 'Full-time Permanent',
+    shift: user?.shift || 'General Day (09:00 AM - 06:30 PM)',
+    panNumber: user?.panNumber || 'BNMKL9876P',
+    bankAccount: user?.bankAccount || '•••• •••• 1029 (ICICI Bank)',
+    pfNumber: user?.pfNumber || 'PF/HYD/10927711',
     avatar: user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80',
-    company: 'IntelliAttend',
+    avatarUrl: user?.avatarUrl || '',
+    company: 'IntelliAttend Technologies',
   });
+
+  useEffect(() => {
+    // 1. Fetch live user profile from Neon PostgreSQL
+    api.get(`/users/profile/${user?.id || 'IA-MG-001'}`)
+      .then(res => {
+        if (res.data?.success && res.data?.data) {
+          setProfileData(res.data.data);
+          setSelectedEmpId(res.data.data.employeeId || res.data.data.id);
+        }
+      })
+      .catch(err => console.error('Error fetching live manager profile:', err));
+
+    // 2. Fetch live directory from Neon PostgreSQL
+    api.get('/users/directory')
+      .then(res => {
+        if (res.data?.success && Array.isArray(res.data?.data)) {
+          setDirectory(res.data.data);
+        }
+      })
+      .catch(err => console.error('Error fetching directory:', err));
+  }, [user?.id]);
 
   const handleInputChange = (field, value) => {
     setProfileData(prev => ({
@@ -49,15 +81,52 @@ export default function ManagerProfile() {
     }));
   };
 
-  const handleSaveProfile = (e) => {
-    e.preventDefault();
-    setIsEditing(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 4000);
+  const handleSaveProfile = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setSaveLoading(true);
+    try {
+      const res = await api.put('/users/profile', profileData);
+      if (res.data?.success && res.data?.data) {
+        setProfileData(res.data.data);
+        if (updateUser) updateUser(res.data.data);
+        setIsEditing(false);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 4000);
+      }
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      formData.append('userId', user?.id || profileData.employeeId);
+      const res = await api.post('/upload/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.success && res.data?.url) {
+        setProfileData(prev => ({ ...prev, avatar: res.data.url, avatarUrl: res.data.url }));
+        if (updateUser) updateUser({ avatar: res.data.url, avatarUrl: res.data.url });
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 4000);
+      }
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const displayedEmployee = useMemo(() => {
-    if (selectedEmpId === 'mgr-self') {
+    const isSelf = selectedEmpId === profileData.employeeId || selectedEmpId === (user?.id || 'IA-MG-001');
+    if (isSelf) {
       return {
         name: profileData.fullName,
         designation: profileData.designation,
@@ -67,23 +136,23 @@ export default function ManagerProfile() {
         emergencyPhone: profileData.emergencyPhone,
         doj: profileData.doj,
         bloodGroup: profileData.bloodGroup,
-        avatar: profileData.avatar,
+        avatar: profileData.avatarUrl || profileData.avatar,
         company: profileData.company,
       };
     }
-    const found = ALL_EMPLOYEES.find(e => e.employeeId === selectedEmpId || e.id === selectedEmpId);
+    const found = directory.find(e => e.employeeId === selectedEmpId || e.id === selectedEmpId);
     if (found) {
       return {
         name: found.name,
         designation: found.designation,
-        employeeId: found.employeeId,
-        email: found.email,
+        employeeId: found.employeeId || found.id,
+        email: found.corporateEmail || found.email,
         phone: found.phone,
         emergencyPhone: found.emergencyPhone,
         doj: found.doj,
         bloodGroup: found.bloodGroup,
-        avatar: found.avatar,
-        company: found.company || 'IntelliAttend',
+        avatar: found.avatarUrl || found.avatar,
+        company: found.company || 'IntelliAttend Technologies',
       };
     }
     return {
@@ -95,22 +164,22 @@ export default function ManagerProfile() {
       emergencyPhone: profileData.emergencyPhone,
       doj: profileData.doj,
       bloodGroup: profileData.bloodGroup,
-      avatar: profileData.avatar,
+      avatar: profileData.avatarUrl || profileData.avatar,
       company: profileData.company,
     };
-  }, [selectedEmpId, profileData]);
+  }, [selectedEmpId, profileData, directory, user?.id]);
 
   const filteredDirectory = useMemo(() => {
-    if (!directorySearch.trim()) return ALL_EMPLOYEES;
+    if (!directorySearch.trim()) return directory;
     const q = directorySearch.toLowerCase();
-    return ALL_EMPLOYEES.filter(
+    return directory.filter(
       emp =>
-        emp.name.toLowerCase().includes(q) ||
-        emp.designation.toLowerCase().includes(q) ||
-        emp.employeeId.toLowerCase().includes(q) ||
-        emp.department.toLowerCase().includes(q)
+        (emp.name && emp.name.toLowerCase().includes(q)) ||
+        (emp.designation && emp.designation.toLowerCase().includes(q)) ||
+        (emp.employeeId && emp.employeeId.toLowerCase().includes(q)) ||
+        (emp.department && emp.department.toLowerCase().includes(q))
     );
-  }, [directorySearch]);
+  }, [directorySearch, directory]);
 
   return (
     <div className="space-y-6">
@@ -126,15 +195,16 @@ export default function ManagerProfile() {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {activeTab !== 'team_cards' && (
+          {activeTab !== 'all_employees' && (
             isEditing ? (
               <button
                 type="button"
                 onClick={handleSaveProfile}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                disabled={saveLoading}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Changes</span>
+                {saveLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>{saveLoading ? 'Saving...' : 'Save Changes'}</span>
               </button>
             ) : (
               <button
@@ -143,7 +213,7 @@ export default function ManagerProfile() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-2xs transition cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5 text-teal-600" />
-                <span>Edit Details</span>
+                <span>Edit Profile</span>
               </button>
             )
           )}
@@ -154,7 +224,7 @@ export default function ManagerProfile() {
         <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-teal-600" />
-            <span className="font-semibold">Manager credentials and ID badge updated!</span>
+            <span className="font-semibold">Manager profile updated successfully in Neon PostgreSQL!</span>
           </div>
           <button type="button" onClick={() => setSaveSuccess(false)} className="text-teal-600 font-bold">
             ✕
@@ -162,30 +232,32 @@ export default function ManagerProfile() {
         </div>
       )}
 
-      {/* Main Grid: Left = Official ID Card, Right = Profile Center tabs */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column (5 Cols): The Exact Official ID Card */}
+        {/* Left: ID Card */}
         <div className="lg:col-span-5 flex flex-col items-center">
           <div className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
             <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-slate-100 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <ShieldCheck className="w-4 h-4 text-teal-600 flex-shrink-0" />
                 <span className="font-bold text-xs text-slate-900 truncate">
-                  {selectedEmpId === 'mgr-self' ? 'My Manager ID Badge' : `${displayedEmployee.name}'s ID Card`}
+                  {selectedEmpId === (user?.id || 'IA-MG-001') ? 'My Leadership ID Badge' : `${displayedEmployee.name}'s ID Card`}
                 </span>
               </div>
 
+              {/* Quick Select Employee */}
               <div className="relative">
                 <select
                   value={selectedEmpId}
                   onChange={(e) => setSelectedEmpId(e.target.value)}
                   className="text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 pr-6 cursor-pointer hover:bg-slate-100 transition appearance-none"
                 >
-                  <option value="mgr-self">Aditya Dhiman (My ID)</option>
-                  <option value="SI0121">Rahul Bariki (SI0121)</option>
-                  {ALL_EMPLOYEES.filter(e => e.employeeId !== 'SI0121' && e.employeeId !== 'SI0010').map(emp => (
-                    <option key={emp.employeeId} value={emp.employeeId}>
-                      {emp.name} ({emp.employeeId})
+                  <option value={profileData.employeeId}>
+                    {profileData.fullName} ({profileData.employeeId})
+                  </option>
+                  {directory.filter(e => e.employeeId !== profileData.employeeId && e.id !== profileData.employeeId).map(emp => (
+                    <option key={emp.employeeId || emp.id} value={emp.employeeId || emp.id}>
+                      {emp.name} ({emp.employeeId || emp.id})
                     </option>
                   ))}
                 </select>
@@ -197,15 +269,14 @@ export default function ManagerProfile() {
           </div>
         </div>
 
-        {/* Right Column (7 Cols): Profile Details */}
+        {/* Right: Tabs */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          {/* Tabs Navigation */}
           <div className="flex items-center border-b border-slate-200 bg-slate-50/70 px-4 pt-2 gap-2 overflow-x-auto">
             {[
-              { id: 'overview', label: 'Personal Information', icon: User },
-              { id: 'employment', label: 'Leadership Record', icon: Briefcase },
-              { id: 'compliance', label: 'Statutory & Bank', icon: CreditCard },
-              { id: 'team_cards', label: 'Team Member ID Cards', icon: Users, badge: ALL_EMPLOYEES.length },
+              { id: 'overview', label: 'Leadership Overview', icon: User },
+              { id: 'employment', label: 'Department & Shifts', icon: Briefcase },
+              { id: 'compliance', label: 'Statutory & Payroll', icon: CreditCard },
+              { id: 'all_employees', label: 'Active Organization Badges', icon: Users, badge: directory.length },
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -223,7 +294,7 @@ export default function ManagerProfile() {
                 >
                   <Icon className={clsx('w-3.5 h-3.5', isActive ? 'text-teal-600' : 'text-slate-400')} />
                   <span>{tab.label}</span>
-                  {tab.badge && (
+                  {tab.badge !== undefined && (
                     <span className={clsx(
                       'px-1.5 py-0.5 rounded-full text-[10px] font-extrabold',
                       isActive ? 'bg-teal-100 text-teal-800' : 'bg-slate-200 text-slate-600'
@@ -236,16 +307,34 @@ export default function ManagerProfile() {
             })}
           </div>
 
-          {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'overview' && (
               <form onSubmit={handleSaveProfile} className="space-y-5 text-xs">
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-teal-50/50 border border-teal-200/70">
-                  <img
-                    src={profileData.avatar}
-                    alt={profileData.fullName}
-                    className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs"
-                  />
+                  <div className="relative group">
+                    <img
+                      src={profileData.avatarUrl || profileData.avatar || '/avatar_rahul.png'}
+                      alt={profileData.fullName}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-xs"
+                      onError={(e) => { e.target.src = '/avatar_rahul.png'; }}
+                    />
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      title="Upload Avatar to Cloudinary"
+                      className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                    >
+                      {uploadingAvatar ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                    </button>
+                  </div>
                   <div>
                     <h3 className="font-display font-bold text-base text-slate-900">{profileData.fullName}</h3>
                     <p className="text-xs text-slate-500 mt-0.5">{profileData.designation}</p>
@@ -288,8 +377,22 @@ export default function ManagerProfile() {
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Work Email</label>
-                    <p className="p-2.5 rounded-xl bg-slate-50 text-slate-600 font-mono text-[11px]">{profileData.email}</p>
+                    <label className="block font-semibold text-slate-700 mb-1">Manager Login Email</label>
+                    <p className="p-2.5 rounded-xl bg-slate-50 text-slate-600 font-mono text-[11px]">{profileData.loginEmail || profileData.email}</p>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Corporate Work Email</label>
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs"
+                      />
+                    ) : (
+                      <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-mono text-[11px]">{profileData.email}</p>
+                    )}
                   </div>
 
                   <div>
@@ -299,16 +402,67 @@ export default function ManagerProfile() {
                         type="text"
                         value={profileData.phone}
                         onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs"
                       />
                     ) : (
                       <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-semibold">{profileData.phone}</p>
                     )}
                   </div>
 
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Emergency Contact Phone</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.emergencyPhone}
+                        onChange={(e) => handleInputChange('emergencyPhone', e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs"
+                      />
+                    ) : (
+                      <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-semibold">{profileData.emergencyPhone}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Blood Group</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.bloodGroup}
+                        onChange={(e) => handleInputChange('bloodGroup', e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs"
+                      />
+                    ) : (
+                      <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-semibold">{profileData.bloodGroup}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Work Location</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.workLocation}
+                        onChange={(e) => handleInputChange('workLocation', e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs"
+                      />
+                    ) : (
+                      <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-semibold">{profileData.workLocation}</p>
+                    )}
+                  </div>
+
                   <div className="sm:col-span-2">
                     <label className="block font-semibold text-slate-700 mb-1">Residential Address</label>
-                    <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-medium">{profileData.address}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.address}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs"
+                      />
+                    ) : (
+                      <p className="p-2.5 rounded-xl bg-slate-50 text-slate-800 font-semibold">{profileData.address}</p>
+                    )}
                   </div>
                 </div>
               </form>
@@ -317,12 +471,12 @@ export default function ManagerProfile() {
             {activeTab === 'employment' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee ID</span>
-                  <p className="font-extrabold text-sm text-slate-900 mt-0.5">{profileData.employeeId}</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employment Classification</span>
+                  <p className="font-extrabold text-sm text-slate-900 mt-0.5">{profileData.employmentType}</p>
                 </div>
                 <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Department</span>
-                  <p className="font-bold text-slate-900 mt-0.5">{profileData.department}</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assigned Shift</span>
+                  <p className="font-bold text-slate-900 mt-0.5">{profileData.shift}</p>
                 </div>
                 <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reports To</span>
@@ -340,29 +494,33 @@ export default function ManagerProfile() {
                 <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 text-teal-900 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed">
-                    Statutory tax identifiers and bank accounts for leadership payroll.
+                    Statutory registrations, bank accounts, and compliance tokens synchronized with PostgreSQL.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PAN Number</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PAN Identity</span>
                     <p className="font-mono font-bold text-slate-900 mt-0.5">{profileData.panNumber}</p>
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Salary Account</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PF / Provident Fund Identifier</span>
+                    <p className="font-mono font-bold text-slate-900 mt-0.5">{profileData.pfNumber}</p>
+                  </div>
+                  <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 sm:col-span-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Salary Credit Account</span>
                     <p className="font-mono font-bold text-slate-900 mt-0.5">{profileData.bankAccount}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'team_cards' && (
+            {activeTab === 'all_employees' && (
               <div className="space-y-4">
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
-                    placeholder="Search direct report or employee..."
+                    placeholder="Search employee by name, ID, or designation..."
                     value={directorySearch}
                     onChange={(e) => setDirectorySearch(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
@@ -371,11 +529,12 @@ export default function ManagerProfile() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   {filteredDirectory.map((emp) => {
-                    const isSelected = selectedEmpId === emp.employeeId;
+                    const empIdentifier = emp.employeeId || emp.id;
+                    const isSelected = selectedEmpId === empIdentifier;
                     return (
                       <div
-                        key={emp.employeeId}
-                        onClick={() => setSelectedEmpId(emp.employeeId)}
+                        key={empIdentifier}
+                        onClick={() => setSelectedEmpId(empIdentifier)}
                         className={clsx(
                           'p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left group hover:shadow-md',
                           isSelected
@@ -385,7 +544,7 @@ export default function ManagerProfile() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={emp.avatar}
+                            src={emp.avatarUrl || emp.avatar || '/avatar_rahul.png'}
                             alt={emp.name}
                             className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-2xs flex-shrink-0"
                             onError={(e) => {
@@ -400,7 +559,7 @@ export default function ManagerProfile() {
                               {emp.designation}
                             </p>
                             <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 mt-1 inline-block">
-                              {emp.employeeId}
+                              {empIdentifier}
                             </span>
                           </div>
                         </div>

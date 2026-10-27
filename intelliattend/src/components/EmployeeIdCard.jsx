@@ -332,7 +332,7 @@ export default function EmployeeIdCard({
                   <rect x="134" y="0" width="4.5" height="40" />
                 </svg>
                 <span className="font-mono font-extrabold text-[11px] tracking-[0.2em] text-[#0f172a] mt-1.5">
-                  {employee.employeeId || 'SI0121'}
+                  {employee.employeeId || employee.id || 'IA-EMP-001'}
                 </span>
               </div>
 

@@ -41,7 +41,32 @@ async function migrate() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
-    console.log('✓ Table "users" verified');
+
+    // Ensure all profile columns exist on users table
+    await sql`
+      DO $$
+      BEGIN
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(30);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS blood_group VARCHAR(10);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS doj VARCHAR(50);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS dob VARCHAR(50);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS work_location VARCHAR(150);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS employment_type VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS shift VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS pf_number VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(150);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_name VARCHAR(150);
+      END
+      $$;
+    `;
+    console.log('✓ Table "users" schema enhanced with complete profile columns');
 
     // 4. Attendance records table
     await sql`
@@ -123,8 +148,25 @@ async function migrate() {
         role: 'superadmin',
         first_name: 'Rahul',
         last_name: 'Bariki',
-        designation: 'Global Platform Super Administrator & Founder',
-        department: 'Platform Administration & Security'
+        designation: 'GLOBAL PLATFORM SUPER ADMINISTRATOR & FOUNDER',
+        department: 'Platform Administration & Security',
+        phone: '6281769923',
+        emergency_phone: '8374273126',
+        emergency_contact_name: 'B. Venkata Rao (Father)',
+        blood_group: 'O+',
+        doj: '01-01-2022',
+        dob: '15-08-1998',
+        gender: 'Male',
+        address: 'Flat 304, Silicon Heights, Madhapur, Hyderabad, TS 500081',
+        work_location: 'Corporate HQ, Hyderabad',
+        employment_type: 'Executive Root Authority',
+        shift: 'Continuous System Oversight (24x7)',
+        pan_number: 'ABCDE1234F',
+        bank_account: '•••• •••• 4892 (HDFC Bank)',
+        pf_number: 'PF/HYD/10928374',
+        avatar_url: '/avatar_rahul.png',
+        company_name: 'IntelliAttend Technologies',
+        manager_name: 'Board of Directors',
       },
       {
         id: 'IA-CA-001',
@@ -132,8 +174,25 @@ async function migrate() {
         role: 'client',
         first_name: 'Alex',
         last_name: 'Rivera',
-        designation: 'Client Enterprise Administrator',
-        department: 'Executive Leadership'
+        designation: 'CLIENT ENTERPRISE ADMINISTRATOR & OPERATIONS DIRECTOR',
+        department: 'Human Resources & Corporate Governance',
+        phone: '9876543212',
+        emergency_phone: '9876543288',
+        emergency_contact_name: 'Corporate HR Desk',
+        blood_group: 'A-',
+        doj: '15-02-2024',
+        dob: '22-11-1992',
+        gender: 'Male',
+        address: 'Plot 42, Jubilee Hills, Hyderabad, TS 500033',
+        work_location: 'Corporate HQ, Hyderabad',
+        employment_type: 'Corporate Executive Admin',
+        shift: 'General Executive Hours',
+        pan_number: 'ERTY56789X',
+        bank_account: '•••• •••• 6610 (HDFC Bank)',
+        pf_number: 'PF/HYD/10920008',
+        avatar_url: '',
+        company_name: 'IntelliAttend Technologies',
+        manager_name: 'Rahul Bariki (Super Admin)',
       },
       {
         id: 'IA-MG-001',
@@ -141,8 +200,25 @@ async function migrate() {
         role: 'manager',
         first_name: 'David',
         last_name: 'Chen',
-        designation: 'Engineering & Delivery Director',
-        department: 'Engineering'
+        designation: 'LEAD ENGINEERING & DELIVERY DIRECTOR',
+        department: 'Engineering & Technology',
+        phone: '9876543211',
+        emergency_phone: '9876543299',
+        emergency_contact_name: 'Operations Lead',
+        blood_group: 'B+',
+        doj: '12-04-2024',
+        dob: '10-03-1994',
+        gender: 'Male',
+        address: 'Hill View Enclave, Banjara Hills, Hyderabad, TS 500034',
+        work_location: 'Hyderabad Campus (On-site)',
+        employment_type: 'Full-time Permanent',
+        shift: 'General Day (09:00 AM - 06:30 PM)',
+        pan_number: 'BNMKL9876P',
+        bank_account: '•••• •••• 1029 (ICICI Bank)',
+        pf_number: 'PF/HYD/10927711',
+        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80',
+        company_name: 'IntelliAttend Technologies',
+        manager_name: 'Alex Rivera (Client Admin)',
       },
       {
         id: 'IA-EM-001',
@@ -150,22 +226,66 @@ async function migrate() {
         role: 'employee',
         first_name: 'Sarah',
         last_name: 'Miller',
-        designation: 'Lead Product UI/UX Engineer',
-        department: 'Product & Design'
+        designation: 'LEAD PRODUCT SOFTWARE DEVELOPMENT ENGINEER',
+        department: 'Engineering & Technology',
+        phone: '9876543220',
+        emergency_phone: '9876543299',
+        emergency_contact_name: 'Operations Lead',
+        blood_group: 'O+',
+        doj: '01-01-2026',
+        dob: '18-07-1999',
+        gender: 'Female',
+        address: 'Flat 304, Silicon Heights, Madhapur, Hyderabad, TS 500081',
+        work_location: 'Hyderabad Campus (Hybrid)',
+        employment_type: 'Full-time Permanent',
+        shift: 'General Day (09:00 AM - 06:30 PM)',
+        pan_number: 'ABCDE1234F',
+        bank_account: '•••• •••• 4892 (HDFC Bank)',
+        pf_number: 'PF/HYD/10928374',
+        avatar_url: '',
+        company_name: 'IntelliAttend Technologies',
+        manager_name: 'David Chen (Engineering Manager)',
       }
     ];
 
     for (const u of initialUsers) {
       await sql`
-        INSERT INTO users (id, email, password_hash, role, first_name, last_name, designation, department)
-        VALUES (${u.id}, ${u.email}, ${passwordHash}, ${u.role}, ${u.first_name}, ${u.last_name}, ${u.designation}, ${u.department})
+        INSERT INTO users (
+          id, email, password_hash, role, first_name, last_name, designation, department,
+          phone, emergency_phone, emergency_contact_name, blood_group, doj, dob, gender,
+          address, work_location, employment_type, shift, pan_number, bank_account,
+          pf_number, avatar_url, company_name, manager_name
+        )
+        VALUES (
+          ${u.id}, ${u.email}, ${passwordHash}, ${u.role}, ${u.first_name}, ${u.last_name}, ${u.designation}, ${u.department},
+          ${u.phone}, ${u.emergency_phone}, ${u.emergency_contact_name}, ${u.blood_group}, ${u.doj}, ${u.dob}, ${u.gender},
+          ${u.address}, ${u.work_location}, ${u.employment_type}, ${u.shift}, ${u.pan_number}, ${u.bank_account},
+          ${u.pf_number}, ${u.avatar_url}, ${u.company_name}, ${u.manager_name}
+        )
         ON CONFLICT (email) DO UPDATE SET
           password_hash = ${passwordHash},
           first_name = ${u.first_name},
           last_name = ${u.last_name},
           role = ${u.role},
           designation = ${u.designation},
-          department = ${u.department};
+          department = ${u.department},
+          phone = ${u.phone},
+          emergency_phone = ${u.emergency_phone},
+          emergency_contact_name = ${u.emergency_contact_name},
+          blood_group = ${u.blood_group},
+          doj = ${u.doj},
+          dob = ${u.dob},
+          gender = ${u.gender},
+          address = ${u.address},
+          work_location = ${u.work_location},
+          employment_type = ${u.employment_type},
+          shift = ${u.shift},
+          pan_number = ${u.pan_number},
+          bank_account = ${u.bank_account},
+          pf_number = ${u.pf_number},
+          avatar_url = ${u.avatar_url},
+          company_name = ${u.company_name},
+          manager_name = ${u.manager_name};
       `;
     }
     console.log('✓ Production accounts seeded (SuperAdmin, Client Admin, Manager, Employee)');

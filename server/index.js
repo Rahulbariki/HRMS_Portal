@@ -108,6 +108,39 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid password' });
     }
 
+    const formatUserResponse = (u) => ({
+      id: u.id,
+      employeeId: u.id,
+      email: u.email,
+      loginEmail: u.email,
+      corporateEmail: u.corporate_email || `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
+      role: u.role,
+      name: `${u.first_name} ${u.last_name}`,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
+      designation: u.designation,
+      department: u.department,
+      phone: u.phone || '',
+      emergencyPhone: u.emergency_phone || '',
+      emergencyContactName: u.emergency_contact_name || '',
+      bloodGroup: u.blood_group || 'O+',
+      doj: u.doj || '',
+      dob: u.dob || '',
+      gender: u.gender || '',
+      address: u.address || '',
+      workLocation: u.work_location || '',
+      employmentType: u.employment_type || 'Full-time Permanent',
+      shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
+      panNumber: u.pan_number || '',
+      bankAccount: u.bank_account || '',
+      pfNumber: u.pf_number || '',
+      avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
+      avatarUrl: u.avatar_url || '',
+      company: u.company_name || 'IntelliAttend Technologies',
+      manager: u.manager_name || 'Board of Directors'
+    });
+
     const tokenPayload = {
       id: user.id,
       email: user.email,
@@ -122,16 +155,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        name: `${user.first_name} ${user.last_name}`,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        designation: user.designation,
-        department: user.department
-      }
+      user: formatUserResponse(user)
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -142,24 +166,226 @@ app.post('/api/auth/login', async (req, res) => {
 // 3. Auth: Current User (/api/auth/me)
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const rows = await sql`SELECT id, email, role, first_name, last_name, designation, department FROM users WHERE id = ${req.user.id} LIMIT 1`;
+    const rows = await sql`SELECT * FROM users WHERE id = ${req.user.id} LIMIT 1`;
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found in database' });
     }
-    const user = rows[0];
+    const u = rows[0];
     res.json({
       success: true,
       data: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        name: `${user.first_name} ${user.last_name}`,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        designation: user.designation,
-        department: user.department
+        id: u.id,
+        employeeId: u.id,
+        email: u.email,
+        loginEmail: u.email,
+        corporateEmail: `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
+        role: u.role,
+        name: `${u.first_name} ${u.last_name}`,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
+        designation: u.designation,
+        department: u.department,
+        phone: u.phone || '',
+        emergencyPhone: u.emergency_phone || '',
+        emergencyContactName: u.emergency_contact_name || '',
+        bloodGroup: u.blood_group || 'O+',
+        doj: u.doj || '',
+        dob: u.dob || '',
+        gender: u.gender || '',
+        address: u.address || '',
+        workLocation: u.work_location || '',
+        employmentType: u.employment_type || 'Full-time Permanent',
+        shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
+        panNumber: u.pan_number || '',
+        bankAccount: u.bank_account || '',
+        pfNumber: u.pf_number || '',
+        avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
+        avatarUrl: u.avatar_url || '',
+        company: u.company_name || 'IntelliAttend Technologies',
+        manager: u.manager_name || 'Board of Directors'
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 3.1 Profile: Get Profile (/api/users/profile or /api/users/profile/:id)
+const getProfileHandler = async (req, res) => {
+  try {
+    const targetId = req.params.id || req.query.id || req.query.email || (req.user && req.user.id) || 'IA-SA-001';
+    const rows = await sql`SELECT * FROM users WHERE id = ${targetId} OR email = ${targetId} LIMIT 1`;
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+    const u = rows[0];
+    res.json({
+      success: true,
+      data: {
+        id: u.id,
+        employeeId: u.id,
+        email: u.email,
+        loginEmail: u.email,
+        corporateEmail: `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
+        role: u.role,
+        name: `${u.first_name} ${u.last_name}`,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
+        designation: u.designation,
+        department: u.department,
+        phone: u.phone || '',
+        emergencyPhone: u.emergency_phone || '',
+        emergencyContactName: u.emergency_contact_name || '',
+        bloodGroup: u.blood_group || 'O+',
+        doj: u.doj || '',
+        dob: u.dob || '',
+        gender: u.gender || '',
+        address: u.address || '',
+        workLocation: u.work_location || '',
+        employmentType: u.employment_type || 'Full-time Permanent',
+        shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
+        panNumber: u.pan_number || '',
+        bankAccount: u.bank_account || '',
+        pfNumber: u.pf_number || '',
+        avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
+        avatarUrl: u.avatar_url || '',
+        company: u.company_name || 'IntelliAttend Technologies',
+        manager: u.manager_name || 'Board of Directors'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+app.get('/api/users/profile', getProfileHandler);
+app.get('/api/users/profile/:id', getProfileHandler);
+
+// 3.2 Profile: Update Profile (/api/users/profile)
+app.put('/api/users/profile', async (req, res) => {
+  try {
+    const {
+      id, email, firstName, lastName, phone, emergencyPhone,
+      emergencyContactName, bloodGroup, dob, gender, address,
+      workLocation, shift, panNumber, bankAccount, pfNumber, avatarUrl
+    } = req.body;
+
+    const targetUser = id || email;
+    if (!targetUser) {
+      return res.status(400).json({ success: false, message: 'User identifier required' });
+    }
+
+    const updated = await sql`
+      UPDATE users SET
+        first_name = COALESCE(${firstName}, first_name),
+        last_name = COALESCE(${lastName}, last_name),
+        phone = COALESCE(${phone}, phone),
+        emergency_phone = COALESCE(${emergencyPhone}, emergency_phone),
+        emergency_contact_name = COALESCE(${emergencyContactName}, emergency_contact_name),
+        blood_group = COALESCE(${bloodGroup}, blood_group),
+        dob = COALESCE(${dob}, dob),
+        gender = COALESCE(${gender}, gender),
+        address = COALESCE(${address}, address),
+        work_location = COALESCE(${workLocation}, work_location),
+        shift = COALESCE(${shift}, shift),
+        pan_number = COALESCE(${panNumber}, pan_number),
+        bank_account = COALESCE(${bankAccount}, bank_account),
+        pf_number = COALESCE(${pfNumber}, pf_number),
+        avatar_url = COALESCE(${avatarUrl}, avatar_url)
+      WHERE id = ${targetUser} OR email = ${targetUser}
+      RETURNING *;
+    `;
+
+    if (updated.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found in database' });
+    }
+
+    const u = updated[0];
+    res.json({
+      success: true,
+      message: 'Profile updated successfully in Neon PostgreSQL',
+      data: {
+        id: u.id,
+        employeeId: u.id,
+        email: u.email,
+        loginEmail: u.email,
+        corporateEmail: `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
+        role: u.role,
+        name: `${u.first_name} ${u.last_name}`,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
+        designation: u.designation,
+        department: u.department,
+        phone: u.phone || '',
+        emergencyPhone: u.emergency_phone || '',
+        emergencyContactName: u.emergency_contact_name || '',
+        bloodGroup: u.blood_group || 'O+',
+        doj: u.doj || '',
+        dob: u.dob || '',
+        gender: u.gender || '',
+        address: u.address || '',
+        workLocation: u.work_location || '',
+        employmentType: u.employment_type || 'Full-time Permanent',
+        shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
+        panNumber: u.pan_number || '',
+        bankAccount: u.bank_account || '',
+        pfNumber: u.pf_number || '',
+        avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
+        avatarUrl: u.avatar_url || '',
+        company: u.company_name || 'IntelliAttend Technologies',
+        manager: u.manager_name || 'Board of Directors'
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 3.3 Directory: Live Employee Directory (/api/users/directory)
+app.get('/api/users/directory', async (req, res) => {
+  try {
+    const rows = await sql`
+      SELECT * FROM users ORDER BY 
+        CASE role 
+          WHEN 'superadmin' THEN 1 
+          WHEN 'client' THEN 2 
+          WHEN 'manager' THEN 3 
+          ELSE 4 
+        END, first_name;
+    `;
+    const directory = rows.map(u => ({
+      id: u.id,
+      employeeId: u.id,
+      name: `${u.first_name} ${u.last_name}`.toUpperCase(),
+      firstName: u.first_name,
+      lastName: u.last_name,
+      designation: u.designation,
+      department: u.department,
+      email: `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
+      loginEmail: u.email,
+      phone: u.phone,
+      emergencyPhone: u.emergency_phone,
+      emergencyContactName: u.emergency_contact_name,
+      doj: u.doj,
+      bloodGroup: u.blood_group,
+      avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
+      avatarUrl: u.avatar_url,
+      company: u.company_name,
+      manager: u.manager_name,
+      workLocation: u.work_location,
+      employmentType: u.employment_type,
+      shift: u.shift,
+      panNumber: u.pan_number,
+      bankAccount: u.bank_account,
+      pfNumber: u.pf_number,
+      status: 'Active'
+    }));
+
+    res.json({ success: true, data: directory });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -317,17 +543,25 @@ app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'No image uploaded' });
     }
 
-    const userId = req.body.userId || 'current-user';
+    const userId = req.body.userId || req.body.email || '';
 
     const result = await uploadBufferToCloudinary(req.file.buffer, {
       folder: 'intelliattend/avatars',
       resource_type: 'image',
-      public_id: `avatar_${userId}_${Date.now()}`
+      public_id: `avatar_${userId || 'user'}_${Date.now()}`
     });
+
+    if (userId) {
+      await sql`
+        UPDATE users 
+        SET avatar_url = ${result.secure_url} 
+        WHERE id = ${userId} OR email = ${userId};
+      `;
+    }
 
     res.json({
       success: true,
-      message: 'Avatar uploaded to Cloudinary',
+      message: 'Avatar uploaded to Cloudinary object storage and saved to database',
       url: result.secure_url,
       publicId: result.public_id
     });
