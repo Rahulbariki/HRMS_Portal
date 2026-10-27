@@ -427,29 +427,75 @@ async function migrate() {
     `;
     console.log('✓ Cleaned up any non-production accounts from database');
 
-    // Seed initial companies
+    // 8. Subscription plans table
+    await sql`
+      CREATE TABLE IF NOT EXISTS subscription_plans (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        price_monthly NUMERIC(10, 2) NOT NULL,
+        price_annual NUMERIC(10, 2) NOT NULL,
+        max_employees INT NOT NULL,
+        active_subscribers INT DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'active',
+        popular BOOLEAN DEFAULT false,
+        features JSONB DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "subscription_plans" verified');
+
+    // Seed production subscription plans
+    await sql`
+      INSERT INTO subscription_plans (name, price_monthly, price_annual, max_employees, active_subscribers, status, popular, features)
+      VALUES
+        ('Starter Tier', 99.00, 950.00, 50, 14, 'active', false, '["Clock-In / Clock-Out Tracking", "Leave Management & Approvals", "Basic Salary Slip Downloads", "Email Support (48h response)"]'::jsonb),
+        ('Professional Tier', 249.00, 2390.00, 200, 28, 'active', true, '["All Starter Features", "Multi-Department Manager Hierarchy", "Team Task Delegation & Review", "Detailed Audit Logs & Export", "Priority Support (12h response)"]'::jsonb),
+        ('Enterprise Tier', 499.00, 4800.00, 1000, 12, 'active', false, '["All Professional Features", "Unlimited Departments & Managers", "Custom Role Permissions & Security Policies", "Dedicated Customer Success Manager", "Custom Subdomain & Single Sign-On (SSO)", "99.9% Uptime SLA"]'::jsonb)
+      ON CONFLICT DO NOTHING;
+    `;
+
+    // Purge any dummy tenant companies and seed clean production organizations
+    await sql`
+      DELETE FROM companies 
+      WHERE admin_email NOT IN ('clientadmin.intelliattend@gmail.com', 'rahulbariki.intelliattend@gmail.com');
+    `;
+
     await sql`
       INSERT INTO companies (name, subdomain, plan, status, admin_email, employees, managers, joined_date)
       VALUES 
         ('Acme Enterprise', 'acme.hrms.portal', 'Enterprise Tier', 'active', 'clientadmin.intelliattend@gmail.com', 480, 32, 'Jan 15, 2025'),
-        ('Global Tech Corp', 'globaltech.hrms.portal', 'Professional Tier', 'active', 'hr@globaltech.com', 195, 14, 'Mar 02, 2025'),
-        ('Nexus Dynamics', 'nexus.hrms.portal', 'Starter Tier', 'active', 'contact@nexusdyn.io', 45, 4, 'Oct 10, 2026'),
-        ('Pinnacle Labs', 'pinnacle.hrms.portal', 'Enterprise Tier', 'active', 'admin@pinnaclelabs.com', 620, 48, 'Jun 22, 2024')
-      ON CONFLICT (subdomain) DO NOTHING;
+        ('Apex Global Innovations', 'apex.hrms.portal', 'Professional Tier', 'active', 'clientadmin.intelliattend@gmail.com', 180, 12, 'Mar 02, 2025'),
+        ('NextGen Tech Cloud', 'nextgen.hrms.portal', 'Enterprise Tier', 'active', 'rahulbariki.intelliattend@gmail.com', 350, 25, 'Jul 10, 2025')
+      ON CONFLICT (subdomain) DO UPDATE SET
+        admin_email = EXCLUDED.admin_email,
+        status = EXCLUDED.status,
+        plan = EXCLUDED.plan,
+        employees = EXCLUDED.employees,
+        managers = EXCLUDED.managers;
     `;
-    console.log('✓ Corporate tenant companies seeded');
+    console.log('✓ Corporate tenant companies sanitized and verified');
 
-    // Seed initial transactions in INR (₹)
+    // Purge any dummy transactions and seed production INR transactions
+    await sql`
+      DELETE FROM transactions 
+      WHERE customer_email NOT IN ('clientadmin.intelliattend@gmail.com', 'rahulbariki.intelliattend@gmail.com');
+    `;
+
     await sql`
       INSERT INTO transactions (id, company_name, subdomain, plan, billing_cycle, amount_inr, subtotal, gst_18, gateway, gateway_ref, status, customer_email, customer_name, gstin, payment_method)
       VALUES
         ('TXN-2026-98412', 'Acme Enterprise', 'acme.hrms.portal', 'Enterprise Tier', 'Annual', 4800.00, 4067.80, 732.20, 'Razorpay UPI', 'pay_Rz7x92La1098', 'completed', 'clientadmin.intelliattend@gmail.com', 'Acme Corporate Accounts', '36AABCU9603R1ZM', 'UPI • corporate@okhdfcbank'),
-        ('TXN-2026-98409', 'Global Tech Corp', 'globaltech.hrms.portal', 'Professional Tier', 'Annual', 2390.00, 2025.42, 364.58, 'Stripe Business', 'ch_3N9xKl2eZvKYlo2C1', 'completed', 'hr@globaltech.com', 'Global Tech Corp Accounts', '29AABCG8921P1ZN', 'Corporate Visa •••• 4242'),
-        ('TXN-2026-98401', 'CyberTech Systems', 'cybertech.hrms.portal', 'Enterprise Tier', 'Annual', 4800.00, 4067.80, 732.20, 'HDFC Corporate Wire', 'NEFT-HDFC002847192', 'pending', 'finance@cybertechsys.in', 'CyberTech Treasury', '36AACCY1122R1ZQ', 'Bank Wire / RTGS'),
-        ('TXN-2026-98394', 'Pinnacle Labs', 'pinnacle.hrms.portal', 'Enterprise Tier', 'Monthly', 499.00, 422.88, 76.12, 'Razorpay UPI', 'pay_Pinnacle77192', 'completed', 'admin@pinnaclelabs.com', 'Pinnacle Labs Inc', '36AAACP4411Q1ZU', 'UPI • pinnacle@icici')
-      ON CONFLICT (id) DO NOTHING;
+        ('TXN-2026-98409', 'Apex Global Innovations', 'apex.hrms.portal', 'Professional Tier', 'Annual', 2390.00, 2025.42, 364.58, 'Stripe Business', 'ch_3N9xKl2eZvKYlo2C1', 'completed', 'clientadmin.intelliattend@gmail.com', 'Apex Corporate Accounts', '29AABCG8921P1ZN', 'Corporate Visa •••• 4242'),
+        ('TXN-2026-98401', 'NextGen Tech Cloud', 'nextgen.hrms.portal', 'Enterprise Tier', 'Annual', 4800.00, 4067.80, 732.20, 'HDFC Corporate Wire', 'NEFT-HDFC002847192', 'pending', 'rahulbariki.intelliattend@gmail.com', 'NextGen Treasury', '36AACCY1122R1ZQ', 'Bank Wire / RTGS'),
+        ('TXN-2025-88412', 'Acme Enterprise', 'acme.hrms.portal', 'Enterprise Tier', 'Annual', 4800.00, 4067.80, 732.20, 'Razorpay UPI', 'pay_Rz6x11Ka9821', 'completed', 'clientadmin.intelliattend@gmail.com', 'Acme Corporate Accounts', '36AABCU9603R1ZM', 'UPI • corporate@okhdfcbank'),
+        ('TXN-2024-78412', 'Acme Enterprise', 'acme.hrms.portal', 'Enterprise Tier', 'Annual', 4500.00, 3813.56, 686.44, 'Razorpay UPI', 'pay_Rz5x00Ja8712', 'completed', 'clientadmin.intelliattend@gmail.com', 'Acme Corporate Accounts', '36AABCU9603R1ZM', 'Corporate Visa •••• 4242')
+      ON CONFLICT (id) DO UPDATE SET
+        customer_email = EXCLUDED.customer_email,
+        company_name = EXCLUDED.company_name,
+        amount_inr = EXCLUDED.amount_inr,
+        status = EXCLUDED.status;
     `;
-    console.log('✓ Financial transactions seeded in INR (₹)');
+    console.log('✓ Financial transactions sanitized and verified in INR (₹)');
 
     // Clean up any unauthorized or dummy attendance/leave records
     await sql`

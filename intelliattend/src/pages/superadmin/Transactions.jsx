@@ -1,222 +1,45 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   IndianRupee, Search, Filter, Download, ArrowUpRight, CheckCircle2,
   Clock, XCircle, AlertCircle, RefreshCw, ExternalLink, Copy, Check,
-  CreditCard, ShieldCheck, FileText, ChevronRight, Building2, Eye, Printer, X
+  CreditCard, ShieldCheck, FileText, ChevronRight, Building2, Eye, Printer, X, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
-
-const INITIAL_TRANSACTIONS = [
-  {
-    id: 'TXN-2026-98412',
-    date: 'Oct 26, 2026 • 14:32 IST',
-    rawDate: '2026-10-26T14:32:00',
-    company: 'Acme Enterprise',
-    subdomain: 'acme.hrms.portal',
-    plan: 'Enterprise Tier',
-    billingCycle: 'Annual',
-    amount: 4800.00,
-    subtotal: 4067.80,
-    gst: 732.20,
-    gateway: 'Razorpay UPI',
-    gatewayRef: 'pay_Rz7x92La1098',
-    status: 'completed',
-    customerEmail: 'clientadmin.intelliattend@gmail.com',
-    customerName: 'Acme Corporate Accounts',
-    gstin: '36AABCU9603R1ZM',
-    paymentMethod: 'UPI • corporate@okhdfcbank',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98409',
-    date: 'Oct 25, 2026 • 19:15 IST',
-    rawDate: '2026-10-25T19:15:00',
-    company: 'Global Tech Corp',
-    subdomain: 'globaltech.hrms.portal',
-    plan: 'Professional Tier',
-    billingCycle: 'Annual',
-    amount: 2390.00,
-    subtotal: 2025.42,
-    gst: 364.58,
-    gateway: 'Stripe Business',
-    gatewayRef: 'ch_3N9xKl2eZvKYlo2C1',
-    status: 'completed',
-    customerEmail: 'hr@globaltech.com',
-    customerName: 'Global Tech Corp Accounts',
-    gstin: '29AABCG8921P1ZN',
-    paymentMethod: 'Corporate Visa •••• 4242',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98401',
-    date: 'Oct 24, 2026 • 11:05 IST',
-    rawDate: '2026-10-24T11:05:00',
-    company: 'CyberTech Systems',
-    subdomain: 'cybertech.hrms.portal',
-    plan: 'Enterprise Tier',
-    billingCycle: 'Annual',
-    amount: 4800.00,
-    subtotal: 4067.80,
-    gst: 732.20,
-    gateway: 'HDFC Corporate Wire',
-    gatewayRef: 'NEFT-HDFC002847192',
-    status: 'pending',
-    customerEmail: 'finance@cybertechsys.in',
-    customerName: 'CyberTech Treasury',
-    gstin: '36AACCY1122R1ZQ',
-    paymentMethod: 'Bank Wire / RTGS',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98394',
-    date: 'Oct 22, 2026 • 16:48 IST',
-    rawDate: '2026-10-22T16:48:00',
-    company: 'Pinnacle Labs',
-    subdomain: 'pinnacle.hrms.portal',
-    plan: 'Enterprise Tier',
-    billingCycle: 'Monthly',
-    amount: 499.00,
-    subtotal: 422.88,
-    gst: 76.12,
-    gateway: 'Razorpay UPI',
-    gatewayRef: 'pay_Pinnacle77192',
-    status: 'completed',
-    customerEmail: 'admin@pinnaclelabs.com',
-    customerName: 'Pinnacle Labs Inc',
-    gstin: '36AAACP4411Q1ZU',
-    paymentMethod: 'UPI • pinnacle@icici',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98382',
-    date: 'Oct 20, 2026 • 10:20 IST',
-    rawDate: '2026-10-20T10:20:00',
-    company: 'Quantum AI Labs',
-    subdomain: 'quantumai.hrms.portal',
-    plan: 'Enterprise Tier',
-    billingCycle: 'Annual',
-    amount: 4800.00,
-    subtotal: 4067.80,
-    gst: 732.20,
-    gateway: 'Stripe Business',
-    gatewayRef: 'ch_3M7qAA2eZvKYlo1A9',
-    status: 'completed',
-    customerEmail: 'ops@quantumai.io',
-    customerName: 'Quantum AI Technologies',
-    gstin: '33AABCQ1234L1ZY',
-    paymentMethod: 'Corporate Mastercard •••• 8821',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98375',
-    date: 'Oct 18, 2026 • 18:04 IST',
-    rawDate: '2026-10-18T18:04:00',
-    company: 'Vanguard Retail Ltd',
-    subdomain: 'vanguard.hrms.portal',
-    plan: 'Professional Tier',
-    billingCycle: 'Monthly',
-    amount: 249.00,
-    subtotal: 211.02,
-    gst: 37.98,
-    gateway: 'Razorpay UPI',
-    gatewayRef: 'pay_Vanguard81023',
-    status: 'completed',
-    customerEmail: 'hr@vanguardretail.com',
-    customerName: 'Vanguard Retail India',
-    gstin: '27AABCV5599K1ZL',
-    paymentMethod: 'NetBanking • HDFC Corp',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98361',
-    date: 'Oct 15, 2026 • 12:40 IST',
-    rawDate: '2026-10-15T12:40:00',
-    company: 'Nexus Dynamics',
-    subdomain: 'nexus.hrms.portal',
-    plan: 'Starter Tier',
-    billingCycle: 'Annual',
-    amount: 950.00,
-    subtotal: 805.08,
-    gst: 144.92,
-    gateway: 'Stripe Business',
-    gatewayRef: 'ch_3K8yBB2eZvKYlo8K3',
-    status: 'completed',
-    customerEmail: 'contact@nexusdyn.io',
-    customerName: 'Nexus Dynamics LLP',
-    gstin: '36AABCN7766M1ZR',
-    paymentMethod: 'Amex •••• 1004',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98342',
-    date: 'Oct 12, 2026 • 09:12 IST',
-    rawDate: '2026-10-12T09:12:00',
-    company: 'InnoWave Bio',
-    subdomain: 'innowave.hrms.portal',
-    plan: 'Starter Tier',
-    billingCycle: 'Monthly',
-    amount: 99.00,
-    subtotal: 83.90,
-    gst: 15.10,
-    gateway: 'Razorpay UPI',
-    gatewayRef: 'pay_InnoWave00921',
-    status: 'completed',
-    customerEmail: 'accounts@innowavebio.com',
-    customerName: 'InnoWave Biosciences',
-    gstin: '36AABCI8822B1ZX',
-    paymentMethod: 'UPI • innowave@axisbank',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98330',
-    date: 'Oct 10, 2026 • 15:55 IST',
-    rawDate: '2026-10-10T15:55:00',
-    company: 'Apex Logistics',
-    subdomain: 'apexlogistics.hrms.portal',
-    plan: 'Professional Tier',
-    billingCycle: 'Monthly',
-    amount: 249.00,
-    subtotal: 211.02,
-    gst: 37.98,
-    gateway: 'Razorpay UPI',
-    gatewayRef: 'pay_fail_Apex88102',
-    status: 'failed',
-    customerEmail: 'billing@apexlogistics.in',
-    customerName: 'Apex Express Logistics',
-    gstin: '07AABCA3311D1ZV',
-    paymentMethod: 'Corporate Card •••• 9012 (3DS Timeout)',
-    receiptUrl: '#',
-  },
-  {
-    id: 'TXN-2026-98319',
-    date: 'Oct 08, 2026 • 11:30 IST',
-    rawDate: '2026-10-08T11:30:00',
-    company: 'BluePeak Media',
-    subdomain: 'bluepeak.hrms.portal',
-    plan: 'Professional Tier',
-    billingCycle: 'Annual',
-    amount: 2390.00,
-    subtotal: 2025.42,
-    gst: 364.58,
-    gateway: 'Razorpay UPI',
-    gatewayRef: 'rfnd_BluePeak99201',
-    status: 'refunded',
-    customerEmail: 'finance@bluepeak.agency',
-    customerName: 'BluePeak Creative Media',
-    gstin: '27AABCB9090E1ZW',
-    paymentMethod: 'UPI Auto-Debit Refund',
-    receiptUrl: '#',
-  },
-];
+import api from '../../services/api';
 
 export default function SuperAdminTransactions() {
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [gatewayFilter, setGatewayFilter] = useState('all');
   const [selectedTxn, setSelectedTxn] = useState(null);
   const [copiedId, setCopiedId] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/transactions');
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        const mapped = res.data.data.map(t => ({
+          ...t,
+          amount: Number(t.amount || 0),
+          subtotal: Number(t.subtotal || 0),
+          gst: Number(t.gst || 0)
+        }));
+        setTransactions(mapped);
+      }
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -233,11 +56,11 @@ export default function SuperAdminTransactions() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter((txn) => {
       const matchesSearch =
-        txn.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        txn.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        txn.subdomain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        txn.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        txn.gatewayRef.toLowerCase().includes(searchQuery.toLowerCase());
+        txn.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        txn.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        txn.subdomain?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        txn.customerEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        txn.gatewayRef?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus = statusFilter === 'all' || txn.status === statusFilter;
       const matchesGateway = gatewayFilter === 'all' || txn.gateway === gatewayFilter;
@@ -249,18 +72,20 @@ export default function SuperAdminTransactions() {
   // Aggregate stats
   const totalSettled = transactions
     .filter((t) => t.status === 'completed')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalPending = transactions
     .filter((t) => t.status === 'pending')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalRefunded = transactions
     .filter((t) => t.status === 'refunded')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const completedCount = transactions.filter((t) => t.status === 'completed').length;
-  const successRate = ((completedCount / (transactions.length - 1)) * 100).toFixed(1);
+  const successRate = transactions.length > 0
+    ? ((completedCount / transactions.length) * 100).toFixed(1)
+    : '100.0';
 
   const exportCSV = () => {
     const headers = [
@@ -352,6 +177,15 @@ export default function SuperAdminTransactions() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="p-16 flex flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <p className="text-xs font-semibold">Loading verified corporate ledger & transactions from Neon PostgreSQL...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -387,7 +221,10 @@ export default function SuperAdminTransactions() {
           </button>
           <button
             type="button"
-            onClick={() => showToast('Payment gateways synchronized with latest bank settlements')}
+            onClick={() => {
+              fetchTransactions();
+              showToast('Transactions synchronized with Neon PostgreSQL and payment gateways');
+            }}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5 text-teal-400" />

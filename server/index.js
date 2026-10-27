@@ -1355,6 +1355,314 @@ app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
   }
 });
 
+// 13. Tenant Companies Management (SuperAdmin)
+app.get('/api/companies', async (req, res) => {
+  try {
+    const companies = await sql`
+      SELECT 
+        id,
+        name,
+        subdomain AS domain,
+        plan,
+        status,
+        admin_email AS "adminEmail",
+        employees,
+        managers,
+        joined_date AS "joinedDate",
+        created_at
+      FROM companies
+      ORDER BY id ASC;
+    `;
+    res.json({ success: true, data: companies });
+  } catch (error) {
+    console.error('Error fetching companies:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch companies' });
+  }
+});
+
+app.post('/api/companies', async (req, res) => {
+  try {
+    const { name, domain, plan = 'Growth', adminEmail, employees = 50, managers = 5 } = req.body;
+    if (!name || !adminEmail) {
+      return res.status(400).json({ success: false, message: 'Company name and admin email are required' });
+    }
+
+    const subdomain = domain || `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.hrms.portal`;
+    const joinedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+
+    const inserted = await sql`
+      INSERT INTO companies (name, subdomain, plan, status, admin_email, employees, managers, joined_date)
+      VALUES (${name}, ${subdomain}, ${plan}, 'active', ${adminEmail}, ${Number(employees)}, ${Number(managers)}, ${joinedDate})
+      RETURNING 
+        id,
+        name,
+        subdomain AS domain,
+        plan,
+        status,
+        admin_email AS "adminEmail",
+        employees,
+        managers,
+        joined_date AS "joinedDate";
+    `;
+
+    res.json({ success: true, message: 'Company created successfully', data: inserted[0] });
+  } catch (error) {
+    console.error('Error creating company:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to create company' });
+  }
+});
+
+app.patch('/api/companies/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const updated = await sql`
+      UPDATE companies
+      SET status = ${status}
+      WHERE id = ${Number(id)}
+      RETURNING id, name, status;
+    `;
+
+    if (updated.length === 0) {
+      return res.status(404).json({ success: false, message: 'Company not found' });
+    }
+
+    res.json({ success: true, message: `Company status changed to ${status}`, data: updated[0] });
+  } catch (error) {
+    console.error('Error updating company status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update company status' });
+  }
+});
+
+app.delete('/api/companies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await sql`DELETE FROM companies WHERE id = ${Number(id)};`;
+    res.json({ success: true, message: 'Company removed successfully' });
+  } catch (error) {
+    console.error('Error deleting company:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete company' });
+  }
+});
+
+// 14. Transactions & Revenue Audit (SuperAdmin)
+app.get('/api/transactions', async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    let txns = await sql`
+      SELECT 
+        id,
+        company_name AS company,
+        subdomain,
+        plan,
+        billing_cycle AS "billingCycle",
+        amount_inr AS amount,
+        subtotal,
+        gst_18 AS gst,
+        gateway,
+        gateway_ref AS "gatewayRef",
+        status,
+        customer_email AS "customerEmail",
+        customer_name AS "customerName",
+        gstin,
+        payment_method AS "paymentMethod",
+        to_char(created_at, 'Mon DD, YYYY • HH24:MI "IST"') AS date,
+        created_at AS "rawDate",
+        '#' AS "receiptUrl"
+      FROM transactions
+      ORDER BY created_at DESC;
+    `;
+
+    if (status && status !== 'all') {
+      txns = txns.filter(t => t.status === status);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      txns = txns.filter(t =>
+        t.company?.toLowerCase().includes(q) ||
+        t.id?.toLowerCase().includes(q) ||
+        t.gatewayRef?.toLowerCase().includes(q) ||
+        t.customerEmail?.toLowerCase().includes(q)
+      );
+    }
+
+    res.json({ success: true, data: txns });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch transactions' });
+  }
+});
+
+app.post('/api/transactions', async (req, res) => {
+  try {
+    const {
+      companyName, subdomain, plan, billingCycle = 'Annual',
+      amount, gateway = 'Razorpay UPI', gatewayRef,
+      customerEmail, customerName, gstin = '36AABCU9603R1ZM', paymentMethod = 'UPI'
+    } = req.body;
+
+    const numAmount = Number(amount);
+    const subtotal = Number((numAmount / 1.18).toFixed(2));
+    const gst18 = Number((numAmount - subtotal).toFixed(2));
+    const id = `TXN-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const ref = gatewayRef || `pay_${Math.random().toString(36).substring(2, 12)}`;
+
+    const created = await sql`
+      INSERT INTO transactions (
+        id, company_name, subdomain, plan, billing_cycle,
+        amount_inr, subtotal, gst_18, gateway, gateway_ref,
+        status, customer_email, customer_name, gstin, payment_method
+      )
+      VALUES (
+        ${id}, ${companyName}, ${subdomain}, ${plan}, ${billingCycle},
+        ${numAmount}, ${subtotal}, ${gst18}, ${gateway}, ${ref},
+        'completed', ${customerEmail}, ${customerName}, ${gstin}, ${paymentMethod}
+      )
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: 'Transaction recorded successfully', data: created[0] });
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    res.status(500).json({ success: false, message: 'Failed to record transaction' });
+  }
+});
+
+// 15. Client Billing Overview & Invoices
+app.get('/api/billing/overview', async (req, res) => {
+  try {
+    const email = req.query.email || 'clientadmin.intelliattend@gmail.com';
+
+    // Find company for this client admin
+    const comps = await sql`
+      SELECT * FROM companies 
+      WHERE admin_email = ${email}
+      LIMIT 1;
+    `;
+
+    const company = comps[0] || {
+      name: 'Acme Enterprise',
+      plan: 'Enterprise Tier',
+      employees: 480,
+      managers: 32,
+      subdomain: 'acme.hrms.portal'
+    };
+
+    const overview = {
+      companyName: company.name,
+      plan: company.plan || 'Enterprise Tier',
+      subdomain: company.subdomain,
+      annualFeeInr: 4800,
+      renewalDate: 'Oct 01, 2027',
+      totalSeats: 500,
+      usedSeats: Number(company.employees) || 480,
+      autoRenew: true,
+      paymentMethod: {
+        type: 'Corporate Visa',
+        last4: '4242',
+        expiry: '12/28',
+        holder: 'Acme Treasury'
+      }
+    };
+
+    res.json({ success: true, data: overview });
+  } catch (error) {
+    console.error('Error fetching billing overview:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch billing overview' });
+  }
+});
+
+app.get('/api/billing/invoices', async (req, res) => {
+  try {
+    const email = req.query.email || 'clientadmin.intelliattend@gmail.com';
+
+    const txns = await sql`
+      SELECT 
+        id,
+        to_char(created_at, 'Mon DD, YYYY') AS date,
+        '₹' || to_char(amount_inr, 'FM999,999,990.00') AS amount,
+        amount_inr AS "amountNumber",
+        status,
+        plan || ' (' || billing_cycle || ')' AS description,
+        payment_method AS "paymentMethod",
+        gateway_ref AS "reference"
+      FROM transactions
+      WHERE customer_email = ${email}
+      ORDER BY created_at DESC;
+    `;
+
+    res.json({ success: true, data: txns });
+  } catch (error) {
+    console.error('Error fetching client invoices:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch invoices' });
+  }
+});
+
+// 16. Subscription Plans Management (SuperAdmin)
+app.get('/api/plans', async (req, res) => {
+  try {
+    const plans = await sql`
+      SELECT 
+        id,
+        name,
+        price_monthly AS "priceMonthly",
+        price_annual AS "priceAnnual",
+        max_employees AS "maxEmployees",
+        active_subscribers AS "activeSubscribers",
+        status,
+        popular,
+        features
+      FROM subscription_plans
+      ORDER BY price_monthly ASC;
+    `;
+    res.json({ success: true, data: plans });
+  } catch (error) {
+    console.error('Error fetching subscription plans:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch subscription plans' });
+  }
+});
+
+app.post('/api/plans', async (req, res) => {
+  try {
+    const { name, priceMonthly, priceAnnual, maxEmployees, features = [] } = req.body;
+    if (!name || !priceMonthly) {
+      return res.status(400).json({ success: false, message: 'Plan name and price are required' });
+    }
+
+    const inserted = await sql`
+      INSERT INTO subscription_plans (name, price_monthly, price_annual, max_employees, active_subscribers, status, features)
+      VALUES (${name}, ${Number(priceMonthly)}, ${Number(priceAnnual)}, ${Number(maxEmployees)}, 0, 'active', ${JSON.stringify(features)}::jsonb)
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: 'Plan created successfully', data: inserted[0] });
+  } catch (error) {
+    console.error('Error saving subscription plan:', error);
+    res.status(500).json({ success: false, message: 'Failed to create plan' });
+  }
+});
+
+app.patch('/api/plans/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const updated = await sql`
+      UPDATE subscription_plans
+      SET status = ${status}
+      WHERE id = ${Number(id)}
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: `Plan status updated to ${status}`, data: updated[0] });
+  } catch (error) {
+    console.error('Error updating plan status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update plan status' });
+  }
+});
+
 // Serve frontend build in production
 const distPath = path.resolve(__dirname, '../intelliattend/dist');
 app.use(express.static(distPath));
