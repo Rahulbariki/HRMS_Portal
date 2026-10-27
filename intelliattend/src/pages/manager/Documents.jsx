@@ -1,347 +1,464 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FileText, Search, Download, Eye, FolderOpen, Paperclip } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  FileText, Search, Download, Eye, FolderOpen,
+  Upload, Trash2, X, Loader2, RefreshCw, CheckCircle2,
+  AlertCircle, ShieldCheck, FileSpreadsheet, FileCode
+} from 'lucide-react';
+import clsx from 'clsx';
+import api from '../../services/api';
 
-const documents = [
-  {
-    id: 1,
-    title: 'Employee Handbook 2025',
-    category: 'Handbooks',
-    type: 'PDF',
-    size: '2.4 MB',
-    version: 'v5.0',
-    lastUpdated: '2025-11-15',
-    status: 'published',
-    tags: ['onboarding', 'policies', 'benefits'],
-    description: 'Complete guide to company policies, benefits, and workplace expectations.',
-  },
-  {
-    id: 2,
-    title: 'Code of Conduct & Ethics',
-    category: 'Policies',
-    type: 'PDF',
-    size: '1.8 MB',
-    version: 'v2.3',
-    lastUpdated: '2025-11-10',
-    status: 'published',
-    tags: ['compliance', 'ethics', 'conduct'],
-    description: 'Standards of professional behavior and ethical guidelines.',
-  },
-  {
-    id: 3,
-    title: 'Data Privacy Policy',
-    category: 'Policies',
-    type: 'PDF',
-    size: '2.1 MB',
-    version: 'v3.1',
-    lastUpdated: '2025-10-01',
-    status: 'published',
-    tags: ['gdpr', 'ferpa', 'privacy', 'security'],
-    description: 'GDPR/FERPA compliant data handling and privacy procedures.',
-  },
-  {
-    id: 4,
-    title: 'Information Security Policy',
-    category: 'Security',
-    type: 'PDF',
-    size: '3.2 MB',
-    version: 'v4.0',
-    lastUpdated: '2025-11-01',
-    status: 'published',
-    tags: ['soc2', 'iso27001', 'security', 'access-control'],
-    description: 'Comprehensive security framework and compliance standards.',
-  },
-  {
-    id: 5,
-    title: 'Remote Work Guidelines',
-    category: 'Operations',
-    type: 'PDF',
-    size: '1.2 MB',
-    version: 'v1.2',
-    lastUpdated: '2025-08-15',
-    status: 'published',
-    tags: ['hybrid', 'remote', 'workspace'],
-    description: 'Guidelines for hybrid and remote work arrangements.',
-  },
-  {
-    id: 6,
-    title: 'Expense Reimbursement Policy',
-    category: 'Finance',
-    type: 'PDF',
-    size: '1.5 MB',
-    version: 'v2.1',
-    lastUpdated: '2025-07-10',
-    status: 'published',
-    tags: ['expenses', 'reimbursement', 'travel'],
-    description: 'Business expense claims, approval limits, and documentation.',
-  },
-  {
-    id: 7,
-    title: 'Onboarding Checklist Template',
-    category: 'Templates',
-    type: 'DOCX',
-    size: '0.5 MB',
-    version: 'v1.0',
-    lastUpdated: '2025-09-01',
-    status: 'published',
-    tags: ['hr', 'onboarding', 'template'],
-    description: 'Standardized new hire onboarding checklist for managers.',
-  },
-  {
-    id: 8,
-    title: 'Performance Review Form',
-    category: 'Templates',
-    type: 'DOCX',
-    size: '0.8 MB',
-    version: 'v2.0',
-    lastUpdated: '2025-06-15',
-    status: 'published',
-    tags: ['performance', 'review', 'hr'],
-    description: 'Annual performance evaluation template and guidelines.',
-  },
-  {
-    id: 9,
-    title: 'Incident Response Playbook',
-    category: 'Security',
-    type: 'PDF',
-    size: '4.1 MB',
-    version: 'v3.0',
-    lastUpdated: '2025-10-20',
-    status: 'published',
-    tags: ['incident', 'security', 'response', 'soc'],
-    description: 'Step-by-step security incident response procedures.',
-  },
-  {
-    id: 10,
-    title: 'API Documentation v2',
-    category: 'Technical',
-    type: 'HTML',
-    size: '5.6 MB',
-    version: 'v2.4',
-    lastUpdated: '2025-11-01',
-    status: 'published',
-    tags: ['api', 'developers', 'integration'],
-    description: 'Complete REST API reference with examples and SDKs.',
-  },
-];
-
-export default function DocumentsPage() {
+export default function ManagerDocuments() {
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedType, setSelectedType] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
-  const categories = ['all', 'Handbooks', 'Policies', 'Security', 'Operations', 'Finance', 'Templates', 'Technical'];
-  const types = ['all', 'PDF', 'DOCX', 'HTML', 'XLSX', 'PPTX'];
-
-  const filteredDocs = documents.filter(d => {
-    const matchesSearch = d.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         d.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         d.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = selectedCategory === 'all' || d.category === selectedCategory;
-    const matchesType = selectedType === 'all' || d.type === selectedType;
-    return matchesSearch && matchesCategory && matchesType;
+  const [newDoc, setNewDoc] = useState({
+    title: '',
+    category: 'Policies',
+    file: null,
   });
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'PDF': return <FileText className="h-5 w-5 text-red-500" />;
-      case 'DOCX': return <FileText className="h-5 w-5 text-blue-500" />;
-      case 'HTML': return <FileText className="h-5 w-5 text-orange-500" />;
-      case 'XLSX': return <FileText className="h-5 w-5 text-green-500" />;
-      case 'PPTX': return <FileText className="h-5 w-5 text-orange-500" />;
-      default: return <FileText className="h-5 w-5 text-muted" />;
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/documents');
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setDocuments(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      Handbooks: 'badge-primary',
-      Policies: 'badge-accent',
-      Security: 'badge-primary',
-      Operations: 'badge-warning',
-      Finance: 'badge-success',
-      Templates: 'badge-info',
-      Technical: 'badge-gray',
-    };
-    return colors[category] || 'badge-gray';
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const categories = ['all', 'Handbooks', 'Policies', 'Security', 'Operations', 'Finance', 'Benefits'];
+
+  const filteredDocs = documents.filter((d) => {
+    const matchesCategory =
+      selectedCategory === 'all' ||
+      d.category?.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesSearch =
+      d.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.uploadedBy?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!newDoc.file) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', newDoc.file);
+      formData.append('title', newDoc.title || newDoc.file.name);
+      formData.append('category', newDoc.category);
+      formData.append('uploadedBy', 'Manager / Director');
+
+      const res = await api.post('/upload/document', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (res.data?.success) {
+        setFeedback({
+          type: 'success',
+          text: `Document "${newDoc.title || newDoc.file.name}" uploaded to Cloudinary object storage successfully!`,
+        });
+        setIsUploadOpen(false);
+        setNewDoc({ title: '', category: 'Policies', file: null });
+        fetchDocuments();
+      } else {
+        setFeedback({ type: 'error', text: res.data?.message || 'Upload failed' });
+      }
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      setFeedback({ type: 'error', text: 'Server error uploading file to Cloudinary' });
+    } finally {
+      setUploading(false);
+    }
   };
 
+  const handleDelete = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+    try {
+      const res = await api.delete(`/documents/${id}`);
+      if (res.data?.success) {
+        setDocuments((prev) => prev.filter((d) => d.id !== id));
+        setFeedback({ type: 'success', text: `Document "${title}" removed.` });
+      }
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      setFeedback({ type: 'error', text: 'Failed to delete document' });
+    }
+  };
+
+  const handleDownload = (doc) => {
+    if (doc.fileUrl) {
+      window.open(doc.fileUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const getTypeIcon = (type = '') => {
+    const t = type.toUpperCase();
+    if (t === 'PDF') return <FileText className="h-6 w-6 text-rose-600" />;
+    if (t === 'XLSX' || t === 'CSV') return <FileSpreadsheet className="h-6 w-6 text-emerald-600" />;
+    if (t === 'HTML' || t === 'JSON') return <FileCode className="h-6 w-6 text-blue-600" />;
+    return <FileText className="h-6 w-6 text-teal-600" />;
+  };
+
+  if (loading) {
+    return (
+      <div className="p-16 flex flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <p className="text-xs font-semibold">Loading enterprise document repository from Neon PostgreSQL...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-primary">Documents & Resources</h1>
-          <p className="text-muted mt-1">Access company documents, templates, and technical resources</p>
+          <h1 className="font-display text-2xl font-bold text-slate-900 tracking-tight">Documents & Knowledge Base</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Publish and manage enterprise handbooks, compliance policies, and templates on Cloudinary storage
+          </p>
         </div>
-        <div className="flex gap-3">
-          <Link to="/documents/upload" className="btn-primary w-auto sm:w-auto">
-            <Paperclip className="h-4 w-4 mr-2" />
-            Upload Document
-          </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => fetchDocuments()}
+            className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+            title="Refresh List"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setIsUploadOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-md transition cursor-pointer"
+          >
+            <Upload className="h-4 w-4 text-teal-400" />
+            <span>Upload Document</span>
+          </button>
         </div>
       </div>
 
-      <div className="card-elevated p-6">
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
-            <input
-              type="text"
-              placeholder="Search documents, tags, descriptions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
-            />
+      {feedback && (
+        <div
+          className={clsx(
+            'p-4 rounded-xl border flex items-center justify-between text-xs font-semibold',
+            feedback.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          )}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-rose-600" />
+            )}
+            <span>{feedback.text}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-sm text-muted">Category:</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="input-field w-auto"
+          <button onClick={() => setFeedback(null)} className="font-bold cursor-pointer">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Filter Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search documents by title or topic..."
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat === 'all' ? 'All Categories' : cat}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={clsx(
+                'px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer',
+                viewMode === 'grid' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+              )}
             >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
-              ))}
-            </select>
-            <label className="text-sm text-muted">Type:</label>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="input-field w-auto"
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={clsx(
+                'px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer',
+                viewMode === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+              )}
             >
-              {types.map(type => (
-                <option key={type} value={type}>{type === 'all' ? 'All Types' : type}</option>
+              Table
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Rendering */}
+      {filteredDocs.length === 0 ? (
+        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center text-slate-400">
+          <FolderOpen className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+          <p className="text-sm font-semibold">No documents found matching your filter.</p>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredDocs.map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center">
+                    {getTypeIcon(doc.fileType)}
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
+                    {doc.category}
+                  </span>
+                </div>
+
+                <h3 className="font-semibold text-slate-900 text-sm mt-3 line-clamp-1">{doc.title}</h3>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  {doc.description || 'Verified enterprise document stored in Cloudinary.'}
+                </p>
+
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100 font-mono">
+                  <span>{doc.fileType || 'PDF'}</span>
+                  <span>•</span>
+                  <span>{doc.fileSize || '1.2 MB'}</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setPreviewDoc(doc)}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+                    title="Preview metadata"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDownload(doc)}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+                    title="Download file"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => handleDelete(doc.id, doc.title)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                  title="Delete Document"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th className="py-3 px-6">Document</th>
+                <th className="py-3 px-6">Category</th>
+                <th className="py-3 px-6">Format</th>
+                <th className="py-3 px-6">Size</th>
+                <th className="py-3 px-6">Uploaded By</th>
+                <th className="py-3 px-6 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              {filteredDocs.map((doc) => (
+                <tr key={doc.id} className="hover:bg-slate-50/70 transition">
+                  <td className="py-3.5 px-6 font-semibold text-slate-900">{doc.title}</td>
+                  <td className="py-3.5 px-6 text-slate-600">{doc.category}</td>
+                  <td className="py-3.5 px-6 font-mono text-xs uppercase text-slate-500">{doc.fileType}</td>
+                  <td className="py-3.5 px-6 font-mono text-xs text-slate-500">{doc.fileSize}</td>
+                  <td className="py-3.5 px-6 text-xs text-slate-600">{doc.uploadedBy}</td>
+                  <td className="py-3.5 px-6 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer"
+                      >
+                        Download
+                      </button>
+                      <button
+                        onClick={() => handleDelete(doc.id, doc.title)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ))}
-            </select>
-            <div className="flex items-center gap-1 border-l border-slate-200 pl-4 ml-4">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-primary-light text-primary' : 'text-muted hover:bg-slate-100'}`}
-                aria-label="Grid view"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full p-6 rounded-2xl shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-display text-lg font-bold text-slate-900">Upload to Object Storage</h3>
+              <button onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="h-5 w-5" />
               </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Document Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. FY27 Leave & Remote Guidelines"
+                  value={newDoc.title}
+                  onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                <select
+                  value={newDoc.category}
+                  onChange={(e) => setNewDoc({ ...newDoc, category: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                  <option value="Policies">Policies</option>
+                  <option value="Handbooks">Handbooks</option>
+                  <option value="Benefits">Benefits</option>
+                  <option value="Security">Security</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Finance">Finance</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Select File (PDF, DOCX, TXT)</label>
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.docx,.doc,.txt,.xlsx"
+                  onChange={(e) => setNewDoc({ ...newDoc, file: e.target.files[0] })}
+                  className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow disabled:opacity-50 cursor-pointer"
+                >
+                  {uploading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{uploading ? 'Uploading...' : 'Upload File'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-900">{previewDoc.title}</h3>
+                <p className="text-xs text-slate-500">{previewDoc.category} • {previewDoc.fileType}</p>
+              </div>
+              <button onClick={() => setPreviewDoc(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-3 text-xs">
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Cloudinary Public ID:</span>
+                <span className="font-mono text-slate-800">{previewDoc.publicId}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">File Size:</span>
+                <span className="font-mono text-slate-800">{previewDoc.fileSize}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Uploaded By:</span>
+                <span className="font-semibold text-slate-800">{previewDoc.uploadedBy}</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-slate-500">Direct URL:</span>
+                <a
+                  href={previewDoc.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-teal-600 underline font-mono truncate max-w-[220px]"
+                >
+                  {previewDoc.fileUrl}
+                </a>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
               <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-primary-light text-primary' : 'text-muted hover:bg-slate-100'}`}
-                aria-label="List view"
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition cursor-pointer"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                Close
               </button>
             </div>
           </div>
         </div>
-
-        {viewMode === 'grid' ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredDocs.map((doc) => (
-              <article key={doc.id} className="card-elevated p-6 hover:shadow-xl transition-shadow group">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-                    {getTypeIcon(doc.type)}
-                  </div>
-                  <span className={`badge ${getCategoryColor(doc.category)} flex-shrink-0`}>
-                    {doc.category}
-                  </span>
-                </div>
-                <h3 className="font-display text-lg font-semibold text-primary mb-2 line-clamp-1">{doc.title}</h3>
-                <p className="text-sm text-muted mb-4 line-clamp-2">{doc.description}</p>
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  {doc.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="badge badge-gray text-xs">{tag}</span>
-                  ))}
-                  {doc.tags.length > 3 && (
-                    <span className="badge badge-gray text-xs">+{doc.tags.length - 3}</span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-3 text-xs text-muted">
-                    <span>{doc.type}</span>
-                    <span>•</span>
-                    <span>{doc.size}</span>
-                    <span>•</span>
-                    <span>{doc.version}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="View">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="Download">
-                      <Download className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-primary">Document</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden md:table-cell">Category</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden lg:table-cell">Type</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden lg:table-cell">Size</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden xl:table-cell">Version</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden xl:table-cell">Updated</th>
-                  <th className="text-right py-3 px-4 font-semibold text-primary">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDocs.map((doc) => (
-                  <tr key={doc.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center">
-                          {getTypeIcon(doc.type)}
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-primary">{doc.title}</h4>
-                          <p className="text-sm text-muted line-clamp-1">{doc.description}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {doc.tags.slice(0, 2).map((tag) => (
-                              <span key={tag} className="badge badge-gray text-[10px]">{tag}</span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 hidden md:table-cell">
-                      <span className={`badge ${getCategoryColor(doc.category)}`}>
-                        {doc.category}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 hidden lg:table-cell text-sm text-muted">{doc.type}</td>
-                    <td className="py-4 px-4 hidden lg:table-cell text-sm text-muted">{doc.size}</td>
-                    <td className="py-4 px-4 hidden xl:table-cell text-sm text-muted">{doc.version}</td>
-                    <td className="py-4 px-4 hidden xl:table-cell text-sm text-muted">{new Date(doc.lastUpdated).toLocaleDateString()}</td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="View">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="Download">
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {filteredDocs.length === 0 && (
-          <div className="text-center py-12">
-            <FolderOpen className="h-16 w-16 mx-auto text-muted/30 mb-4" />
-            <p className="text-muted">No documents found matching your criteria.</p>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

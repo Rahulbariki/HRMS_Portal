@@ -263,6 +263,22 @@ async function migrate() {
     `;
     console.log('✓ Table "documents" verified');
 
+    // 8. Policies table
+    await sql`
+      CREATE TABLE IF NOT EXISTS policies (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL DEFAULT 'Conduct',
+        version VARCHAR(20) DEFAULT 'v1.0',
+        status VARCHAR(20) DEFAULT 'active',
+        description TEXT,
+        content TEXT NOT NULL,
+        last_updated VARCHAR(50) DEFAULT CURRENT_DATE::text,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "policies" verified');
+
     // Seed production credentials if not exists
     const passwordHash = await bcrypt.hash('password123', 10);
 
@@ -753,7 +769,34 @@ async function migrate() {
         (205, 'IA-EM-001', 'Sarah Miller', 'May 2026', '2026-05-31', 150000.00, 21600.00, 128400.00, 21, 21, 'paid', 'SAL-MAY26-5412')
       ON CONFLICT (id) DO NOTHING;
     `;
-    console.log('✓ Historical payslips seeded in INR (₹)');
+    // Seed corporate policies
+    await sql`
+      INSERT INTO policies (id, title, category, version, status, description, content, last_updated)
+      VALUES
+        (1, 'Code of Conduct & Professional Ethics', 'Conduct', 'v2.3', 'active', 'Standards of professional behavior, ethical guidelines, and compliance requirements for all personnel.', '<h3>1. Purpose</h3><p>This Code of Conduct establishes the standards of professional behavior expected from all personnel across IntelliAttend workspaces.</p><h3>2. Core Values</h3><ul><li><strong>Integrity:</strong> We act honestly, transparently, and ethically in all client and stakeholder interactions.</li><li><strong>Respect:</strong> We treat everyone with dignity, equity, and courtesy.</li><li><strong>Confidentiality:</strong> Strict protection of customer data and intellectual property.</li><li><strong>Accountability:</strong> Ownership of commitments and transparent incident reporting.</li></ul>', '2026-10-15'),
+        (2, 'Data Privacy & Information Security Policy', 'Security', 'v3.1', 'active', 'GDPR, ISO 27001, and SOC2 compliant corporate data protection standards and encryption guidelines.', '<h3>1. Scope</h3><p>Applies to all systems, cryptographic secrets, employee records, and production databases.</p><h3>2. Requirements</h3><ul><li>Two-factor authentication (MFA) mandatory on all enterprise portals.</li><li>Zero plain-text password or API key exposure.</li><li>Access based on least-privilege role-based access control (RBAC).</li><li>All data at rest encrypted using AES-256 and in transit via TLS 1.3.</li></ul>', '2026-10-01'),
+        (3, 'Remote & Hybrid Work Protocol', 'Operations', 'v1.4', 'active', 'Workplace ergonomics, secure remote access, working hours, and communication standards.', '<h3>1. Work Schedules</h3><p>Core collaboration hours are 10:00 AM to 5:00 PM IST. Employees must punch in/out daily via IntelliAttend.</p><h3>2. Security & Assets</h3><ul><li>Company assets must not be used on unsecured public Wi-Fi networks.</li><li>Hardware loss or compromise must be immediately reported to IT within 2 hours.</li></ul>', '2026-09-15'),
+        (4, 'POSH & Workplace Anti-Harassment Policy', 'Compliance', 'v2.0', 'active', 'Zero tolerance framework for workplace discrimination, harassment, and grievance redressing.', '<h3>1. Zero Tolerance</h3><p>IntelliAttend maintains zero tolerance for any form of verbal, physical, sexual, or discriminatory harassment.</p><h3>2. Internal Complaints Committee (ICC)</h3><p>All complaints are investigated strictly within 10 business days under total confidentiality.</p>', '2026-08-20')
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        category = EXCLUDED.category,
+        content = EXCLUDED.content;
+    `;
+    console.log('✓ Enterprise corporate policies seeded');
+
+    // Seed official corporate documents
+    await sql`
+      INSERT INTO documents (id, title, category, file_url, public_id, file_size, file_type, uploaded_by)
+      VALUES
+        (1, 'IntelliAttend Employee Handbook 2026', 'Handbooks', 'https://res.cloudinary.com/demo/image/upload/sample.pdf', 'doc_handbook_2026', '2.4 MB', 'PDF', 'SuperAdmin'),
+        (2, 'Corporate Code of Conduct & Ethics Charter', 'Policies', 'https://res.cloudinary.com/demo/image/upload/sample.pdf', 'doc_conduct_2026', '1.8 MB', 'PDF', 'HR Operations'),
+        (3, 'Statutory EPF & Health Insurance Scheme Guide', 'Benefits', 'https://res.cloudinary.com/demo/image/upload/sample.pdf', 'doc_benefits_2026', '1.2 MB', 'PDF', 'Finance Treasury'),
+        (4, 'Emergency Response & Cyber Incident Protocol', 'Security', 'https://res.cloudinary.com/demo/image/upload/sample.pdf', 'doc_security_2026', '950 KB', 'PDF', 'IT SecOps')
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        category = EXCLUDED.category;
+    `;
+    console.log('✓ Corporate document storage metadata seeded');
 
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {

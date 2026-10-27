@@ -1313,10 +1313,136 @@ app.post('/api/upload/document', upload.single('file'), async (req, res) => {
 // 11. Retrieve Documents list from Neon
 app.get('/api/documents', async (req, res) => {
   try {
-    const docs = await sql`SELECT * FROM documents ORDER BY created_at DESC`;
+    const { category, search } = req.query;
+    let docs = await sql`
+      SELECT 
+        id,
+        title,
+        category,
+        file_url AS "fileUrl",
+        public_id AS "publicId",
+        file_size AS "fileSize",
+        file_type AS "fileType",
+        uploaded_by AS "uploadedBy",
+        to_char(created_at, 'YYYY-MM-DD') AS "lastUpdated",
+        'published' AS status,
+        'v1.0' AS version,
+        'Official corporate document stored on Cloudinary object storage.' AS description,
+        created_at
+      FROM documents 
+      ORDER BY id ASC;
+    `;
+
+    if (category && category !== 'all' && category !== 'All') {
+      docs = docs.filter(d => d.category?.toLowerCase() === category.toLowerCase());
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      docs = docs.filter(d => d.title?.toLowerCase().includes(q) || d.category?.toLowerCase().includes(q));
+    }
+
     res.json({ success: true, data: docs });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await sql`SELECT public_id FROM documents WHERE id = ${Number(id)};`;
+    if (doc.length > 0 && doc[0].public_id) {
+      try {
+        await deleteFromCloudinary(doc[0].public_id, { resource_type: 'raw' });
+      } catch (cErr) {
+        console.warn('Cloudinary cleanup warning:', cErr.message);
+      }
+    }
+    await sql`DELETE FROM documents WHERE id = ${Number(id)};`;
+    res.json({ success: true, message: 'Document deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete document' });
+  }
+});
+
+// 11b. Corporate Policies API
+app.get('/api/policies', async (req, res) => {
+  try {
+    const policies = await sql`
+      SELECT 
+        id,
+        title,
+        category,
+        version,
+        status,
+        description,
+        content,
+        last_updated AS "lastUpdated"
+      FROM policies
+      ORDER BY id ASC;
+    `;
+    res.json({ success: true, data: policies });
+  } catch (error) {
+    console.error('Error fetching policies:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch policies' });
+  }
+});
+
+app.post('/api/policies', async (req, res) => {
+  try {
+    const { title, category = 'Conduct', version = 'v1.0', description, content } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ success: false, message: 'Title and content are required' });
+    }
+
+    const inserted = await sql`
+      INSERT INTO policies (title, category, version, status, description, content, last_updated)
+      VALUES (${title}, ${category}, ${version}, 'active', ${description || ''}, ${content}, ${new Date().toISOString().split('T')[0]})
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: 'Policy created successfully', data: inserted[0] });
+  } catch (error) {
+    console.error('Error creating policy:', error);
+    res.status(500).json({ success: false, message: 'Failed to create policy' });
+  }
+});
+
+app.put('/api/policies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, category, version, description, content, status } = req.body;
+
+    const updated = await sql`
+      UPDATE policies
+      SET
+        title = COALESCE(${title}, title),
+        category = COALESCE(${category}, category),
+        version = COALESCE(${version}, version),
+        description = COALESCE(${description}, description),
+        content = COALESCE(${content}, content),
+        status = COALESCE(${status}, status),
+        last_updated = ${new Date().toISOString().split('T')[0]}
+      WHERE id = ${Number(id)}
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: 'Policy updated successfully', data: updated[0] });
+  } catch (error) {
+    console.error('Error updating policy:', error);
+    res.status(500).json({ success: false, message: 'Failed to update policy' });
+  }
+});
+
+app.delete('/api/policies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await sql`DELETE FROM policies WHERE id = ${Number(id)};`;
+    res.json({ success: true, message: 'Policy removed successfully' });
+  } catch (error) {
+    console.error('Error deleting policy:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete policy' });
   }
 });
 

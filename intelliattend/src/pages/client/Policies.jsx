@@ -1,402 +1,366 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FileText, Search, ChevronDown, ChevronUp, Download, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  FileText, Search, ChevronDown, ChevronUp, Download, Eye,
+  Plus, Loader2, RefreshCw, Trash2, X, CheckCircle2, AlertCircle, Printer
+} from 'lucide-react';
+import clsx from 'clsx';
+import api from '../../services/api';
 
-const policies = [
-  {
-    id: 1,
-    title: 'Code of Conduct & Ethics',
-    category: 'Conduct',
-    version: 'v2.3',
-    lastUpdated: '2025-11-15',
-    status: 'active',
-    description: 'Standards of professional behavior, ethical guidelines, and compliance requirements for all employees.',
-    content: `
-      <h3>1. Purpose</h3>
-      <p>This Code of Conduct establishes the standards of professional behavior expected from all employees, contractors, and representatives of our enterprise organization.</p>
-      
-      <h3>2. Core Values</h3>
-      <ul>
-        <li><strong>Integrity:</strong> We act honestly and ethically in all interactions.</li>
-        <li><strong>Respect:</strong> We treat everyone with dignity and respect.</li>
-        <li><strong>Excellence:</strong> We strive for quality in everything we do.</li>
-        <li><strong>Innovation:</strong> We embrace change and continuous improvement.</li>
-        <li><strong>Accountability:</strong> We take ownership of our actions and decisions.</li>
-      </ul>
-      
-      <h3>3. Professional Conduct</h3>
-      <p>All employees must:</p>
-      <ul>
-        <li>Comply with all applicable laws and regulations</li>
-        <li>Avoid conflicts of interest</li>
-        <li>Protect confidential information</li>
-        <li>Use company resources responsibly</li>
-        <li>Maintain a harassment-free workplace</li>
-      </ul>
-      
-      <h3>4. Compliance & Reporting</h3>
-      <p>Violations should be reported through the Ethics Hotline or to HR. Retaliation against good-faith reporters is strictly prohibited.</p>
-    `,
-  },
-  {
-    id: 2,
-    title: 'Data Privacy & Protection Policy',
-    category: 'Security',
-    version: 'v3.1',
-    lastUpdated: '2025-10-01',
-    status: 'active',
-    description: 'Guidelines for handling personal data, GDPR/FERPA compliance, and data subject rights.',
-    content: `
-      <h3>1. Scope</h3>
-      <p>This policy applies to all personal data and employment records processed by the HRMS Portal.</p>
-      
-      <h3>2. Data Principles</h3>
-      <ul>
-        <li>Lawfulness, fairness, and transparency</li>
-        <li>Purpose limitation</li>
-        <li>Data minimization</li>
-        <li>Accuracy</li>
-        <li>Storage limitation</li>
-        <li>Integrity and confidentiality</li>
-      </ul>
-      
-      <h3>3. Data Subject Rights</h3>
-      <p>Individuals have the right to access, rectify, erase, restrict processing, data portability, and object to processing.</p>
-      
-      <h3>4. Security Measures</h3>
-      <ul>
-        <li>AES-256 encryption at rest</li>
-        <li>TLS 1.3 for data in transit</li>
-        <li>Role-based access control</li>
-        <li>Regular security audits</li>
-        <li>Incident response procedures</li>
-      </ul>
-    `,
-  },
-  {
-    id: 3,
-    title: 'Attendance & Leave Policy',
-    category: 'HR',
-    version: 'v1.8',
-    lastUpdated: '2025-09-20',
-    status: 'active',
-    description: 'Rules for attendance tracking, leave entitlements, approval workflows, and absence management.',
-    content: `
-      <h3>1. Attendance Requirements</h3>
-      <p>All employees must record attendance daily via the HRMS Portal terminal or verified check-in.</p>
-      
-      <h3>2. Leave Entitlements (Annual)</h3>
-      <ul>
-        <li><strong>Annual Leave:</strong> 20 days (pro-rated for part-time)</li>
-        <li><strong>Sick Leave:</strong> 10 days</li>
-        <li><strong>Casual Leave:</strong> 5 days</li>
-        <li><strong>Parental Leave:</strong> As per local law</li>
-        <li><strong>Bereavement Leave:</strong> 3 days</li>
-      </ul>
-      
-      <h3>3. Approval Workflow</h3>
-      <ol>
-        <li>Employee submits request via portal</li>
-        <li>Manager reviews within 2 business days</li>
-        <li>HR validates balance and approves</li>
-        <li>Confirmation sent to employee</li>
-      </ol>
-      
-      <h3>4. Unauthorized Absence</h3>
-      <p>Three consecutive unauthorized absences may result in disciplinary action.</p>
-    `,
-  },
-  {
-    id: 4,
-    title: 'Information Security Policy',
-    category: 'Security',
-    version: 'v4.0',
-    lastUpdated: '2025-11-01',
-    status: 'active',
-    description: 'Comprehensive security framework covering access control, incident response, and compliance standards.',
-    content: `
-      <h3>1. Access Control</h3>
-      <ul>
-        <li>Principle of least privilege</li>
-        <li>Multi-factor authentication required</li>
-        <li>Quarterly access reviews</li>
-        <li>Automated provisioning/deprovisioning</li>
-      </ul>
-      
-      <h3>2. Network Security</h3>
-      <ul>
-        <li>Zero-trust architecture</li>
-        <li>Encrypted communications (TLS 1.3)</li>
-        <li>Intrusion detection systems</li>
-        <li>Regular penetration testing</li>
-      </ul>
-      
-      <h3>3. Incident Response</h3>
-      <p>24/7 SOC monitoring with defined escalation procedures. Maximum 4-hour response for critical incidents.</p>
-      
-      <h3>4. Compliance</h3>
-      <p>SOC 2 Type II, ISO 27001, GDPR, FERPA, CCPA compliant.</p>
-    `,
-  },
-  {
-    id: 5,
-    title: 'Remote Work Policy',
-    category: 'Operations',
-    version: 'v1.2',
-    lastUpdated: '2025-08-15',
-    status: 'active',
-    description: 'Guidelines for hybrid and remote work arrangements, eligibility, and expectations.',
-    content: `
-      <h3>1. Eligibility</h3>
-      <p>Employees with 6+ months tenure and satisfactory performance may request remote work up to 3 days/week.</p>
-      
-      <h3>2. Requirements</h3>
-      <ul>
-        <li>Dedicated workspace meeting ergonomic standards</li>
-        <li>Reliable internet (min 25 Mbps)</li>
-        <li>Availability during core hours (10 AM - 3 PM local)</li>
-        <li>Use of company-approved devices only</li>
-      </ul>
-      
-      <h3>3. Security</h3>
-      <p>VPN required for all remote connections. No public WiFi for sensitive work.</p>
-    `,
-  },
-  {
-    id: 6,
-    title: 'Expense Reimbursement Policy',
-    category: 'Finance',
-    version: 'v2.1',
-    lastUpdated: '2025-07-10',
-    status: 'active',
-    description: 'Rules for business expense claims, approval limits, documentation requirements, and reimbursement timelines.',
-    content: `
-      <h3>1. Reimbursable Expenses</h3>
-      <ul>
-        <li>Travel (transport, accommodation, meals)</li>
-        <li>Client entertainment (with prior approval)</li>
-        <li>Professional development</li>
-        <li>Office supplies for remote work</li>
-      </ul>
-      
-      <h3>2. Approval Limits</h3>
-      <ul>
-        <li>Up to ₹100: Manager approval</li>
-        <li>₹100 - ₹500: Director approval</li>
-        <li>₹500 - ₹2,000: VP approval</li>
-        <li>Over ₹2,000: CFO approval</li>
-      </ul>
-      
-      <h3>3. Documentation</h3>
-      <p>Original receipts required for all expenses over ₹25. Digital copies accepted via mobile app.</p>
-      
-      <h3>4. Reimbursement Timeline</h3>
-      <p>Approved expenses reimbursed within 5 business days via payroll.</p>
-    `,
-  },
-];
-
-export default function CompanyPoliciesPage() {
+export default function ClientPolicies() {
+  const [policies, setPolicies] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedPolicy, setExpandedPolicy] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
-  const categories = ['all', 'Conduct', 'Security', 'HR', 'Operations', 'Finance'];
+  const [newPolicy, setNewPolicy] = useState({
+    title: '',
+    category: 'Conduct',
+    version: 'v1.0',
+    description: '',
+    content: ''
+  });
+
+  const fetchPolicies = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/policies');
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setPolicies(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching policies:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPolicies();
+  }, []);
+
+  const categories = ['all', 'Conduct', 'Security', 'Compliance', 'Operations', 'Benefits'];
 
   const filteredPolicies = policies.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    const matchesSearch =
+      p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === 'all' ||
+      p.category?.toLowerCase() === selectedCategory.toLowerCase();
     return matchesSearch && matchesCategory;
   });
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      active: 'badge-success',
-      draft: 'badge-warning',
-      archived: 'badge-gray',
-    };
-    return styles[status] || 'badge-gray';
+  const handleCreatePolicy = async (e) => {
+    e.preventDefault();
+    if (!newPolicy.title || !newPolicy.content) return;
+
+    try {
+      setSubmitting(true);
+      const res = await api.post('/policies', newPolicy);
+      if (res.data?.success) {
+        setFeedback({ type: 'success', text: `Policy "${newPolicy.title}" published successfully!` });
+        setShowAddModal(false);
+        setNewPolicy({ title: '', category: 'Conduct', version: 'v1.0', description: '', content: '' });
+        fetchPolicies();
+      } else {
+        setFeedback({ type: 'error', text: res.data?.message || 'Failed to create policy' });
+      }
+    } catch (err) {
+      console.error('Error creating policy:', err);
+      setFeedback({ type: 'error', text: 'Server error creating policy.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
+  const handleDeletePolicy = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to remove policy "${title}"?`)) return;
+    try {
+      const res = await api.delete(`/policies/${id}`);
+      if (res.data?.success) {
+        setPolicies(prev => prev.filter(p => p.id !== id));
+        setFeedback({ type: 'success', text: `Policy "${title}" removed.` });
+      }
+    } catch (err) {
+      console.error('Error deleting policy:', err);
+      setFeedback({ type: 'error', text: 'Failed to delete policy' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-16 flex flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <p className="text-xs font-semibold">Loading verified corporate policies from Neon PostgreSQL...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-primary">Company Policies</h1>
-          <p className="text-muted mt-1">Browse, search, and manage organizational policies</p>
+          <h1 className="font-display text-2xl font-bold text-slate-900 tracking-tight">Corporate Policies & Guidelines</h1>
+          <p className="text-sm text-slate-500 mt-1">Browse, publish, and govern enterprise standards, compliance, and workplace protocols</p>
         </div>
-        <div className="flex gap-3">
-          <button className="btn-secondary w-auto sm:w-auto">
-            <Download className="h-4 w-4 mr-2" />
-            Export All
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => fetchPolicies()}
+            className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+            title="Refresh List"
+          >
+            <RefreshCw className="h-4 w-4" />
           </button>
-          <Link to="/policies/new" className="btn-primary w-auto sm:w-auto">
-            <FileText className="h-4 w-4 mr-2" />
-            New Policy
-          </Link>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-md transition cursor-pointer"
+          >
+            <Plus className="h-4 w-4 text-teal-400" />
+            <span>Publish New Policy</span>
+          </button>
         </div>
       </div>
 
-      <div className="card-elevated p-6">
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
-            <input
-              type="text"
-              placeholder="Search policies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
-            />
-          </div>
+      {feedback && (
+        <div
+          className={clsx(
+            'p-4 rounded-xl border flex items-center justify-between text-xs font-semibold',
+            feedback.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          )}
+        >
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted">Category:</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="input-field w-auto"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
-              ))}
-            </select>
-            <div className="flex items-center gap-1 border-l border-slate-200 pl-4 ml-4">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-primary-light text-primary' : 'text-muted hover:bg-slate-100'}`}
-                aria-label="Grid view"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-primary-light text-primary' : 'text-muted hover:bg-slate-100'}`}
-                aria-label="List view"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-              </button>
-            </div>
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-rose-600" />
+            )}
+            <span>{feedback.text}</span>
           </div>
+          <button onClick={() => setFeedback(null)} className="font-bold cursor-pointer">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search policies by keyword..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
+          />
         </div>
 
-        {viewMode === 'grid' ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPolicies.map((policy) => (
-              <article
-                key={policy.id}
-                className={`card-elevated p-6 transition-all ${expandedPolicy === policy.id ? 'ring-2 ring-primary' : ''}`}
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex-1 min-w-0">
-                    <span className={`badge ${policy.category === 'Security' ? 'badge-primary' : policy.category === 'HR' ? 'badge-accent' : policy.category === 'Finance' ? 'badge-success' : policy.category === 'Operations' ? 'badge-warning' : 'badge-info'} mb-2 inline-block`}>
-                      {policy.category}
-                    </span>
-                    <h3 className="font-display text-lg font-semibold text-primary mb-1">{policy.title}</h3>
-                    <div className="flex items-center gap-3 text-xs text-muted">
-                      <span>{policy.version}</span>
-                      <span>•</span>
-                      <span>Updated {new Date(policy.lastUpdated).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <span className={`badge ${getStatusBadge(policy.status)} flex-shrink-0`}>
-                    {policy.status.charAt(0).toUpperCase() + policy.status.slice(1)}
-                  </span>
-                </div>
-                <p className="text-sm text-muted mb-4 line-clamp-3">{policy.description}</p>
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <button
-                    onClick={() => setExpandedPolicy(expandedPolicy === policy.id ? null : policy.id)}
-                    className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-hover transition-colors"
-                  >
-                    {expandedPolicy === policy.id ? (
-                      <>
-                        <ChevronUp className="h-4 w-4" />
-                        Collapse
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4" />
-                        Read More
-                      </>
-                    )}
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="View">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="Download">
-                      <Download className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                {expandedPolicy === policy.id && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2">
-                    <div className="prose prose-sm max-w-none text-muted">{policy.content}</div>
-                  </div>
-                )}
-              </article>
-            ))}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={clsx(
+                'px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer',
+                selectedCategory === cat
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              )}
+            >
+              {cat === 'all' ? 'All Policies' : cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Policies List */}
+      <div className="space-y-4">
+        {filteredPolicies.length === 0 ? (
+          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center text-slate-400">
+            <FileText className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-sm font-semibold">No policies found matching your query.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-primary">Policy</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden md:table-cell">Category</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden lg:table-cell">Version</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary hidden lg:table-cell">Updated</th>
-                  <th className="text-left py-3 px-4 font-semibold text-primary">Status</th>
-                  <th className="text-right py-3 px-4 font-semibold text-primary">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPolicies.map((policy) => (
-                  <tr key={policy.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-4 px-4">
-                      <div>
-                        <h4 className="font-medium text-primary">{policy.title}</h4>
-                        <p className="text-sm text-muted line-clamp-1">{policy.description}</p>
+          filteredPolicies.map((policy) => {
+            const isExpanded = expandedPolicy === policy.id;
+            return (
+              <div
+                key={policy.id}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm transition hover:border-slate-300"
+              >
+                <div
+                  onClick={() => setExpandedPolicy(isExpanded ? null : policy.id)}
+                  className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 text-base">{policy.title}</h3>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
+                          {policy.version}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 uppercase">
+                          {policy.status}
+                        </span>
                       </div>
-                    </td>
-                    <td className="py-4 px-4 hidden md:table-cell">
-                      <span className={`badge ${policy.category === 'Security' ? 'badge-primary' : policy.category === 'HR' ? 'badge-accent' : policy.category === 'Finance' ? 'badge-success' : policy.category === 'Operations' ? 'badge-warning' : 'badge-info'}`}>
-                        {policy.category}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 hidden lg:table-cell text-sm text-muted">{policy.version}</td>
-                    <td className="py-4 px-4 hidden lg:table-cell text-sm text-muted">{new Date(policy.lastUpdated).toLocaleDateString()}</td>
-                    <td className="py-4 px-4">
-                      <span className={`badge ${getStatusBadge(policy.status)}`}>
-                        {policy.status.charAt(0).toUpperCase() + policy.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="View">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 rounded-lg hover:bg-slate-100 text-muted transition-colors" aria-label="Download">
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      <p className="text-xs text-slate-500 mt-1">{policy.description}</p>
+                    </div>
+                  </div>
 
-        {filteredPolicies.length === 0 && (
-          <div className="text-center py-12">
-            <FileText className="h-16 w-16 mx-auto text-muted/30 mb-4" />
-            <p className="text-muted">No policies found matching your criteria.</p>
-          </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-400 hidden sm:inline">
+                      Updated {policy.lastUpdated}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePolicy(policy.id, policy.title);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                      title="Remove policy"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    {isExpanded ? (
+                      <ChevronUp className="w-5 h-5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="p-6 border-t border-slate-100 bg-slate-50/40 animate-in fade-in duration-150 space-y-4">
+                    <div
+                      className="prose prose-sm max-w-none text-slate-700 text-xs leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: policy.content }}
+                    />
+
+                    <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-500">
+                      <span>Category: <strong className="text-slate-800">{policy.category}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Print Policy</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
+
+      {/* Publish Policy Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-lg w-full p-6 rounded-2xl shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-display text-lg font-bold text-slate-900">Publish Corporate Policy</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePolicy} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Policy Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Employee Wellness & Mental Health Charter"
+                  value={newPolicy.title}
+                  onChange={(e) => setNewPolicy({ ...newPolicy, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                  <select
+                    value={newPolicy.category}
+                    onChange={(e) => setNewPolicy({ ...newPolicy, category: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  >
+                    <option value="Conduct">Conduct</option>
+                    <option value="Security">Security</option>
+                    <option value="Compliance">Compliance</option>
+                    <option value="Operations">Operations</option>
+                    <option value="Benefits">Benefits</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Version</label>
+                  <input
+                    type="text"
+                    placeholder="v1.0"
+                    value={newPolicy.version}
+                    onChange={(e) => setNewPolicy({ ...newPolicy, version: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Summary / Objective</label>
+                <input
+                  type="text"
+                  placeholder="Brief summary of policy coverage"
+                  value={newPolicy.description}
+                  onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Policy Content (HTML / Text)</label>
+                <textarea
+                  rows="5"
+                  required
+                  placeholder="<h3>1. Scope</h3><p>Details of the protocol...</p>"
+                  value={newPolicy.content}
+                  onChange={(e) => setNewPolicy({ ...newPolicy, content: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/20 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{submitting ? 'Publishing...' : 'Publish Policy'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
