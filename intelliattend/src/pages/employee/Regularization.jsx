@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   RefreshCw, Plus, Clock, CheckCircle2,
-  XCircle, AlertCircle, X, Search
+  XCircle, AlertCircle, X, Search, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
+
 
 const INITIAL_REGULARIZATIONS = [
   {
@@ -54,6 +56,7 @@ const INITIAL_REGULARIZATIONS = [
 export default function EmployeeRegularization() {
   const { user } = useAuth();
   const [requests, setRequests] = useState(INITIAL_REGULARIZATIONS);
+  const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,45 +68,68 @@ export default function EmployeeRegularization() {
   const [reasonType, setReasonType] = useState('Biometric / Scanner Issue');
   const [reasonDetails, setReasonDetails] = useState('');
 
+  const fetchRegularizations = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/regularizations?userId=' + (user?.employeeId || 'IA-EM-001'));
+      if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        setRequests(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch regularizations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRegularizations();
+  }, [user]);
+
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
       if (filterStatus !== 'All' && req.status !== filterStatus) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
-          req.attendanceDate.toLowerCase().includes(q) ||
-          req.reasonType.toLowerCase().includes(q) ||
-          req.reasonDetails.toLowerCase().includes(q)
+          (req.attendanceDate && req.attendanceDate.toLowerCase().includes(q)) ||
+          (req.reasonType && req.reasonType.toLowerCase().includes(q)) ||
+          (req.reasonDetails && req.reasonDetails.toLowerCase().includes(q))
         );
       }
       return true;
     });
   }, [requests, filterStatus, searchQuery]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!date) return;
 
-    const newReq = {
-      id: Date.now(),
-      attendanceDate: date,
-      day: new Date(date).toLocaleDateString('en-GB', { weekday: 'long' }),
-      originalClockIn: 'Missed / Irregular',
-      originalClockOut: 'Missed / Irregular',
-      requestedClockIn: reqIn,
-      requestedClockOut: reqOut,
-      reasonType,
-      reasonDetails,
-      status: 'Pending',
-      managerComment: null,
-      appliedDate: new Date().toISOString().slice(0, 10),
-    };
+    try {
+      const res = await api.post('/regularizations', {
+        userId: user?.employeeId || 'IA-EM-001',
+        userName: user?.name || 'Sarah Miller',
+        attendanceDate: date,
+        requestedClockIn: reqIn,
+        requestedClockOut: reqOut,
+        reasonType,
+        reasonDetails,
+      });
 
-    setRequests([newReq, ...requests]);
+      if (res.data?.success && res.data.data) {
+        setRequests([res.data.data, ...requests]);
+      } else {
+        fetchRegularizations();
+      }
+    } catch (err) {
+      console.error('Failed to submit regularization:', err);
+    }
+
     setIsModalOpen(false);
     setDate('');
     setReasonDetails('');
   };
+
 
   return (
     <div className="space-y-4">

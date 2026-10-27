@@ -71,17 +71,18 @@ const attendanceStatus = [
 ];
 
 const recentActivity = [
-  { type: 'leave_approved', title: 'Leave Request Approved', description: 'Annual Leave - Dec 20-22', time: '2 hours ago', status: 'success' },
-  { type: 'expense_submitted', title: 'Expense Submitted', description: 'Travel - Client Meeting ₹245.00', time: '5 hours ago', status: 'pending' },
-  { type: 'task_assigned', title: 'New Task Assigned', description: 'Q4 Report Preparation', time: '1 day ago', status: 'info' },
-  { type: 'payslip_available', title: 'Payslip Available', description: 'November 2024 payslip ready', time: '2 days ago', status: 'success' },
-  { type: 'document_shared', title: 'Document Shared', description: 'Employee Handbook v2.1', time: '3 days ago', status: 'info' },
+  { type: 'leave_approved', title: 'Leave Request Approved', description: 'Diwali Festival Break (Nov 09-11, 2026)', time: '2 hours ago', status: 'success' },
+  { type: 'expense_submitted', title: 'Expense Claim Submitted', description: 'AWS Certified Solutions Architect Exam ₹12,500.00', time: '5 hours ago', status: 'pending' },
+  { type: 'task_assigned', title: 'Active Sprint Task Assigned', description: 'Implement Face Biometrics & Geo Attendance verification', time: '1 day ago', status: 'info' },
+  { type: 'payslip_available', title: 'October 2026 Payslip Available', description: 'Net Disbursed: ₹82,750 via HDFC Direct Transfer', time: '2 days ago', status: 'success' },
+  { type: 'document_shared', title: 'Corporate Policy Document Published', description: 'Enterprise Remote Work & Infosec Protocols v3.0', time: '3 days ago', status: 'info' },
 ];
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState(attendanceStatus);
   const [leaveBalance, setLeaveBalance] = useState({ annual: 15, sick: 8, casual: 5 });
+
 
   useEffect(() => {
     const token = localStorage.getItem('token') || '';

@@ -299,6 +299,96 @@ async function migrate() {
     `;
     console.log('✓ Table "support_tickets" verified');
 
+    // 10. Tasks table
+    await sql`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        subtitle TEXT,
+        scope VARCHAR(50) DEFAULT 'assignedToMe',
+        assigned_by VARCHAR(100) NOT NULL,
+        assigned_date DATE DEFAULT CURRENT_DATE,
+        priority VARCHAR(50) DEFAULT 'Medium',
+        due_date DATE NOT NULL,
+        due_date_formatted VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'Pending',
+        progress INT DEFAULT 0,
+        assignees JSONB DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "tasks" verified');
+
+    // 11. Task comments table
+    await sql`
+      CREATE TABLE IF NOT EXISTS task_comments (
+        id SERIAL PRIMARY KEY,
+        task_id INT NOT NULL,
+        author VARCHAR(100) NOT NULL,
+        author_email VARCHAR(255),
+        time VARCHAR(50),
+        content TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "task_comments" verified');
+
+    // 12. Attendance Regularizations table
+    await sql`
+      CREATE TABLE IF NOT EXISTS regularizations (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        attendance_date DATE NOT NULL,
+        day VARCHAR(20),
+        original_clock_in VARCHAR(20),
+        original_clock_out VARCHAR(20),
+        requested_clock_in VARCHAR(20),
+        requested_clock_out VARCHAR(20),
+        reason_type VARCHAR(150) NOT NULL,
+        reason_details TEXT,
+        status VARCHAR(20) DEFAULT 'Pending',
+        manager_comment TEXT,
+        applied_date DATE DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "regularizations" verified');
+
+    // 13. Announcements table
+    await sql`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        date VARCHAR(50) NOT NULL,
+        read_time VARCHAR(50) DEFAULT '3 min read',
+        author VARCHAR(100) NOT NULL,
+        pinned BOOLEAN DEFAULT false,
+        summary TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "announcements" verified');
+
+    // 14. Holidays table
+    await sql`
+      CREATE TABLE IF NOT EXISTS holidays (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        date DATE NOT NULL,
+        day VARCHAR(50) NOT NULL,
+        month INT NOT NULL,
+        year INT NOT NULL DEFAULT 2026,
+        type VARCHAR(100) NOT NULL DEFAULT 'Gazetted Holiday',
+        description TEXT,
+        is_paid BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "holidays" verified');
+
     // Seed production credentials if not exists
     const passwordHash = await bcrypt.hash('password123', 10);
 
@@ -832,6 +922,211 @@ async function migrate() {
         status = EXCLUDED.status;
     `;
     console.log('✓ Production support tickets seeded');
+
+    // 10. Seed real production tasks
+    await sql`
+      INSERT INTO tasks (id, title, subtitle, scope, assigned_by, assigned_date, priority, due_date, due_date_formatted, status, progress, assignees)
+      VALUES
+        (
+          1,
+          'Go through Guides and setup git',
+          'Go through Guides and setup git, GitHub workspace, clone repos, and configure local SSH keys.',
+          'assignedToMe',
+          'David Chen',
+          '2026-10-10',
+          'Medium',
+          '2026-10-15',
+          '15 Oct 2026',
+          'Completed',
+          100,
+          '[{"name": "Sarah Miller", "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"}, {"name": "David Chen", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150"}]'::jsonb
+        ),
+        (
+          2,
+          'Work on dashboards implementation',
+          'Work on dashboards implementation in the panels of employee, manager, and client views.',
+          'assignedToMe',
+          'David Chen',
+          '2026-10-16',
+          'Medium',
+          '2026-10-23',
+          '23 Oct 2026',
+          'Completed',
+          100,
+          '[{"name": "Sarah Miller", "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"}, {"name": "David Chen", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150"}]'::jsonb
+        ),
+        (
+          3,
+          'Implement Face Biometrics & Geo Attendance verification',
+          'Integrate MediaPipe camera feed for facial match check during punch in/out workflow.',
+          'assignedToMe',
+          'David Chen',
+          '2026-10-24',
+          'High',
+          '2026-10-29',
+          '29 Oct 2026',
+          'In Progress',
+          75,
+          '[{"name": "Sarah Miller", "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"}]'::jsonb
+        ),
+        (
+          4,
+          'Review Organisation Chart & Branch Filter components',
+          'Verify SVG link connectors, pan/zoom canvas, and employee detail cards.',
+          'assignedByMe',
+          'Rahul Bariki',
+          '2026-10-25',
+          'Medium',
+          '2026-10-31',
+          '31 Oct 2026',
+          'Pending',
+          30,
+          '[{"name": "Sarah Miller", "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"}, {"name": "Alex Rivera", "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150"}]'::jsonb
+        )
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        status = EXCLUDED.status,
+        progress = EXCLUDED.progress;
+    `;
+    console.log('✓ Production tasks seeded');
+
+    // 11. Seed task comments
+    await sql`
+      INSERT INTO task_comments (id, task_id, author, author_email, time, content)
+      VALUES
+        (1, 1, 'David Chen', 'manager.intelliattend@gmail.com', '12 Oct 2026, 10:30 AM', 'Please confirm when your local SSH keys and repository remotes are working properly.'),
+        (2, 1, 'Sarah Miller', 'employee.intelliattend@gmail.com', '14 Oct 2026, 04:15 PM', 'Completed setup, verified git push and branches. All guides reviewed.'),
+        (3, 2, 'David Chen', 'manager.intelliattend@gmail.com', '18 Oct 2026, 11:00 AM', 'Ensure responsiveness on tablets and mobile screens for all quick action widgets.'),
+        (4, 2, 'Sarah Miller', 'employee.intelliattend@gmail.com', '23 Oct 2026, 06:00 PM', 'Implemented and tested work timers, quick actions, leaves summary, and regularizations.'),
+        (5, 3, 'David Chen', 'manager.intelliattend@gmail.com', '25 Oct 2026, 02:20 PM', 'Add fallbacks for when webcam permission is denied or device does not have camera.')
+      ON CONFLICT (id) DO UPDATE SET
+        author = EXCLUDED.author,
+        content = EXCLUDED.content;
+    `;
+    console.log('✓ Task comments seeded');
+
+    // 12. Seed real regularizations
+    await sql`
+      INSERT INTO regularizations (id, user_id, user_name, attendance_date, day, original_clock_in, original_clock_out, requested_clock_in, requested_clock_out, reason_type, reason_details, status, manager_comment, applied_date)
+      VALUES
+        (
+          1,
+          'IA-EM-001',
+          'Sarah Miller',
+          '2026-10-24',
+          'Saturday',
+          '10:45 AM',
+          '06:15 PM',
+          '09:30 AM',
+          '06:30 PM',
+          'Biometric Scanner Failure / Network Glitch',
+          'Device terminal failed to sync face verification at office gate entry.',
+          'Approved',
+          'Verified with physical security entry register.',
+          '2026-10-24'
+        ),
+        (
+          2,
+          'IA-EM-001',
+          'Sarah Miller',
+          '2026-10-21',
+          'Wednesday',
+          '11:15 AM',
+          '07:30 PM',
+          '09:00 AM',
+          '07:30 PM',
+          'On-site Client Meeting',
+          'Client site deployment visit at Hyderabad facility during morning hours.',
+          'Approved',
+          'Approved as per itinerary.',
+          '2026-10-21'
+        ),
+        (
+          3,
+          'IA-EM-001',
+          'Sarah Miller',
+          '2026-10-26',
+          'Monday',
+          'Missed Punch',
+          '07:00 PM',
+          '09:15 AM',
+          '07:00 PM',
+          'Forgot to Clock In',
+          'Was in urgent sprint triage call with tech lead right after arrival.',
+          'Pending',
+          NULL,
+          '2026-10-26'
+        )
+      ON CONFLICT (id) DO UPDATE SET
+        user_name = EXCLUDED.user_name,
+        status = EXCLUDED.status;
+    `;
+    console.log('✓ Production regularizations seeded');
+
+    // 13. Seed real announcements
+    await sql`
+      INSERT INTO announcements (id, title, category, date, read_time, author, pinned, summary, content)
+      VALUES
+        (
+          1,
+          'Q4 2026 Global Townhall & Strategy Alignment',
+          'Townhall',
+          'Oct 28, 2026',
+          '3 min read',
+          'Executive Leadership',
+          true,
+          'Join leadership for the upcoming quarterly townhall addressing company milestones, international expansion, and FY27 roadmap.',
+          '<p>Dear Team,</p><p>We are excited to invite all team members across departments to our upcoming <strong>Q4 2026 Global Townhall</strong>. Leadership will present high-level updates on organizational velocity, customer adoption metrics, and key initiatives for the upcoming fiscal cycle.</p><h4>Agenda Overview:</h4><ul><li>• Performance and milestone highlights across engineering and product.</li><li>• Infrastructure and compliance certifications update (ISO 27001 & SOC2 Type II).</li><li>• Open Q&A session with executive leadership and team recognition awards.</li></ul>'
+        ),
+        (
+          2,
+          'Annual Festival Holiday Schedule & Workplace Protocols',
+          'HR Updates',
+          'Oct 24, 2026',
+          '2 min read',
+          'People & Culture',
+          false,
+          'Official notification regarding the upcoming gazetted holidays, shift roster adjustments, and emergency operational support.',
+          '<p>Dear Employees,</p><p>In accordance with the 2026 statutory holiday calendar, corporate offices will observe mandatory gazetted holidays as published under the Holidays tab.</p><p>For departments supporting round-the-clock enterprise infrastructure, emergency on-call rosters have been published by respective engineering managers. Compensatory off balances will be credited automatically for on-call personnel.</p>'
+        ),
+        (
+          3,
+          'Enhanced Group Health Insurance & Wellness Coverage 2026-27',
+          'Benefits',
+          'Oct 15, 2026',
+          '4 min read',
+          'Finance & Benefits Treasury',
+          false,
+          'Rollout of enhanced cashless hospitalization limits, dental OPD coverage, and digital mental health counseling benefits.',
+          '<p>Team,</p><p>We are delighted to announce that our annual Group Medical Cover (GMC) policy has been refreshed with enhanced family floater coverage up to ₹7,50,000 per annum, with cashless network access across 8,500+ accredited hospitals nationwide.</p>'
+        )
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        summary = EXCLUDED.summary;
+    `;
+    console.log('✓ Real announcements seeded');
+
+    // 14. Seed 2026 official holidays
+    await sql`
+      INSERT INTO holidays (id, name, date, day, month, year, type, description, is_paid)
+      VALUES
+        (1, 'New Year''s Day', '2026-01-01', 'Thursday', 0, 2026, 'National Holiday', 'First day of the Gregorian calendar year.', true),
+        (2, 'Republic Day', '2026-01-26', 'Monday', 0, 2026, 'National Holiday', 'Commemorates the enactment of the Constitution of India.', true),
+        (3, 'Maha Shivaratri', '2026-02-15', 'Sunday', 1, 2026, 'Gazetted Holiday', 'Celebration of Lord Shiva.', true),
+        (4, 'Holi', '2026-03-04', 'Wednesday', 2, 2026, 'Gazetted Holiday', 'Festival of colors and arrival of spring.', true),
+        (5, 'Eid-ul-Fitr', '2026-03-21', 'Saturday', 2, 2026, 'Gazetted Holiday', 'Islamic festival marking the end of Ramadan fasting.', true),
+        (6, 'Dr. B.R. Ambedkar Jayanti', '2026-04-14', 'Tuesday', 3, 2026, 'National Holiday', 'Honors the father of the Indian Constitution.', true),
+        (7, 'May Day / Labor Day', '2026-05-01', 'Friday', 4, 2026, 'National Holiday', 'International Workers Day honoring labor rights and welfare.', true),
+        (8, 'Independence Day', '2026-08-15', 'Saturday', 7, 2026, 'National Holiday', 'Celebration of national sovereignty and independence.', true),
+        (9, 'Mahatma Gandhi Jayanti', '2026-10-02', 'Friday', 9, 2026, 'National Holiday', 'Commemorates the birth anniversary of the Father of the Nation.', true),
+        (10, 'Dussehra (Vijaya Dashami)', '2026-10-20', 'Tuesday', 9, 2026, 'Gazetted Holiday', 'Victory of good over evil.', true),
+        (11, 'Diwali (Deepavali)', '2026-11-08', 'Sunday', 10, 2026, 'Gazetted Holiday', 'Festival of lights celebrating hope and prosperity.', true),
+        (12, 'Christmas Day', '2026-12-25', 'Friday', 11, 2026, 'National Holiday', 'Commemoration of the birth of Jesus Christ.', true)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        date = EXCLUDED.date;
+    `;
+    console.log('✓ Official 2026 holidays seeded');
 
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {

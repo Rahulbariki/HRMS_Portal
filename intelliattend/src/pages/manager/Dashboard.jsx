@@ -6,6 +6,7 @@ import {
   Users, CheckCircle2, Clock, ChevronRight, UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
 const pages = [
   { label: 'Leave Approvals', path: '/manager/leaves', icon: Calendar, desc: 'Review team leave requests', colorClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
@@ -24,6 +25,28 @@ const pages = [
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    reporteesCount: 1,
+    pendingLeavesCount: 0,
+    pendingExpensesCount: 0,
+    pendingRegularizationsCount: 1,
+    attendanceRate: '100%',
+    tasks: { total: 4, completed: 2, inProgress: 1, pending: 1 }
+  });
+
+  useEffect(() => {
+    const fetchManagerStats = async () => {
+      try {
+        const res = await api.get('/manager/dashboard-stats');
+        if (res.data?.success && res.data.data) {
+          setStats(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load manager stats:', err);
+      }
+    };
+    fetchManagerStats();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -42,7 +65,7 @@ export default function ManagerDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Direct Reportees</p>
-            <p className="font-display text-3xl font-bold text-slate-900 dark:text-white mt-1">1</p>
+            <p className="font-display text-3xl font-bold text-slate-900 dark:text-white mt-1">{stats.reporteesCount}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Active engineering staff</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
@@ -53,7 +76,7 @@ export default function ManagerDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Leaves</p>
-            <p className="font-display text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">1</p>
+            <p className="font-display text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.pendingLeavesCount}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Awaiting manager review</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -64,7 +87,7 @@ export default function ManagerDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Claims</p>
-            <p className="font-display text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">1</p>
+            <p className="font-display text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{stats.pendingExpensesCount}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Expense reimbursements</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -75,7 +98,7 @@ export default function ManagerDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Team Attendance</p>
-            <p className="font-display text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">100%</p>
+            <p className="font-display text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.attendanceRate}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Checked-in today</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -83,6 +106,7 @@ export default function ManagerDashboard() {
           </div>
         </div>
       </div>
+
 
       {/* Pages Grid */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">

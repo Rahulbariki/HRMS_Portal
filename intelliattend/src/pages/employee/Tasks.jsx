@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, FileSpreadsheet, X,
   Calendar, CheckCircle2, Clock,
-  Send
+  Send, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
+
 
 const INITIAL_TASKS = [
   {
@@ -117,6 +119,25 @@ const INITIAL_TASKS = [
 export default function EmployeeTasks() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/tasks');
+        if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          setTasks(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load tasks from server:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTasks();
+  }, []);
+
   const [scope, setScope] = useState('assignedToMe'); // 'assignedToMe' | 'assignedByMe'
   const [filterDue, setFilterDue] = useState('all'); // 'all' | 'due_today' | 'overdue'
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,6 +157,7 @@ export default function EmployeeTasks() {
   const [newTaskSubtitle, setNewTaskSubtitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState('Medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
+
 
   // Counts for filter pills
   const counts = useMemo(() => {
@@ -207,7 +229,7 @@ export default function EmployeeTasks() {
     document.body.removeChild(link);
   };
 
-  const handleCreateTask = (e) => {
+  const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
@@ -215,25 +237,46 @@ export default function EmployeeTasks() {
       ? new Date(newTaskDueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       : '31 Oct 2026';
 
-    const newTask = {
-      id: Date.now(),
-      title: newTaskTitle.trim(),
-      subtitle: newTaskSubtitle.trim() || newTaskTitle.trim(),
-      scope: 'assignedByMe',
-      assignees: [
-        { name: user?.name || 'Sarah Miller', avatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-      ],
-      assignedBy: user?.name || 'Sarah Miller',
-      assignedDate: '2026-10-26',
-      priority: newTaskPriority,
-      dueDate: newTaskDueDate || '2026-10-31',
-      dueDateFormatted: formattedDate,
-      status: 'Pending',
-      progress: 0,
-      comments: [],
-    };
+    const assignees = [
+      { name: user?.name || 'Sarah Miller', avatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
+    ];
 
-    setTasks([newTask, ...tasks]);
+    try {
+      const res = await api.post('/tasks', {
+        title: newTaskTitle.trim(),
+        subtitle: newTaskSubtitle.trim() || newTaskTitle.trim(),
+        scope: 'assignedByMe',
+        assignedBy: user?.name || 'Sarah Miller',
+        priority: newTaskPriority,
+        dueDate: newTaskDueDate || '2026-10-31',
+        dueDateFormatted: formattedDate,
+        assignees,
+      });
+
+      if (res.data?.success && res.data.data) {
+        setTasks([res.data.data, ...tasks]);
+      } else {
+        const fallback = {
+          id: Date.now(),
+          title: newTaskTitle.trim(),
+          subtitle: newTaskSubtitle.trim() || newTaskTitle.trim(),
+          scope: 'assignedByMe',
+          assignees,
+          assignedBy: user?.name || 'Sarah Miller',
+          assignedDate: '2026-10-26',
+          priority: newTaskPriority,
+          dueDate: newTaskDueDate || '2026-10-31',
+          dueDateFormatted: formattedDate,
+          status: 'Pending',
+          progress: 0,
+          comments: [],
+        };
+        setTasks([fallback, ...tasks]);
+      }
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    }
+
     setScope('assignedByMe');
     setIsCreateModalOpen(false);
     setNewTaskTitle('');
@@ -242,37 +285,64 @@ export default function EmployeeTasks() {
     setNewTaskDueDate('');
   };
 
-  const handleAddComment = (e) => {
+  const handleAddComment = async (e) => {
     e.preventDefault();
     if (!newCommentText.trim() || !viewingTask) return;
 
-    const newComment = {
-      id: Date.now(),
-      author: user?.name || 'Sarah Miller',
-      time: 'Just now',
-      content: newCommentText.trim(),
-    };
+    const authorName = user?.name || 'Sarah Miller';
+    const authorEmail = user?.email || 'employee.intelliattend@gmail.com';
+    const timeStr = 'Just now';
 
-    const updatedTask = {
-      ...viewingTask,
-      comments: [...(viewingTask.comments || []), newComment],
-    };
+    try {
+      const res = await api.post(`/tasks/${viewingTask.id}/comments`, {
+        author: authorName,
+        authorEmail,
+        time: timeStr,
+        content: newCommentText.trim()
+      });
 
-    setViewingTask(updatedTask);
-    setTasks(tasks.map(t => (t.id === updatedTask.id ? updatedTask : t)));
+      const savedComment = res.data?.success ? res.data.data : {
+        id: Date.now(),
+        author: authorName,
+        time: timeStr,
+        content: newCommentText.trim()
+      };
+
+      const updatedTask = {
+        ...viewingTask,
+        comments: [...(viewingTask.comments || []), savedComment],
+      };
+
+      setViewingTask(updatedTask);
+      setTasks(tasks.map(t => (t.id === updatedTask.id ? updatedTask : t)));
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+    }
     setNewCommentText('');
   };
 
-  const handleUpdateStatus = (newStatus) => {
+  const handleUpdateStatus = async (newStatus) => {
     if (!viewingTask) return;
+    const newProgress = newStatus === 'Completed' ? 100 : newStatus === 'In Progress' ? 50 : 0;
+    
+    try {
+      await api.patch(`/tasks/${viewingTask.id}/status`, {
+        status: newStatus,
+        progress: newProgress
+      });
+    } catch (err) {
+      console.error('Failed to update status on server:', err);
+    }
+
     const updated = {
       ...viewingTask,
       status: newStatus,
-      progress: newStatus === 'Completed' ? 100 : newStatus === 'In Progress' ? 50 : 0,
+      progress: newProgress,
     };
     setViewingTask(updated);
     setTasks(tasks.map(t => (t.id === updated.id ? updated : t)));
   };
+
 
   return (
     <div className="space-y-4">

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Newspaper, Search, Calendar, Tag, Sparkles,
-  Megaphone, ExternalLink, ArrowRight, X, Clock, Users
+  Megaphone, ExternalLink, ArrowRight, X, Clock, Users, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import api from '../../services/api';
+
 
 const ANNOUNCEMENTS = [
   {
@@ -80,9 +82,28 @@ const ANNOUNCEMENTS = [
 
 export default function EmployeeNews() {
   const [news, setNews] = useState(ANNOUNCEMENTS);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeArticle, setActiveArticle] = useState(null);
+
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/announcements');
+        if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          setNews(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load announcements from server:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
+
 
   const categories = ['All', 'Townhall', 'HR Updates', 'Benefits', 'Milestones'];
 

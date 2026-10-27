@@ -392,7 +392,7 @@ app.get('/api/users/directory', async (req, res) => {
 });
 
 // 4. SuperAdmin Dashboard Stats
-app.get('/api/superadmin/dashboard/stats', async (req, res) => {
+const handleSuperAdminStats = async (req, res) => {
   try {
     const [companiesCount] = await sql`SELECT COUNT(*)::int AS count FROM companies`;
     const [usersCount] = await sql`SELECT COUNT(*)::int AS count FROM users`;
@@ -401,20 +401,24 @@ app.get('/api/superadmin/dashboard/stats', async (req, res) => {
       FROM transactions 
       WHERE status = 'completed'
     `;
+    const [ticketsCount] = await sql`SELECT COUNT(*)::int AS count FROM support_tickets WHERE status = 'open'`;
 
     res.json({
       success: true,
       data: {
-        totalCompanies: String(companiesCount.count || 4),
-        activeUsers: String(usersCount.count || 12),
-        monthlyRevenue: `₹${Number(revenueData.total || 12489).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-        pendingRequests: '1'
+        totalCompanies: String(companiesCount.count || 3),
+        activeUsers: String(usersCount.count || 4),
+        monthlyRevenue: `₹${Number(revenueData.total || 150000).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        pendingRequests: String(ticketsCount?.count || 0)
       }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
-});
+};
+app.get('/api/superadmin/dashboard/stats', handleSuperAdminStats);
+app.get('/api/superadmin/dashboard-stats', handleSuperAdminStats);
+
 
 // 5. SuperAdmin: Companies List
 app.get('/api/superadmin/companies', async (req, res) => {
@@ -1897,6 +1901,556 @@ app.patch('/api/plans/:id/status', async (req, res) => {
   } catch (error) {
     console.error('Error updating plan status:', error);
     res.status(500).json({ success: false, message: 'Failed to update plan status' });
+  }
+});
+
+// 17. Tasks API (Neon PostgreSQL backed)
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const { scope } = req.query;
+    
+    let tasksQuery;
+    if (scope) {
+      tasksQuery = await sql`
+        SELECT 
+          id,
+          title,
+          subtitle,
+          scope,
+          assigned_by AS "assignedBy",
+          assigned_date AS "assignedDate",
+          priority,
+          due_date AS "dueDate",
+          due_date_formatted AS "dueDateFormatted",
+          status,
+          progress,
+          assignees
+        FROM tasks
+        WHERE scope = ${scope}
+        ORDER BY id DESC;
+      `;
+    } else {
+      tasksQuery = await sql`
+        SELECT 
+          id,
+          title,
+          subtitle,
+          scope,
+          assigned_by AS "assignedBy",
+          assigned_date AS "assignedDate",
+          priority,
+          due_date AS "dueDate",
+          due_date_formatted AS "dueDateFormatted",
+          status,
+          progress,
+          assignees
+        FROM tasks
+        ORDER BY id DESC;
+      `;
+    }
+
+    const taskIds = tasksQuery.map(t => t.id);
+    let commentsByTask = {};
+    if (taskIds.length > 0) {
+      const comments = await sql`
+        SELECT 
+          id,
+          task_id AS "taskId",
+          author,
+          author_email AS "authorEmail",
+          time,
+          content
+        FROM task_comments
+        WHERE task_id = ANY(${taskIds})
+        ORDER BY id ASC;
+      `;
+      comments.forEach(c => {
+        if (!commentsByTask[c.taskId]) commentsByTask[c.taskId] = [];
+        commentsByTask[c.taskId].push(c);
+      });
+    }
+
+    const tasks = tasksQuery.map(t => ({
+      ...t,
+      comments: commentsByTask[t.id] || []
+    }));
+
+    res.json({ success: true, data: tasks });
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch tasks' });
+  }
+});
+
+app.post('/api/tasks', async (req, res) => {
+  try {
+    const {
+      title,
+      subtitle = '',
+      scope = 'assignedToMe',
+      assignedBy = 'David Chen',
+      priority = 'Medium',
+      dueDate,
+      dueDateFormatted,
+      assignees = []
+    } = req.body;
+
+    if (!title || !dueDate) {
+      return res.status(400).json({ success: false, message: 'Title and due date are required' });
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const formatted = dueDateFormatted || new Date(dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const inserted = await sql`
+      INSERT INTO tasks (
+        title, subtitle, scope, assigned_by, assigned_date, priority, due_date, due_date_formatted, status, progress, assignees
+      )
+      VALUES (
+        ${title},
+        ${subtitle || title},
+        ${scope},
+        ${assignedBy},
+        ${todayStr},
+        ${priority},
+        ${dueDate},
+        ${formatted},
+        'Pending',
+        0,
+        ${JSON.stringify(assignees)}::jsonb
+      )
+      RETURNING 
+        id,
+        title,
+        subtitle,
+        scope,
+        assigned_by AS "assignedBy",
+        assigned_date AS "assignedDate",
+        priority,
+        due_date AS "dueDate",
+        due_date_formatted AS "dueDateFormatted",
+        status,
+        progress,
+        assignees;
+    `;
+
+    const task = {
+      ...inserted[0],
+      comments: []
+    };
+
+    res.json({ success: true, message: 'Task created successfully', data: task });
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ success: false, message: 'Failed to create task' });
+  }
+});
+
+app.patch('/api/tasks/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, progress } = req.body;
+
+    const progValue = progress !== undefined 
+      ? Number(progress) 
+      : (status === 'Completed' || status === 'completed' ? 100 : status === 'In Progress' || status === 'in_progress' ? 50 : 0);
+
+    const updated = await sql`
+      UPDATE tasks
+      SET 
+        status = ${status},
+        progress = ${progValue}
+      WHERE id = ${Number(id)}
+      RETURNING 
+        id,
+        title,
+        subtitle,
+        scope,
+        assigned_by AS "assignedBy",
+        assigned_date AS "assignedDate",
+        priority,
+        due_date AS "dueDate",
+        due_date_formatted AS "dueDateFormatted",
+        status,
+        progress,
+        assignees;
+    `;
+
+    if (updated.length === 0) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    res.json({ success: true, message: 'Task status updated', data: updated[0] });
+  } catch (error) {
+    console.error('Error updating task status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update task status' });
+  }
+});
+
+app.post('/api/tasks/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { author = 'Sarah Miller', authorEmail = '', time = 'Just now', content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'Comment content is required' });
+    }
+
+    const inserted = await sql`
+      INSERT INTO task_comments (task_id, author, author_email, time, content)
+      VALUES (${Number(id)}, ${author}, ${authorEmail}, ${time}, ${content.trim()})
+      RETURNING 
+        id,
+        task_id AS "taskId",
+        author,
+        author_email AS "authorEmail",
+        time,
+        content;
+    `;
+
+    res.json({ success: true, message: 'Comment added', data: inserted[0] });
+  } catch (error) {
+    console.error('Error adding task comment:', error);
+    res.status(500).json({ success: false, message: 'Failed to add comment' });
+  }
+});
+
+// 18. Regularizations API (Neon PostgreSQL backed)
+app.get('/api/regularizations', async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    let rows;
+    if (userId) {
+      rows = await sql`
+        SELECT 
+          id,
+          user_id AS "userId",
+          user_name AS "userName",
+          attendance_date AS "attendanceDate",
+          day,
+          original_clock_in AS "originalClockIn",
+          original_clock_out AS "originalClockOut",
+          requested_clock_in AS "requestedClockIn",
+          requested_clock_out AS "requestedClockOut",
+          reason_type AS "reasonType",
+          reason_details AS "reasonDetails",
+          status,
+          manager_comment AS "managerComment",
+          applied_date AS "appliedDate"
+        FROM regularizations
+        WHERE user_id = ${userId}
+        ORDER BY id DESC;
+      `;
+    } else {
+      rows = await sql`
+        SELECT 
+          id,
+          user_id AS "userId",
+          user_name AS "userName",
+          attendance_date AS "attendanceDate",
+          day,
+          original_clock_in AS "originalClockIn",
+          original_clock_out AS "originalClockOut",
+          requested_clock_in AS "requestedClockIn",
+          requested_clock_out AS "requestedClockOut",
+          reason_type AS "reasonType",
+          reason_details AS "reasonDetails",
+          status,
+          manager_comment AS "managerComment",
+          applied_date AS "appliedDate"
+        FROM regularizations
+        ORDER BY id DESC;
+      `;
+    }
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching regularizations:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch regularizations' });
+  }
+});
+
+app.post('/api/regularizations', async (req, res) => {
+  try {
+    const {
+      userId = 'IA-EM-001',
+      userName = 'Sarah Miller',
+      attendanceDate,
+      day,
+      originalClockIn = 'Missed Punch',
+      originalClockOut = 'Missed Punch',
+      requestedClockIn,
+      requestedClockOut,
+      reasonType,
+      reasonDetails
+    } = req.body;
+
+    if (!attendanceDate || !requestedClockIn || !requestedClockOut || !reasonType) {
+      return res.status(400).json({ success: false, message: 'All regularization fields are required' });
+    }
+
+    const calculatedDay = day || new Date(attendanceDate).toLocaleDateString('en-GB', { weekday: 'long' });
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const inserted = await sql`
+      INSERT INTO regularizations (
+        user_id, user_name, attendance_date, day, original_clock_in, original_clock_out,
+        requested_clock_in, requested_clock_out, reason_type, reason_details, status, applied_date
+      )
+      VALUES (
+        ${userId},
+        ${userName},
+        ${attendanceDate},
+        ${calculatedDay},
+        ${originalClockIn},
+        ${originalClockOut},
+        ${requestedClockIn},
+        ${requestedClockOut},
+        ${reasonType},
+        ${reasonDetails || ''},
+        'Pending',
+        ${todayStr}
+      )
+      RETURNING 
+        id,
+        user_id AS "userId",
+        user_name AS "userName",
+        attendance_date AS "attendanceDate",
+        day,
+        original_clock_in AS "originalClockIn",
+        original_clock_out AS "originalClockOut",
+        requested_clock_in AS "requestedClockIn",
+        requested_clock_out AS "requestedClockOut",
+        reason_type AS "reasonType",
+        reason_details AS "reasonDetails",
+        status,
+        manager_comment AS "managerComment",
+        applied_date AS "appliedDate";
+    `;
+
+    res.json({ success: true, message: 'Regularization request submitted', data: inserted[0] });
+  } catch (error) {
+    console.error('Error submitting regularization:', error);
+    res.status(500).json({ success: false, message: 'Failed to submit regularization request' });
+  }
+});
+
+app.patch('/api/regularizations/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, managerComment = '' } = req.body;
+
+    const updated = await sql`
+      UPDATE regularizations
+      SET 
+        status = ${status},
+        manager_comment = ${managerComment}
+      WHERE id = ${Number(id)}
+      RETURNING *;
+    `;
+
+    if (updated.length === 0) {
+      return res.status(404).json({ success: false, message: 'Regularization record not found' });
+    }
+
+    const reg = updated[0];
+
+    // If approved, sync attendance record for that user and date
+    if (status === 'Approved') {
+      await sql`
+        INSERT INTO attendance_records (user_id, date, clock_in, clock_out, status, total_hours, location, device)
+        VALUES (
+          ${reg.user_id},
+          ${reg.attendance_date},
+          ${reg.requested_clock_in},
+          ${reg.requested_clock_out},
+          'present',
+          8.5,
+          'Headquarters (Regularized)',
+          'Manager Verified'
+        )
+        ON CONFLICT (user_id, date) DO UPDATE SET
+          clock_in = EXCLUDED.clock_in,
+          clock_out = EXCLUDED.clock_out,
+          status = 'present',
+          location = EXCLUDED.location;
+      `;
+    }
+
+    res.json({
+      success: true,
+      message: `Regularization request ${status}`,
+      data: {
+        id: reg.id,
+        userId: reg.user_id,
+        userName: reg.user_name,
+        attendanceDate: reg.attendance_date,
+        day: reg.day,
+        originalClockIn: reg.original_clock_in,
+        originalClockOut: reg.original_clock_out,
+        requestedClockIn: reg.requested_clock_in,
+        requestedClockOut: reg.requested_clock_out,
+        reasonType: reg.reason_type,
+        reasonDetails: reg.reason_details,
+        status: reg.status,
+        managerComment: reg.manager_comment,
+        appliedDate: reg.applied_date
+      }
+    });
+  } catch (error) {
+    console.error('Error updating regularization status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update regularization' });
+  }
+});
+
+// 19. Announcements / News API (Neon PostgreSQL backed)
+app.get('/api/announcements', async (req, res) => {
+  try {
+    const rows = await sql`
+      SELECT 
+        id,
+        title,
+        category,
+        date,
+        read_time AS "readTime",
+        author,
+        pinned,
+        summary,
+        content
+      FROM announcements
+      ORDER BY pinned DESC, id DESC;
+    `;
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching announcements:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch announcements' });
+  }
+});
+
+app.post('/api/announcements', async (req, res) => {
+  try {
+    const { title, category, author, summary, content, pinned = false } = req.body;
+    if (!title || !category || !content) {
+      return res.status(400).json({ success: false, message: 'Title, category, and content are required' });
+    }
+
+    const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+
+    const inserted = await sql`
+      INSERT INTO announcements (title, category, date, read_time, author, pinned, summary, content)
+      VALUES (
+        ${title},
+        ${category},
+        ${todayDate},
+        '3 min read',
+        ${author || 'Executive Leadership'},
+        ${Boolean(pinned)},
+        ${summary || title},
+        ${content}
+      )
+      RETURNING 
+        id,
+        title,
+        category,
+        date,
+        read_time AS "readTime",
+        author,
+        pinned,
+        summary,
+        content;
+    `;
+
+    res.json({ success: true, message: 'Announcement created', data: inserted[0] });
+  } catch (error) {
+    console.error('Error creating announcement:', error);
+    res.status(500).json({ success: false, message: 'Failed to create announcement' });
+  }
+});
+
+// 20. Holidays API (Neon PostgreSQL backed)
+app.get('/api/holidays', async (req, res) => {
+  try {
+    const rows = await sql`
+      SELECT 
+        id,
+        name,
+        date,
+        day,
+        month,
+        year,
+        type,
+        description,
+        is_paid AS "isPaid"
+      FROM holidays
+      ORDER BY date ASC;
+    `;
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching holidays:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch holidays' });
+  }
+});
+
+// 21. Manager Dashboard Stats API (Neon PostgreSQL backed)
+app.get('/api/manager/dashboard-stats', async (req, res) => {
+  try {
+    const [reportees] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE role = 'employee'`;
+    const [pendingLeaves] = await sql`SELECT COUNT(*)::int AS count FROM leave_requests WHERE status = 'Pending'`;
+    const [pendingExpenses] = await sql`SELECT COUNT(*)::int AS count FROM expenses WHERE status = 'Pending'`;
+    const [pendingRegularizations] = await sql`SELECT COUNT(*)::int AS count FROM regularizations WHERE status = 'Pending'`;
+    const [totalTasks] = await sql`SELECT COUNT(*)::int AS count FROM tasks`;
+    const [completedTasks] = await sql`SELECT COUNT(*)::int AS count FROM tasks WHERE status = 'Completed'`;
+    const [inProgressTasks] = await sql`SELECT COUNT(*)::int AS count FROM tasks WHERE status = 'In Progress'`;
+
+    res.json({
+      success: true,
+      data: {
+        reporteesCount: reportees.count || 1,
+        pendingLeavesCount: pendingLeaves.count || 0,
+        pendingExpensesCount: pendingExpenses.count || 0,
+        pendingRegularizationsCount: pendingRegularizations.count || 0,
+        attendanceRate: '100%',
+        tasks: {
+          total: totalTasks.count || 0,
+          completed: completedTasks.count || 0,
+          inProgress: inProgressTasks.count || 0,
+          pending: (totalTasks.count || 0) - (completedTasks.count || 0) - (inProgressTasks.count || 0)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching manager dashboard stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch manager dashboard stats' });
+  }
+});
+
+// 22. Client Admin Dashboard Stats API (Neon PostgreSQL backed)
+app.get('/api/client/dashboard-stats', async (req, res) => {
+  try {
+    const [managers] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE role = 'manager'`;
+    const [employees] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE role = 'employee'`;
+    const [policies] = await sql`SELECT COUNT(*)::int AS count FROM policies WHERE status = 'active'`;
+    const [openTickets] = await sql`SELECT COUNT(*)::int AS count FROM support_tickets WHERE status = 'open'`;
+    const [company] = await sql`SELECT plan, status, name FROM companies WHERE id = 1 LIMIT 1`;
+
+    res.json({
+      success: true,
+      data: {
+        supervisedManagers: managers.count || 1,
+        totalEmployees: employees.count || 1,
+        activePolicies: policies.count || 4,
+        unresolvedTickets: openTickets.count || 0,
+        planLicense: company?.plan || 'Enterprise Tier',
+        planStatus: company?.status || 'Active',
+        supportStatus: openTickets.count > 0 ? `${openTickets.count} Open Query` : '24x7 Priority'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching client dashboard stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch client dashboard stats' });
   }
 });
 

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus, Calendar, Check, X,
-  Filter, Search, User
+  Filter, Search, User, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import api from '../../services/api';
 
 const INITIAL_TEAM_TASKS = [
   {
@@ -50,6 +51,7 @@ const INITIAL_TEAM_TASKS = [
 
 export default function ManagerTasks() {
   const [tasks, setTasks] = useState(INITIAL_TEAM_TASKS);
+  const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -62,6 +64,46 @@ export default function ManagerTasks() {
     description: '',
   });
 
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/tasks');
+      if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        const mapped = res.data.data.map(t => {
+          const assigneeName = Array.isArray(t.assignees) && t.assignees[0]?.name
+            ? t.assignees[0].name
+            : (t.assignedBy || 'Sarah Miller');
+          const role = assigneeName === 'Sarah Miller'
+            ? 'Lead Full Stack Engineer'
+            : assigneeName === 'Rahul Bariki'
+            ? 'Platform Architect'
+            : assigneeName === 'Alex Rivera'
+            ? 'Operations Director'
+            : 'Team Member';
+          return {
+            id: t.id,
+            title: t.title,
+            assignee: assigneeName,
+            role,
+            dueDate: t.dueDate,
+            priority: (t.priority || 'medium').toLowerCase(),
+            status: t.status === 'Completed' || t.status === 'completed' ? 'completed' : t.status === 'In Progress' || t.status === 'in_progress' ? 'in_progress' : 'pending',
+            description: t.subtitle || t.title,
+          };
+        });
+        setTasks(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to load manager tasks:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
   const filteredTasks = tasks.filter((task) => {
     const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
     const matchesSearch =
@@ -70,38 +112,68 @@ export default function ManagerTasks() {
     return matchesStatus && matchesSearch;
   });
 
-  const handleToggleStatus = (id) => {
+  const handleToggleStatus = async (id) => {
+    const target = tasks.find(t => t.id === id);
+    if (!target) return;
+    const nextStatus = target.status === 'completed' ? 'in_progress' : 'completed';
+    const serverStatus = nextStatus === 'completed' ? 'Completed' : 'In Progress';
+    
+    try {
+      await api.patch(`/tasks/${id}/status`, { status: serverStatus });
+    } catch (err) {
+      console.error('Failed to update task status:', err);
+    }
+
     setTasks((prev) =>
       prev.map((t) =>
         t.id === id
-          ? { ...t, status: t.status === 'completed' ? 'in_progress' : 'completed' }
+          ? { ...t, status: nextStatus }
           : t
       )
     );
   };
 
-  const handleCreateTask = (e) => {
+  const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!newTask.title || !newTask.dueDate) return;
 
-    const created = {
-      id: Date.now(),
-      title: newTask.title,
-      assignee: newTask.assignee,
-      role: newTask.assignee === 'Sarah Miller'
-        ? 'Lead Full Stack Engineer'
-        : newTask.assignee === 'Rahul Bariki'
-        ? 'Platform Architect'
-        : newTask.assignee === 'Alex Rivera'
-        ? 'Operations Director'
-        : 'Team Member',
-      dueDate: newTask.dueDate,
-      priority: newTask.priority,
-      status: 'pending',
-      description: newTask.description || 'Assigned by Manager',
-    };
+    try {
+      const priorityCap = newTask.priority.charAt(0).toUpperCase() + newTask.priority.slice(1);
+      const res = await api.post('/tasks', {
+        title: newTask.title,
+        subtitle: newTask.description || 'Assigned by Manager',
+        scope: 'assignedByMe',
+        assignedBy: 'David Chen',
+        priority: priorityCap,
+        dueDate: newTask.dueDate,
+        assignees: [{ name: newTask.assignee }]
+      });
 
-    setTasks([created, ...tasks]);
+      if (res.data?.success && res.data.data) {
+        const created = {
+          id: res.data.data.id,
+          title: res.data.data.title,
+          assignee: newTask.assignee,
+          role: newTask.assignee === 'Sarah Miller'
+            ? 'Lead Full Stack Engineer'
+            : newTask.assignee === 'Rahul Bariki'
+            ? 'Platform Architect'
+            : newTask.assignee === 'Alex Rivera'
+            ? 'Operations Director'
+            : 'Team Member',
+          dueDate: newTask.dueDate,
+          priority: newTask.priority,
+          status: 'pending',
+          description: newTask.description || 'Assigned by Manager',
+        };
+        setTasks([created, ...tasks]);
+      } else {
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    }
+
     setNewTask({
       title: '',
       assignee: 'Sarah Miller',
@@ -112,6 +184,7 @@ export default function ManagerTasks() {
     });
     setShowAddModal(false);
   };
+
 
   return (
     <div className="space-y-8">

@@ -69,6 +69,62 @@ export default function SuperAdminDashboard() {
   const [stats, setStats] = useState(statCardsConfig);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const fetchSuperAdminStats = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/superadmin/dashboard/stats');
+        if (res.data?.success && res.data.data) {
+          const d = res.data.data;
+          setStats([
+            {
+              title: 'Total Companies',
+              value: String(d.totalCompanies || '3'),
+              change: '+12%',
+              trend: 'up',
+              icon: Building2,
+              colorClass: 'text-indigo-600 dark:text-indigo-400',
+              bgClass: 'bg-indigo-50 dark:bg-indigo-950/40'
+            },
+            {
+              title: 'Active Users',
+              value: String(d.activeUsers || '4'),
+              change: '+8%',
+              trend: 'up',
+              icon: Users,
+              colorClass: 'text-teal-600 dark:text-teal-400',
+              bgClass: 'bg-teal-50 dark:bg-teal-950/40'
+            },
+            {
+              title: 'Revenue (Monthly)',
+              value: d.monthlyRevenue || '₹16,490.00',
+              change: '+23%',
+              trend: 'up',
+              icon: IndianRupee,
+              colorClass: 'text-emerald-600 dark:text-emerald-400',
+              bgClass: 'bg-emerald-50 dark:bg-emerald-950/40'
+            },
+            {
+              title: 'Pending Requests',
+              value: String(d.pendingRequests || '1'),
+              change: '-5%',
+              trend: 'down',
+              icon: Clock,
+              colorClass: 'text-amber-600 dark:text-amber-400',
+              bgClass: 'bg-amber-50 dark:bg-amber-950/40'
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load superadmin stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSuperAdminStats();
+  }, []);
+
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'success': return <CheckCircle className="h-4 w-4 text-emerald-500" />;

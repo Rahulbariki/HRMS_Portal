@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, ChevronLeft, ChevronRight,
-  Search, Info, Sparkles, X, MapPin, Clock
+  Search, Info, Sparkles, X, MapPin, Clock, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import api from '../../services/api';
+
 
 // Comprehensive 2026 Holiday Schedule
 const HOLIDAYS_DATA = [
@@ -163,6 +165,8 @@ const MONTH_NAMES = [
 ];
 
 export default function EmployeeHolidays() {
+  const [holidays, setHolidays] = useState(HOLIDAYS_DATA);
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' | 'table'
   // Default to October 2026 matching reference screenshot
   const [currentYear, setCurrentYear] = useState(2026);
@@ -175,17 +179,38 @@ export default function EmployeeHolidays() {
   // Today reference is 2026-10-26 matching screenshots
   const todayStr = '2026-10-26';
 
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/holidays');
+        if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          const formatted = res.data.data.map(h => ({
+            ...h,
+            date: typeof h.date === 'string' ? h.date.slice(0, 10) : h.date
+          }));
+          setHolidays(formatted);
+        }
+      } catch (err) {
+        console.error('Failed to load holidays from server:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHolidays();
+  }, []);
+
   // Holidays in current view month
   const monthHolidays = useMemo(() => {
-    return HOLIDAYS_DATA.filter(
+    return holidays.filter(
       h => h.year === currentYear && h.month === currentMonth
     );
-  }, [currentYear, currentMonth]);
+  }, [holidays, currentYear, currentMonth]);
 
   // Selected date holiday details (if any)
   const selectedHoliday = useMemo(() => {
-    return HOLIDAYS_DATA.find(h => h.date === selectedDate);
-  }, [selectedDate]);
+    return holidays.find(h => h.date === selectedDate);
+  }, [holidays, selectedDate]);
 
   // Generate calendar days matrix
   const calendarCells = useMemo(() => {
@@ -205,7 +230,7 @@ export default function EmployeeHolidays() {
         dayNum,
         dateStr,
         isCurrentMonth: false,
-        holiday: HOLIDAYS_DATA.find(h => h.date === dateStr),
+        holiday: holidays.find(h => h.date === dateStr),
       });
     }
 
@@ -216,7 +241,7 @@ export default function EmployeeHolidays() {
         dayNum: day,
         dateStr,
         isCurrentMonth: true,
-        holiday: HOLIDAYS_DATA.find(h => h.date === dateStr),
+        holiday: holidays.find(h => h.date === dateStr),
       });
     }
 
@@ -230,12 +255,12 @@ export default function EmployeeHolidays() {
         dayNum: day,
         dateStr,
         isCurrentMonth: false,
-        holiday: HOLIDAYS_DATA.find(h => h.date === dateStr),
+        holiday: holidays.find(h => h.date === dateStr),
       });
     }
 
     return cells;
-  }, [currentYear, currentMonth]);
+  }, [holidays, currentYear, currentMonth]);
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -263,15 +288,15 @@ export default function EmployeeHolidays() {
 
   // Filtered list for Table List View
   const filteredTableHolidays = useMemo(() => {
-    return HOLIDAYS_DATA.filter(h => {
+    return holidays.filter(h => {
       const matchSearch =
         h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        h.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (h.description && h.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
         h.type.toLowerCase().includes(searchQuery.toLowerCase());
       const matchType = typeFilter === 'All' || h.type === typeFilter;
       return matchSearch && matchType;
     });
-  }, [searchQuery, typeFilter]);
+  }, [holidays, searchQuery, typeFilter]);
 
   return (
     <div className="space-y-4">
