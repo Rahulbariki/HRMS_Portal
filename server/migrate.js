@@ -139,6 +139,30 @@ async function migrate() {
     `;
     console.log('✓ Table "leave_balances" verified');
 
+    // 4d. Expenses & Reimbursements table
+    await sql`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        user_role VARCHAR(100),
+        department VARCHAR(100),
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        amount_inr NUMERIC(12, 2) NOT NULL,
+        expense_date DATE NOT NULL,
+        description TEXT,
+        receipt_url TEXT,
+        receipt_public_id VARCHAR(255),
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        approved_by VARCHAR(100),
+        payment_ref VARCHAR(100),
+        applied_on DATE NOT NULL DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "expenses" verified');
+
     // 5. Transactions table
     await sql`
       CREATE TABLE IF NOT EXISTS transactions (
@@ -453,6 +477,47 @@ async function migrate() {
       `;
     }
     console.log('✓ Attendance records synchronized for production personnel');
+
+    // Clean up any unauthorized or dummy expense records
+    await sql`
+      DELETE FROM expenses
+      WHERE user_id NOT IN ('IA-SA-001', 'IA-CA-001', 'IA-MG-001', 'IA-EM-001');
+    `;
+
+    // Seed production expenses in INR (₹)
+    await sql`
+      INSERT INTO expenses (
+        id, user_id, user_name, user_role, department, title, category,
+        amount_inr, expense_date, description, receipt_url, status, approved_by, payment_ref, applied_on
+      )
+      VALUES 
+        (
+          501, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology',
+          'Client Architecture Lunch & Product Review', 'Meal & Hospitality',
+          2450.00, '2026-10-22', 'Client executive discussion with technical leads over lunch in Hitec City',
+          'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'approved', 'David Chen (Engineering Director)', 'NEFT-HDFC-9921', '2026-10-23'
+        ),
+        (
+          502, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology',
+          'AWS Solutions Architect Professional Exam', 'Tech Equipment',
+          12500.00, '2026-10-18', 'Annual technical certification reimbursement according to engineering policy',
+          'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'reimbursed', 'David Chen (Engineering Director)', 'UPI-RZR-8109', '2026-10-19'
+        ),
+        (
+          503, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology',
+          'High-Speed Fiber Internet Allowance (Q3)', 'Internet & Phone',
+          3540.00, '2026-10-25', 'Quarterly home fiber broadband bill for hybrid engineering work',
+          'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'pending', 'Awaiting Manager Review', NULL, '2026-10-26'
+        ),
+        (
+          504, 'IA-EM-001', 'Sarah Miller', 'Lead Product Software Engineer', 'Engineering & Technology',
+          'Ergonomic Mechanical Keyboard & Mouse Set', 'Office Supplies',
+          4299.00, '2026-10-12', 'Ergonomic workspace accessory set for developer productivity',
+          'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'approved', 'David Chen (Engineering Director)', 'NEFT-HDFC-8910', '2026-10-13'
+        )
+      ON CONFLICT (id) DO NOTHING;
+    `;
+    console.log('✓ Production expense claims seeded in INR (₹)');
 
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {

@@ -942,7 +942,193 @@ app.patch('/api/leaves/:id/status', async (req, res) => {
   }
 });
 
-// 10. Cloudinary Object Storage: Upload Corporate Document
+// ==========================================
+// MODULE 3: EXPENSES & REIMBURSEMENTS API
+// ==========================================
+
+// 10a. Get my expenses
+app.get('/api/expenses/my', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const expenses = await sql`
+      SELECT 
+        id,
+        user_id,
+        title,
+        category,
+        amount_inr AS "amountInr",
+        TO_CHAR(expense_date, 'YYYY-MM-DD') AS "expenseDate",
+        description,
+        COALESCE(receipt_url, '') AS "receiptUrl",
+        status,
+        approved_by AS "approvedBy",
+        payment_ref AS "paymentRef",
+        TO_CHAR(applied_on, 'YYYY-MM-DD') AS "appliedOn"
+      FROM expenses
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC;
+    `;
+    res.json({ success: true, data: expenses });
+  } catch (error) {
+    console.error('Error fetching employee expenses:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch expenses' });
+  }
+});
+
+// 10b. Submit expense claim with receipt upload to Cloudinary
+app.post('/api/expenses/submit', upload.single('receipt'), async (req, res) => {
+  try {
+    const {
+      userId = 'IA-EM-001',
+      title,
+      category = 'General',
+      amountInr,
+      expenseDate,
+      description
+    } = req.body;
+
+    if (!title || !amountInr || !expenseDate) {
+      return res.status(400).json({ success: false, message: 'Title, amount in INR, and date are required' });
+    }
+
+    let receiptUrl = '';
+    let receiptPublicId = '';
+
+    if (req.file) {
+      const uploadRes = await uploadBufferToCloudinary(req.file.buffer, {
+        folder: 'intelliattend/receipts',
+        resource_type: 'auto',
+        public_id: `receipt_${userId}_${Date.now()}`
+      });
+      receiptUrl = uploadRes.secure_url;
+      receiptPublicId = uploadRes.public_id;
+    }
+
+    const userRows = await sql`SELECT first_name, last_name, designation, department FROM users WHERE id = ${userId} LIMIT 1;`;
+    const userName = userRows.length > 0 ? `${userRows[0].first_name} ${userRows[0].last_name}` : 'Sarah Miller';
+    const userRole = userRows.length > 0 ? userRows[0].designation : 'Lead Product Software Engineer';
+    const dept = userRows.length > 0 ? userRows[0].department : 'Engineering & Technology';
+
+    const inserted = await sql`
+      INSERT INTO expenses (
+        user_id, user_name, user_role, department,
+        title, category, amount_inr, expense_date, description,
+        receipt_url, receipt_public_id, status
+      )
+      VALUES (
+        ${userId}, ${userName}, ${userRole}, ${dept},
+        ${title}, ${category}, ${amountInr}, ${expenseDate}, ${description || ''},
+        ${receiptUrl}, ${receiptPublicId}, 'pending'
+      )
+      RETURNING *;
+    `;
+
+    const r = inserted[0];
+    res.json({
+      success: true,
+      message: 'Expense claim submitted successfully',
+      data: {
+        id: r.id,
+        userId: r.user_id,
+        title: r.title,
+        category: r.category,
+        amountInr: r.amount_inr,
+        expenseDate: r.expense_date,
+        description: r.description,
+        receiptUrl: r.receipt_url,
+        status: r.status,
+        appliedOn: r.applied_on
+      }
+    });
+  } catch (error) {
+    console.error('Error submitting expense:', error);
+    res.status(500).json({ success: false, message: 'Failed to submit expense claim' });
+  }
+});
+
+// 10c. Cancel pending expense claim
+app.delete('/api/expenses/:id', async (req, res) => {
+  try {
+    const expenseId = req.params.id;
+    await sql`
+      DELETE FROM expenses
+      WHERE id = ${expenseId} AND status = 'pending';
+    `;
+    res.json({ success: true, message: 'Expense claim cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling expense:', error);
+    res.status(500).json({ success: false, message: 'Failed to cancel expense' });
+  }
+});
+
+// 10d. Team expenses for Manager / Admin approval
+app.get('/api/expenses/team', async (req, res) => {
+  try {
+    const expenses = await sql`
+      SELECT 
+        id,
+        user_id AS "userId",
+        user_name AS "employeeName",
+        user_role AS "employeeRole",
+        department,
+        title,
+        category,
+        amount_inr AS "amountInr",
+        TO_CHAR(expense_date, 'YYYY-MM-DD') AS "expenseDate",
+        description,
+        COALESCE(receipt_url, '') AS "receiptUrl",
+        status,
+        approved_by AS "approvedBy",
+        payment_ref AS "paymentRef",
+        TO_CHAR(applied_on, 'YYYY-MM-DD') AS "appliedOn"
+      FROM expenses
+      ORDER BY 
+        CASE WHEN status = 'pending' THEN 1 WHEN status = 'approved' THEN 2 ELSE 3 END,
+        created_at DESC;
+    `;
+    res.json({ success: true, data: expenses });
+  } catch (error) {
+    console.error('Error fetching team expenses:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team expenses' });
+  }
+});
+
+// 10e. Manager approves or rejects expense claim
+app.patch('/api/expenses/:id/status', async (req, res) => {
+  try {
+    const expenseId = req.params.id;
+    const { status, approvedBy = 'David Chen (Manager)', paymentRef } = req.body;
+
+    if (!['approved', 'rejected', 'reimbursed', 'pending'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid expense status' });
+    }
+
+    const updated = await sql`
+      UPDATE expenses
+      SET 
+        status = ${status}, 
+        approved_by = ${approvedBy},
+        payment_ref = COALESCE(${paymentRef || null}, payment_ref)
+      WHERE id = ${expenseId}
+      RETURNING *;
+    `;
+
+    if (updated.length === 0) {
+      return res.status(404).json({ success: false, message: 'Expense claim not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Expense claim marked as ${status}`,
+      data: updated[0]
+    });
+  } catch (error) {
+    console.error('Error updating expense status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update expense status' });
+  }
+});
+
+// 11. Cloudinary Object Storage: Upload Corporate Document
 app.post('/api/upload/document', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
