@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage';
-import { HelpCircle } from 'lucide-react';
+import ManagerQueries from '../manager/Queries';
 
 export default function ClientSupport() {
-  return <PlaceholderPage title="Support" description="Contact support team" icon={HelpCircle} href="/client/dashboard" />;
+  return <ManagerQueries />;
 }

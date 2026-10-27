@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage';
-import { FileCheck } from 'lucide-react';
+import ClientPolicies from '../client/Policies';
 
 export default function EmployeePolicies() {
-  return <PlaceholderPage title="Policies" description="Company policies" icon={FileCheck} href="/employee/dashboard" />;
+  return <ClientPolicies />;
 }

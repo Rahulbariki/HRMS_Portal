@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage';
-import { FileText } from 'lucide-react';
+import SuperAdminTransactions from './Transactions';
 
 export default function SuperAdminInvoices() {
-  return <PlaceholderPage title="Invoices" description="Generate and track invoices" icon={FileText} href="/superadmin/dashboard" />;
+  return <SuperAdminTransactions />;
 }

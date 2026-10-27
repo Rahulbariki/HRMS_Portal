@@ -279,6 +279,26 @@ async function migrate() {
     `;
     console.log('✓ Table "policies" verified');
 
+    // 9. Support tickets table
+    await sql`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id SERIAL PRIMARY KEY,
+        ticket_ref VARCHAR(50) UNIQUE NOT NULL,
+        user_id VARCHAR(50) NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        user_email VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL DEFAULT 'General HR',
+        priority VARCHAR(50) NOT NULL DEFAULT 'Normal',
+        subject VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'open',
+        resolution_notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "support_tickets" verified');
+
     // Seed production credentials if not exists
     const passwordHash = await bcrypt.hash('password123', 10);
 
@@ -797,6 +817,21 @@ async function migrate() {
         category = EXCLUDED.category;
     `;
     console.log('✓ Corporate document storage metadata seeded');
+
+    // Seed production support tickets
+    await sql`
+      INSERT INTO support_tickets (id, ticket_ref, user_id, user_name, user_email, category, priority, subject, description, status, resolution_notes)
+      VALUES
+        (1, 'TKT-2026-1001', 'IA-EM-001', 'Sarah Miller', 'employee.intelliattend@gmail.com', 'Payroll', 'High', 'Form 16 & TDS Certificate dispatch request', 'Requesting digital Form 16 Part A and Part B for FY 2025-26 tax filing.', 'resolved', 'Digitally signed Form 16 Part A & B generated and dispatched to registered email.'),
+        (2, 'TKT-2026-1002', 'IA-EM-001', 'Sarah Miller', 'employee.intelliattend@gmail.com', 'IT Assets', 'Normal', 'External dual-monitor setup request for workstation', 'Requesting additional 27-inch 4K monitor and USB-C dock for Hyderabad development station.', 'in_progress', 'Approved by Engineering Director. Hardware shipment dispatch scheduled.'),
+        (3, 'TKT-2026-1003', 'IA-MG-001', 'David Chen', 'manager.intelliattend@gmail.com', 'Attendance', 'High', 'Shift roster biometric sync override for weekend maintenance', 'Weekend scheduled infrastructure maintenance punch override for engineering on-call personnel.', 'resolved', 'Compensatory off balances credited and punch timestamps manually verified.'),
+        (4, 'TKT-2026-1004', 'IA-CA-001', 'Client Admin', 'clientadmin.intelliattend@gmail.com', 'Billing', 'High', 'Annual enterprise invoice GSTIN verification', 'Verify GST registration details on TXN-2026-98412 for corporate quarterly tax credit filing.', 'open', NULL)
+      ON CONFLICT (id) DO UPDATE SET
+        user_name = EXCLUDED.user_name,
+        user_email = EXCLUDED.user_email,
+        status = EXCLUDED.status;
+    `;
+    console.log('✓ Production support tickets seeded');
 
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {

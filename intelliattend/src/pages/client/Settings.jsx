@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage';
-import { Settings } from 'lucide-react';
+import EmployeeSettings from '../employee/Settings';
 
 export default function ClientSettings() {
-  return <PlaceholderPage title="Settings" description="Company settings" icon={Settings} href="/client/dashboard" />;
+  return <EmployeeSettings />;
 }

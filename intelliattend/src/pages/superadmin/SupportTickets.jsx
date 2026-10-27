@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage';
-import { HelpCircle } from 'lucide-react';
+import ManagerQueries from '../manager/Queries';
 
 export default function SuperAdminSupportTickets() {
-  return <PlaceholderPage title="Support Tickets" description="Handle support requests" icon={HelpCircle} href="/superadmin/dashboard" />;
+  return <ManagerQueries />;
 }

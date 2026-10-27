@@ -1,6 +1,5 @@
-import PlaceholderPage from '../PlaceholderPage';
-import { Building } from 'lucide-react';
+import SuperAdminCompanies from './Companies';
 
 export default function SuperAdminClients() {
-  return <PlaceholderPage title="Clients" description="Manage client accounts" icon={Building} href="/superadmin/dashboard" />;
+  return <SuperAdminCompanies />;
 }

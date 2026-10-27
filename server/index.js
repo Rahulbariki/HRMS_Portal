@@ -1446,6 +1446,117 @@ app.delete('/api/policies/:id', async (req, res) => {
   }
 });
 
+// 11c. Support Tickets & Corporate Grievance API
+app.get('/api/tickets', async (req, res) => {
+  try {
+    const { userId, userEmail, category, status } = req.query;
+
+    let tickets = await sql`
+      SELECT 
+        id,
+        ticket_ref AS "ticketRef",
+        user_id AS "userId",
+        user_name AS "userName",
+        user_email AS "userEmail",
+        category,
+        priority,
+        subject,
+        description,
+        status,
+        resolution_notes AS "resolutionNotes",
+        to_char(created_at, 'Mon DD, YYYY • HH24:MI') AS "createdAt",
+        to_char(updated_at, 'Mon DD, YYYY • HH24:MI') AS "updatedAt"
+      FROM support_tickets
+      ORDER BY id DESC;
+    `;
+
+    if (userId) {
+      tickets = tickets.filter(t => t.userId === userId);
+    }
+    if (userEmail) {
+      tickets = tickets.filter(t => t.userEmail === userEmail);
+    }
+    if (category && category !== 'all') {
+      tickets = tickets.filter(t => t.category?.toLowerCase() === category.toLowerCase());
+    }
+    if (status && status !== 'all') {
+      tickets = tickets.filter(t => t.status === status);
+    }
+
+    res.json({ success: true, data: tickets });
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch tickets' });
+  }
+});
+
+app.post('/api/tickets', async (req, res) => {
+  try {
+    const { userId, userName, userEmail, category = 'General HR', priority = 'Normal', subject, description } = req.body;
+    if (!subject || !description) {
+      return res.status(400).json({ success: false, message: 'Subject and description are required' });
+    }
+
+    const ticketRef = `TKT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const inserted = await sql`
+      INSERT INTO support_tickets (
+        ticket_ref, user_id, user_name, user_email, category, priority, subject, description, status
+      )
+      VALUES (
+        ${ticketRef},
+        ${userId || 'IA-EM-001'},
+        ${userName || 'Sarah Miller'},
+        ${userEmail || 'employee.intelliattend@gmail.com'},
+        ${category},
+        ${priority},
+        ${subject},
+        ${description},
+        'open'
+      )
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: 'Support ticket submitted successfully', data: inserted[0] });
+  } catch (error) {
+    console.error('Error creating ticket:', error);
+    res.status(500).json({ success: false, message: 'Failed to create ticket' });
+  }
+});
+
+app.patch('/api/tickets/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, resolutionNotes } = req.body;
+
+    const updated = await sql`
+      UPDATE support_tickets
+      SET
+        status = ${status},
+        resolution_notes = COALESCE(${resolutionNotes}, resolution_notes),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${Number(id)}
+      RETURNING *;
+    `;
+
+    res.json({ success: true, message: `Ticket status updated to ${status}`, data: updated[0] });
+  } catch (error) {
+    console.error('Error updating ticket:', error);
+    res.status(500).json({ success: false, message: 'Failed to update ticket status' });
+  }
+});
+
+app.delete('/api/tickets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await sql`DELETE FROM support_tickets WHERE id = ${Number(id)};`;
+    res.json({ success: true, message: 'Ticket deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting ticket:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete ticket' });
+  }
+});
+
 // 12. Cloudinary Object Storage: Upload User Avatar
 app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
   try {
