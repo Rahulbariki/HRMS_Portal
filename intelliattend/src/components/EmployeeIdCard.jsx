@@ -12,7 +12,7 @@ export default function EmployeeIdCard({
     doj: '05-10-2026',
     bloodGroup: 'O+',
     avatar: '/avatar_rahul.png',
-    company: 'SHNOOR INTERNATIONAL',
+    company: 'IntelliAttend',
   },
   showActions = true,
 }) {
@@ -107,17 +107,17 @@ export default function EmployeeIdCard({
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition cursor-pointer shadow-2xs"
             title="Flip to view back side"
           >
-            <RotateCw className="w-3.5 h-3.5 text-amber-600" />
+            <RotateCw className="w-3.5 h-3.5 text-teal-600" />
             <span>{isFlipped ? 'Show Front' : 'Flip to Back'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer shadow-md hover:shadow-lg"
             title="Download or save official ID card"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5 text-teal-400" />
             <span>Download ID Card</span>
           </button>
 
@@ -127,7 +127,7 @@ export default function EmployeeIdCard({
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition cursor-pointer shadow-2xs"
             title="Print ID Card"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-3.5 h-3.5 text-slate-600" />
             <span>Print</span>
           </button>
         </div>
@@ -138,19 +138,27 @@ export default function EmployeeIdCard({
         ref={cardRef}
         className="w-[360px] sm:w-[390px] min-h-[615px] bg-white rounded-[36px] border border-slate-200 shadow-2xl overflow-hidden relative select-none flex flex-col justify-between transition-all duration-300"
         style={{
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.06)',
         }}
       >
         {!isFlipped ? (
-          /* FRONT OF CARD matching User's exact reference */
+          /* FRONT OF CARD matching User's exact reference with IntelliAttend Theme */
           <div className="flex flex-col h-full justify-between relative bg-white">
-            {/* Top Amber Wave Header & Circular Photo */}
+            {/* Top IntelliAttend Midnight Navy Wave Header & Circular Photo */}
             <div className="relative">
-              {/* Rich Warm Caramel Amber Header */}
+              {/* Deep Slate / Midnight Navy Header */}
               <div
-                className="h-44 w-full relative overflow-hidden"
-                style={{ backgroundColor: '#cb6b03' }}
+                className="h-44 w-full relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A]"
               >
+                {/* Subtle Teal Accent Glow Orb in Header */}
+                <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
+                <div className="absolute top-2 left-6 flex items-center gap-2 opacity-90">
+                  <img src="/logo.png" alt="IntelliAttend" className="h-6 w-auto object-contain" />
+                  <span className="font-display font-bold text-xs tracking-wider uppercase text-white/90">
+                    IntelliAttend
+                  </span>
+                </div>
+
                 {/* Flowing Organic Wave at bottom */}
                 <svg
                   className="absolute bottom-0 left-0 right-0 w-full"
@@ -165,10 +173,12 @@ export default function EmployeeIdCard({
               {/* Centered Circular Portrait overlapping the wave */}
               <div className="absolute left-1/2 -bottom-20 -translate-x-1/2 z-20">
                 <div
-                  className="w-44 h-44 rounded-full p-[4px] shadow-lg flex items-center justify-center"
-                  style={{ backgroundColor: '#cb6b03' }}
+                  className="w-44 h-44 rounded-full p-[4px] shadow-xl flex items-center justify-center bg-gradient-to-tr from-teal-400 to-teal-200"
+                  style={{
+                    boxShadow: '0 12px 28px -6px rgba(45, 212, 191, 0.35)',
+                  }}
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-white bg-[#8ec5fc] flex items-center justify-center">
+                  <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-white bg-slate-900 flex items-center justify-center">
                     {employee.avatar ? (
                       <img
                         src={employee.avatar}
@@ -179,7 +189,7 @@ export default function EmployeeIdCard({
                         }}
                       />
                     ) : (
-                      <User className="w-20 h-20 text-white" />
+                      <User className="w-20 h-20 text-teal-300" />
                     )}
                   </div>
                 </div>
@@ -188,40 +198,40 @@ export default function EmployeeIdCard({
 
             {/* Middle Section: Name, Role Pill, Aligned Key-Value Table, Watermark */}
             <div className="pt-24 px-6 pb-4 flex flex-col items-center text-center relative flex-1">
-              {/* Authentic Watermark in Background */}
+              {/* Authentic IntelliAttend Watermark in Background */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 mt-20">
-                {/* Circular Emblem with translucent amber & blue arcs */}
+                {/* Circular Emblem with IntelliAttend teal & navy arcs */}
                 <div className="w-28 h-28 opacity-15 mb-1 flex items-center justify-center">
                   <svg viewBox="0 0 100 100" className="w-full h-full" fill="none">
-                    {/* Amber top-left arc */}
+                    {/* Teal top-left arc */}
                     <path
                       d="M 50 10 A 40 40 0 0 1 90 50"
-                      stroke="#cb6b03"
+                      stroke="#2DD4BF"
                       strokeWidth="10"
                       strokeLinecap="round"
                     />
-                    {/* Blue bottom-right arc */}
+                    {/* Deep Slate bottom-right arc */}
                     <path
                       d="M 50 90 A 40 40 0 0 1 10 50"
-                      stroke="#3b82f6"
+                      stroke="#0F172A"
                       strokeWidth="10"
                       strokeLinecap="round"
                     />
                     {/* Central node dots */}
-                    <circle cx="50" cy="50" r="12" fill="#cb6b03" opacity="0.6" />
+                    <circle cx="50" cy="50" r="12" fill="#2DD4BF" opacity="0.8" />
                   </svg>
                 </div>
-                {/* SHNOOR */}
+                {/* INTELLIATTEND */}
                 <span
-                  className="font-extrabold text-[28px] tracking-[0.14em] text-slate-400 opacity-20 uppercase font-sans select-none leading-none"
+                  className="font-extrabold text-[24px] tracking-[0.18em] text-slate-400 opacity-20 uppercase font-sans select-none leading-none"
                 >
-                  SHNOOR
+                  INTELLIATTEND
                 </span>
-                {/* INTERNATIONAL */}
+                {/* HRMS WORKSPACE */}
                 <span
-                  className="font-bold text-[10px] tracking-[0.35em] text-slate-400 opacity-20 uppercase font-sans select-none mt-1"
+                  className="font-bold text-[9px] tracking-[0.4em] text-slate-400 opacity-20 uppercase font-sans select-none mt-1"
                 >
-                  INTERNATIONAL
+                  HRMS WORKSPACE
                 </span>
               </div>
 
@@ -233,11 +243,10 @@ export default function EmployeeIdCard({
               {/* Designation Pill */}
               <div className="mt-3.5 mb-6 w-full max-w-[340px] relative z-10">
                 <div
-                  className="text-white font-extrabold text-[11px] sm:text-[11.5px] px-5 py-2.5 rounded-full uppercase tracking-wider leading-snug shadow-xs text-center"
-                  style={{ backgroundColor: '#cb6b03' }}
+                  className="text-white font-extrabold text-[11px] sm:text-[11.5px] px-5 py-2.5 rounded-full uppercase tracking-wider leading-snug shadow-md text-center bg-[#0F172A] border border-teal-500/30"
                 >
                   {designationLines.map((line, idx) => (
-                    <div key={idx} className={idx > 0 ? 'mt-0.5' : ''}>
+                    <div key={idx} className={idx > 0 ? 'mt-0.5 text-teal-300' : ''}>
                       {line}
                     </div>
                   ))}
@@ -360,7 +369,7 @@ export default function EmployeeIdCard({
               <div className="flex items-center justify-center gap-2 mb-2">
                 <img src="/logo.png" alt="Logo" className="h-7 w-auto object-contain" />
                 <span className="font-display font-bold text-sm text-[#0f172a] tracking-tight uppercase">
-                  {employee.company || 'SHNOOR INTERNATIONAL LLC'}
+                  {employee.company || 'INTELLIATTEND LLC'}
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
@@ -393,8 +402,8 @@ export default function EmployeeIdCard({
             </div>
 
             {/* Return Notice */}
-            <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[10px] text-amber-900 text-center leading-relaxed">
-              <strong>Notice:</strong> This identity card is property of {employee.company || 'IntelliAttend LLC'}. If found, please return to the nearest company facility or mail to hr@shnoor.com.
+            <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80 text-[10px] text-teal-950 text-center leading-relaxed">
+              <strong>Notice:</strong> This identity card is property of {employee.company || 'IntelliAttend Technologies LLC'}. If found, please return to the nearest company facility or mail to support@intelliattend.com.
             </div>
 
             {/* Back Footer with QR Code */}
