@@ -163,6 +163,53 @@ async function migrate() {
     `;
     console.log('✓ Table "expenses" verified');
 
+    // 4e. Salary structures table
+    await sql`
+      CREATE TABLE IF NOT EXISTS salary_structures (
+        user_id VARCHAR(50) PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        designation VARCHAR(150),
+        department VARCHAR(100),
+        annual_ctc_inr NUMERIC(12, 2) NOT NULL,
+        monthly_gross_inr NUMERIC(12, 2) NOT NULL,
+        basic_salary NUMERIC(12, 2) NOT NULL,
+        hra NUMERIC(12, 2) NOT NULL,
+        special_allowance NUMERIC(12, 2) NOT NULL,
+        performance_bonus NUMERIC(12, 2) NOT NULL,
+        pf_deduction NUMERIC(12, 2) NOT NULL,
+        tds_deduction NUMERIC(12, 2) NOT NULL,
+        insurance_deduction NUMERIC(12, 2) NOT NULL,
+        professional_tax NUMERIC(12, 2) NOT NULL DEFAULT 200.00,
+        monthly_net_inr NUMERIC(12, 2) NOT NULL,
+        salary_band VARCHAR(50) DEFAULT 'Engineering Band L4',
+        bank_name VARCHAR(100),
+        bank_account VARCHAR(100),
+        pan_number VARCHAR(50),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "salary_structures" verified');
+
+    // 4f. Payslips table
+    await sql`
+      CREATE TABLE IF NOT EXISTS payslips (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        month VARCHAR(50) NOT NULL,
+        pay_date DATE NOT NULL,
+        gross_inr NUMERIC(12, 2) NOT NULL,
+        deductions_inr NUMERIC(12, 2) NOT NULL,
+        net_inr NUMERIC(12, 2) NOT NULL,
+        working_days INT NOT NULL DEFAULT 22,
+        paid_days INT NOT NULL DEFAULT 22,
+        status VARCHAR(20) NOT NULL DEFAULT 'paid',
+        transaction_ref VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log('✓ Table "payslips" verified');
+
     // 5. Transactions table
     await sql`
       CREATE TABLE IF NOT EXISTS transactions (
@@ -518,6 +565,149 @@ async function migrate() {
       ON CONFLICT (id) DO NOTHING;
     `;
     console.log('✓ Production expense claims seeded in INR (₹)');
+
+    // Clean up any unauthorized or dummy salary/payslips records
+    await sql`
+      DELETE FROM salary_structures
+      WHERE user_id NOT IN ('IA-SA-001', 'IA-CA-001', 'IA-MG-001', 'IA-EM-001');
+    `;
+    await sql`
+      DELETE FROM payslips
+      WHERE user_id NOT IN ('IA-SA-001', 'IA-CA-001', 'IA-MG-001', 'IA-EM-001');
+    `;
+
+    // Seed salary structures for all 4 production accounts
+    const salaries = [
+      {
+        user_id: 'IA-SA-001',
+        user_name: 'Bariki Rahul',
+        designation: 'GLOBAL PLATFORM SUPER ADMINISTRATOR & FOUNDER',
+        department: 'Platform Administration & Security',
+        annual_ctc_inr: 3600000.00,
+        monthly_gross_inr: 300000.00,
+        basic_salary: 150000.00,
+        hra: 60000.00,
+        special_allowance: 65000.00,
+        performance_bonus: 25000.00,
+        pf_deduction: 18000.00,
+        tds_deduction: 34800.00,
+        insurance_deduction: 2000.00,
+        professional_tax: 200.00,
+        monthly_net_inr: 245000.00,
+        salary_band: 'Executive Founder Band E1',
+        bank_name: 'HDFC Bank',
+        bank_account: '•••• •••• 4892 (HDFC Bank)',
+        pan_number: 'ABCDE1234F'
+      },
+      {
+        user_id: 'IA-CA-001',
+        user_name: 'Alex Rivera',
+        designation: 'CLIENT ENTERPRISE ADMINISTRATOR & OPERATIONS DIRECTOR',
+        department: 'Human Resources & Corporate Governance',
+        annual_ctc_inr: 2400000.00,
+        monthly_gross_inr: 200000.00,
+        basic_salary: 100000.00,
+        hra: 40000.00,
+        special_allowance: 45000.00,
+        performance_bonus: 15000.00,
+        pf_deduction: 12000.00,
+        tds_deduction: 18000.00,
+        insurance_deduction: 1800.00,
+        professional_tax: 200.00,
+        monthly_net_inr: 168000.00,
+        salary_band: 'Corporate Director Band D1',
+        bank_name: 'HDFC Bank',
+        bank_account: '•••• •••• 6610 (HDFC Bank)',
+        pan_number: 'ERTY56789X'
+      },
+      {
+        user_id: 'IA-MG-001',
+        user_name: 'David Chen',
+        designation: 'LEAD ENGINEERING & DELIVERY DIRECTOR',
+        department: 'Engineering & Technology',
+        annual_ctc_inr: 2800000.00,
+        monthly_gross_inr: 233333.00,
+        basic_salary: 116666.00,
+        hra: 46666.00,
+        special_allowance: 50001.00,
+        performance_bonus: 20000.00,
+        pf_deduction: 14000.00,
+        tds_deduction: 22533.00,
+        insurance_deduction: 1600.00,
+        professional_tax: 200.00,
+        monthly_net_inr: 195000.00,
+        salary_band: 'Engineering Leadership Band M2',
+        bank_name: 'ICICI Bank',
+        bank_account: '•••• •••• 1029 (ICICI Bank)',
+        pan_number: 'BNMKL9876P'
+      },
+      {
+        user_id: 'IA-EM-001',
+        user_name: 'Sarah Miller',
+        designation: 'LEAD PRODUCT SOFTWARE DEVELOPMENT ENGINEER',
+        department: 'Engineering & Technology',
+        annual_ctc_inr: 1800000.00,
+        monthly_gross_inr: 150000.00,
+        basic_salary: 75000.00,
+        hra: 30000.00,
+        special_allowance: 33000.00,
+        performance_bonus: 12000.00,
+        pf_deduction: 9000.00,
+        tds_deduction: 11000.00,
+        insurance_deduction: 1400.00,
+        professional_tax: 200.00,
+        monthly_net_inr: 128400.00,
+        salary_band: 'Engineering Band L4',
+        bank_name: 'HDFC Bank',
+        bank_account: '•••• •••• 4892 (HDFC Bank)',
+        pan_number: 'ABCDE1234F'
+      }
+    ];
+
+    for (const s of salaries) {
+      await sql`
+        INSERT INTO salary_structures (
+          user_id, user_name, designation, department, annual_ctc_inr, monthly_gross_inr,
+          basic_salary, hra, special_allowance, performance_bonus, pf_deduction, tds_deduction,
+          insurance_deduction, professional_tax, monthly_net_inr, salary_band, bank_name, bank_account, pan_number
+        )
+        VALUES (
+          ${s.user_id}, ${s.user_name}, ${s.designation}, ${s.department}, ${s.annual_ctc_inr}, ${s.monthly_gross_inr},
+          ${s.basic_salary}, ${s.hra}, ${s.special_allowance}, ${s.performance_bonus}, ${s.pf_deduction}, ${s.tds_deduction},
+          ${s.insurance_deduction}, ${s.professional_tax}, ${s.monthly_net_inr}, ${s.salary_band}, ${s.bank_name}, ${s.bank_account}, ${s.pan_number}
+        )
+        ON CONFLICT (user_id) DO UPDATE SET
+          annual_ctc_inr = ${s.annual_ctc_inr},
+          monthly_gross_inr = ${s.monthly_gross_inr},
+          basic_salary = ${s.basic_salary},
+          hra = ${s.hra},
+          special_allowance = ${s.special_allowance},
+          performance_bonus = ${s.performance_bonus},
+          pf_deduction = ${s.pf_deduction},
+          tds_deduction = ${s.tds_deduction},
+          insurance_deduction = ${s.insurance_deduction},
+          professional_tax = ${s.professional_tax},
+          monthly_net_inr = ${s.monthly_net_inr},
+          salary_band = ${s.salary_band},
+          bank_name = ${s.bank_name},
+          bank_account = ${s.bank_account},
+          pan_number = ${s.pan_number};
+      `;
+    }
+    console.log('✓ Salary structures seeded in INR (₹)');
+
+    // Seed recent payslips for Sarah Miller
+    await sql`
+      INSERT INTO payslips (id, user_id, user_name, month, pay_date, gross_inr, deductions_inr, net_inr, working_days, paid_days, status, transaction_ref)
+      VALUES
+        (201, 'IA-EM-001', 'Sarah Miller', 'September 2026', '2026-09-30', 150000.00, 21600.00, 128400.00, 22, 22, 'paid', 'SAL-SEP26-9812'),
+        (202, 'IA-EM-001', 'Sarah Miller', 'August 2026', '2026-08-31', 150000.00, 21600.00, 128400.00, 22, 22, 'paid', 'SAL-AUG26-8941'),
+        (203, 'IA-EM-001', 'Sarah Miller', 'July 2026', '2026-07-31', 150000.00, 21600.00, 128400.00, 23, 23, 'paid', 'SAL-JUL26-7612'),
+        (204, 'IA-EM-001', 'Sarah Miller', 'June 2026', '2026-06-30', 150000.00, 21600.00, 128400.00, 22, 22, 'paid', 'SAL-JUN26-6519'),
+        (205, 'IA-EM-001', 'Sarah Miller', 'May 2026', '2026-05-31', 150000.00, 21600.00, 128400.00, 21, 21, 'paid', 'SAL-MAY26-5412')
+      ON CONFLICT (id) DO NOTHING;
+    `;
+    console.log('✓ Historical payslips seeded in INR (₹)');
 
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {

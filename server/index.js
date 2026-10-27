@@ -1128,7 +1128,143 @@ app.patch('/api/expenses/:id/status', async (req, res) => {
   }
 });
 
-// 11. Cloudinary Object Storage: Upload Corporate Document
+// ==========================================
+// MODULE 4: SALARY, PAYROLL & PAYSLIPS API
+// ==========================================
+
+// 11a. Get employee salary structure
+app.get('/api/salary/structure', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const rows = await sql`
+      SELECT 
+        user_id AS "userId",
+        user_name AS "userName",
+        designation,
+        department,
+        annual_ctc_inr AS "annualCtcInr",
+        monthly_gross_inr AS "monthlyGrossInr",
+        basic_salary AS "basicSalary",
+        hra,
+        special_allowance AS "specialAllowance",
+        performance_bonus AS "performanceBonus",
+        pf_deduction AS "pfDeduction",
+        tds_deduction AS "tdsDeduction",
+        insurance_deduction AS "insuranceDeduction",
+        professional_tax AS "professionalTax",
+        monthly_net_inr AS "monthlyNetInr",
+        salary_band AS "salaryBand",
+        bank_name AS "bankName",
+        bank_account AS "bankAccount",
+        pan_number AS "panNumber"
+      FROM salary_structures
+      WHERE user_id = ${userId}
+      LIMIT 1;
+    `;
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Salary structure not found' });
+    }
+
+    res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    console.error('Error fetching salary structure:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch salary structure' });
+  }
+});
+
+// 11b. Get employee payslips
+app.get('/api/salary/payslips', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'IA-EM-001';
+    const slips = await sql`
+      SELECT 
+        id,
+        user_id AS "userId",
+        user_name AS "userName",
+        month,
+        TO_CHAR(pay_date, 'YYYY-MM-DD') AS "payDate",
+        gross_inr AS gross,
+        deductions_inr AS deductions,
+        net_inr AS net,
+        working_days AS "workingDays",
+        paid_days AS "paidDays",
+        status,
+        transaction_ref AS "transactionRef"
+      FROM payslips
+      WHERE user_id = ${userId}
+      ORDER BY pay_date DESC;
+    `;
+    res.json({ success: true, data: slips });
+  } catch (error) {
+    console.error('Error fetching payslips:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch payslips' });
+  }
+});
+
+// 11c. Get team salary roster for Manager / Client Admin
+app.get('/api/salary/team', async (req, res) => {
+  try {
+    const team = await sql`
+      SELECT 
+        u.id,
+        u.first_name || ' ' || u.last_name AS name,
+        COALESCE(u.avatar_url, '') AS avatar,
+        u.designation AS role,
+        u.department,
+        COALESCE(s.annual_ctc_inr, 0) AS "annualCtc",
+        COALESCE(s.monthly_gross_inr, 0) AS "monthlyGross",
+        COALESCE(s.monthly_net_inr, 0) AS "monthlyNet",
+        COALESCE(s.salary_band, 'Standard Band') AS "salaryBand",
+        COALESCE(s.bank_account, '—') AS "bankAccount",
+        'Paid' AS "lastMonthStatus"
+      FROM users u
+      LEFT JOIN salary_structures s ON u.id = s.user_id
+      ORDER BY 
+        CASE WHEN u.role = 'manager' THEN 1 WHEN u.role = 'employee' THEN 2 ELSE 3 END,
+        u.first_name;
+    `;
+    res.json({ success: true, data: team });
+  } catch (error) {
+    console.error('Error fetching team salary list:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team salaries' });
+  }
+});
+
+// 11d. Disburse monthly payroll (Manager / Admin action)
+app.post('/api/salary/disburse', async (req, res) => {
+  try {
+    const { month = 'October 2026', payDate = new Date().toISOString().split('T')[0] } = req.body;
+
+    const structures = await sql`SELECT * FROM salary_structures;`;
+    let count = 0;
+
+    for (const s of structures) {
+      const existing = await sql`
+        SELECT id FROM payslips WHERE user_id = ${s.user_id} AND month = ${month};
+      `;
+      if (existing.length === 0) {
+        const totalDeductions = Number(s.pf_deduction) + Number(s.tds_deduction) + Number(s.insurance_deduction) + Number(s.professional_tax);
+        const ref = `SAL-${month.replace(/\s+/g, '').toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await sql`
+          INSERT INTO payslips (user_id, user_name, month, pay_date, gross_inr, deductions_inr, net_inr, working_days, paid_days, status, transaction_ref)
+          VALUES (${s.user_id}, ${s.user_name}, ${month}, ${payDate}, ${s.monthly_gross_inr}, ${totalDeductions}, ${s.monthly_net_inr}, 22, 22, 'paid', ${ref});
+        `;
+        count++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Payroll disbursed successfully for ${month}. ${count} new payslips generated.`
+    });
+  } catch (error) {
+    console.error('Error disbursing payroll:', error);
+    res.status(500).json({ success: false, message: 'Failed to disburse payroll' });
+  }
+});
+
+// 12. Cloudinary Object Storage: Upload Corporate Document
 app.post('/api/upload/document', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
