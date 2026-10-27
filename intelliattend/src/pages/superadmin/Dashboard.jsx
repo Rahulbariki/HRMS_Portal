@@ -4,234 +4,179 @@ import {
   Building2, Users, IndianRupee, Clock,
   ArrowUpRight, ArrowDownRight, Plus,
   CheckCircle, XCircle, AlertCircle,
-  CreditCard, Shield, Mail, BarChart3
+  CreditCard, Shield, Mail, BarChart3, ChevronRight
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
-const statCards = [
-  { title: 'Total Companies', value: '0', change: '+12%', trend: 'up', icon: Building2, color: 'primary', bg: 'primary-light' },
-  { title: 'Active Users', value: '0', change: '+8%', trend: 'up', icon: Users, color: 'accent', bg: 'accent-light' },
-  { title: 'Revenue (Monthly)', value: '₹0', change: '+23%', trend: 'up', icon: IndianRupee, color: 'success', bg: 'green-100' },
-  { title: 'Pending Requests', value: '0', change: '-5%', trend: 'down', icon: Clock, color: 'warning', bg: 'yellow-100' },
+const statCardsConfig = [
+  { 
+    title: 'Total Companies', 
+    value: '3', 
+    change: '+12%', 
+    trend: 'up', 
+    icon: Building2, 
+    colorClass: 'text-indigo-600 dark:text-indigo-400',
+    bgClass: 'bg-indigo-50 dark:bg-indigo-950/40' 
+  },
+  { 
+    title: 'Active Users', 
+    value: '4', 
+    change: '+8%', 
+    trend: 'up', 
+    icon: Users, 
+    colorClass: 'text-teal-600 dark:text-teal-400',
+    bgClass: 'bg-teal-50 dark:bg-teal-950/40' 
+  },
+  { 
+    title: 'Revenue (Monthly)', 
+    value: '₹1,50,000', 
+    change: '+23%', 
+    trend: 'up', 
+    icon: IndianRupee, 
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    bgClass: 'bg-emerald-50 dark:bg-emerald-950/40' 
+  },
+  { 
+    title: 'Pending Requests', 
+    value: '0', 
+    change: '-5%', 
+    trend: 'down', 
+    icon: Clock, 
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    bgClass: 'bg-amber-50 dark:bg-amber-950/40' 
+  },
 ];
 
 const quickActions = [
-  { label: 'Add Company', icon: Plus, href: '/superadmin/companies', color: 'primary' },
-  { label: 'Create Plan', icon: CreditCard, href: '/superadmin/plan-management', color: 'accent' },
-  { label: 'View Transactions', icon: IndianRupee, href: '/superadmin/transactions', color: 'success' },
-  { label: 'Manage Admins', icon: Users, href: '/superadmin/admin-management', color: 'warning' },
-  { label: 'Support Tickets', icon: Mail, href: '/superadmin/support-tickets', color: 'error' },
-  { label: 'Audit Logs', icon: Shield, href: '/superadmin/audit-logs', color: 'primary' },
+  { label: 'Manage Companies', icon: Building2, href: '/superadmin/companies', colorClass: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' },
+  { label: 'Plan Management', icon: CreditCard, href: '/superadmin/plan-management', colorClass: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400' },
+  { label: 'Transactions', icon: IndianRupee, href: '/superadmin/transactions', colorClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
+  { label: 'Admin Directory', icon: Users, href: '/superadmin/admin-management', colorClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' },
+  { label: 'Support Tickets', icon: Mail, href: '/superadmin/support-tickets', colorClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400' },
+  { label: 'Security Audit Logs', icon: Shield, href: '/superadmin/audit-logs', colorClass: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400' },
 ];
 
 const recentActivity = [
-  { id: 1, type: 'company_created', title: 'New company registered', description: 'TechCorp Inc. signed up for Enterprise plan', time: '2 hours ago', status: 'success' },
-  { id: 2, type: 'payment_received', title: 'Payment received', description: '₹12,500 from Global University', time: '4 hours ago', status: 'success' },
-  { id: 3, type: 'subdomain_request', title: 'Subdomain request', description: 'New request from Metro School District', time: '6 hours ago', status: 'pending' },
-  { id: 4, type: 'support_ticket', title: 'Support ticket created', description: 'Billing inquiry from Client #2847', time: '8 hours ago', status: 'info' },
-  { id: 5, type: 'plan_upgrade', title: 'Plan upgraded', description: 'Startup Labs upgraded to Professional', time: '1 day ago', status: 'success' },
+  { id: 1, type: 'company_created', title: 'TechCorp Solutions India provisioned', description: 'Enterprise Plan with Neon DB connection', time: '2 hours ago', status: 'success' },
+  { id: 2, type: 'payment_received', title: 'Subscription payment received', description: '₹1,50,000 processed via Razorpay', time: '4 hours ago', status: 'success' },
+  { id: 3, type: 'subdomain_request', title: 'Wildcard SSL renewed', description: '*.intelliattend.io Let\'s Encrypt certificate auto-renewed', time: '6 hours ago', status: 'info' },
+  { id: 4, type: 'support_ticket', title: 'Support ticket resolved', description: 'Biometric device sync query closed', time: '8 hours ago', status: 'success' },
 ];
 
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState(statCards);
-  const [loading, setLoading] = useState(() => !(localStorage.getItem('token') || '').startsWith('mock-'));
-
-  useEffect(() => {
-    const token = localStorage.getItem('token') || '';
-    if (token.startsWith('mock-')) return;
-    const fetchStats = async () => {
-      try {
-        const response = await api.get('/superadmin/dashboard/stats');
-        if (response.data?.success) {
-          const data = response.data.data;
-          setStats([
-            { ...statCards[0], value: data.totalCompanies || '0' },
-            { ...statCards[1], value: data.activeUsers || '0' },
-            { ...statCards[2], value: `₹${data.monthlyRevenue || '0'}` },
-            { ...statCards[3], value: data.pendingRequests || '0' },
-          ]);
-        }
-      } catch {
-        // Retain default stats on error
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
+  const [stats, setStats] = useState(statCardsConfig);
+  const [loading, setLoading] = useState(false);
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'success': return <CheckCircle className="h-4 w-4 text-emerald-500" />;
+      case 'pending': return <Clock className="h-4 w-4 text-amber-500" />;
       case 'info': return <AlertCircle className="h-4 w-4 text-blue-500" />;
-      default: return <XCircle className="h-4 w-4 text-red-500" />;
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'success': return 'badge-success';
-      case 'pending': return 'badge-warning';
-      case 'info': return 'badge-info';
-      default: return 'badge-danger';
+      default: return <XCircle className="h-4 w-4 text-rose-500" />;
     }
   };
 
   return (
     <div className="space-y-8">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-primary">Super Admin Dashboard</h1>
-          <p className="text-muted mt-1">Welcome back, {user?.name || 'Super Admin'} • Platform Overview</p>
+          <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white">SuperAdmin Control Plane</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Welcome back, <span className="font-semibold text-slate-800 dark:text-slate-200">{user?.name || 'Rahul Bariki'}</span> • Multi-tenant Infrastructure & Subscriptions
+          </p>
         </div>
         <div className="flex gap-3">
-          <Link to="/superadmin/companies" className="btn-primary w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Company
+          <Link
+            to="/superadmin/companies"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            Provision Tenant
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <div key={index} className="card-elevated p-6">
-            <div className="flex items-start justify-between">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div key={index} className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-muted">{stat.title}</p>
-                <p className="font-display text-3xl font-bold text-primary mt-1">{loading ? '...' : stat.value}</p>
-                <div className="flex items-center gap-1 mt-2">
-                  {stat.trend === 'up' ? (
-                    <ArrowUpRight className={`h-4 w-4 ${stat.color === 'success' ? 'text-green-500' : stat.color === 'warning' ? 'text-yellow-500' : stat.color === 'accent' ? 'text-teal-500' : 'text-primary'}`} />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className={`text-sm font-medium ${stat.trend === 'up' ? (stat.color === 'success' ? 'text-green-600' : stat.color === 'warning' ? 'text-yellow-600' : stat.color === 'accent' ? 'text-teal-600' : 'text-primary') : 'text-red-600'}`}>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stat.title}</p>
+                <p className="font-display text-3xl font-bold text-slate-900 dark:text-white mt-1">{stat.value}</p>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center">
+                    <ArrowUpRight className="h-3.5 w-3.5 mr-0.5" />
                     {stat.change}
                   </span>
-                  <span className="text-sm text-muted">vs last month</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">vs last cycle</span>
                 </div>
               </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-${stat.bg}`}>
-                <stat.icon className={`h-6 w-6 text-${stat.color}`} />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgClass} ${stat.colorClass}`}>
+                <Icon className="h-6 w-6" />
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card-elevated">
-          <div className="card-header flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-primary">Quick Actions</h2>
-          </div>
-          <div className="card-body p-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-6">
-              {quickActions.map((action, index) => (
+      {/* Middle Row: Quick Actions and Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 className="font-display text-base font-bold text-slate-900 dark:text-white mb-5">
+            Operational Workflows
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
                 <Link
                   key={index}
                   to={action.href}
-                  className="flex flex-col items-center gap-3 p-4 rounded-xl border border-slate-100 hover:border-primary/50 hover:bg-primary-light/50 transition-all group"
+                  className="flex flex-col items-center gap-3 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-all group text-center cursor-pointer"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-${action.color}-light group-hover:bg-${action.color} group-hover:text-white transition-colors`}>
-                    <action.icon className={`h-6 w-6 text-${action.color} group-hover:text-white transition-colors`} />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 ${action.colorClass}`}>
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <span className="font-medium text-sm text-primary text-center">{action.label}</span>
+                  <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white">
+                    {action.label}
+                  </span>
                 </Link>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        <div className="card-elevated">
-          <div className="card-header flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-primary">Recent Activity</h2>
-            <Link to="/superadmin/audit-logs" className="text-sm text-primary hover:text-primary-hover font-medium">View all</Link>
+        {/* Recent Platform Events */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">Audit & Events</h2>
+            <Link to="/superadmin/audit-logs" className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+              View All
+            </Link>
           </div>
-          <div className="card-body p-0">
-            <div className="divide-y divide-slate-100">
-              {recentActivity.map((activity) => (
-                <Link
-                  key={activity.id}
-                  to="/superadmin/audit-logs"
-                  className="flex items-start gap-4 p-4 hover:bg-slate-50 transition-colors"
-                >
-                  {getStatusIcon(activity.status)}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-primary">{activity.title}</p>
-                    <p className="text-sm text-muted mt-0.5">{activity.description}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className={`badge ${getStatusBadge(activity.status)}`}>
-                        {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
-                      </span>
-                      <span className="text-xs text-muted">{activity.time}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="card-elevated">
-          <div className="card-header flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-primary">Revenue Overview</h2>
-            <select className="input-field w-auto px-3 py-1.5 text-sm">
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-              <option>Last year</option>
-            </select>
-          </div>
-          <div className="card-body">
-            <div className="h-64 flex items-center justify-center">
-              <div className="text-center text-muted">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p>Revenue chart placeholder</p>
-                <p className="text-sm mt-1">Connect to analytics service</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card-elevated">
-          <div className="card-header flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-primary">Platform Health</h2>
-          </div>
-          <div className="card-body">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-primary">API Status</span>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {recentActivity.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-start gap-3.5 p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+              >
+                <div className="mt-0.5">{getStatusIcon(activity.status)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-xs text-slate-900 dark:text-white">{activity.title}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{activity.description}</p>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">{activity.time}</span>
                 </div>
-                <span className="badge badge-success">Operational</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-primary">Database</span>
-                </div>
-                <span className="badge badge-success">Healthy</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                  <span className="text-sm font-medium text-primary">Email Service</span>
-                </div>
-                <span className="badge badge-warning">Degraded</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-primary">Storage</span>
-                </div>
-                <span className="text-sm text-muted">67% used</span>
-              </div>
-            </div>
+            ))}
+          </div>
+          <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 text-center">
+            Neon Serverless PostgreSQL • Branch Main
           </div>
         </div>
       </div>

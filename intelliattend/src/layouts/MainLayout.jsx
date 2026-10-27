@@ -10,8 +10,8 @@ export default function MainLayout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-primary-light flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
       </div>
     );
   }
@@ -30,7 +30,7 @@ export default function MainLayout() {
   const dashboardRoute = roleRoutes[user?.role] || '/login';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex transition-colors">
       <Sidebar
         user={user}
         dashboardRoute={dashboardRoute}

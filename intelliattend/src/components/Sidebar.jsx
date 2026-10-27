@@ -102,7 +102,7 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
     <>
       {window.innerWidth < 768 && mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-20 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
@@ -110,18 +110,18 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
 
       <aside
         className={clsx(
-          'fixed lg:relative z-30 lg:z-auto h-full bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden',
+          'fixed lg:relative z-50 lg:z-auto h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden',
           collapsed ? 'w-16' : 'w-64',
           window.innerWidth < 768 && !mobileOpen ? '-translate-x-full' : 'translate-x-0'
         )}
       >
-        <div className="h-16 flex items-center px-4 border-b border-slate-200">
+        <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-slate-800">
           {!collapsed && (
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="IntelliAttend" className="h-8 w-auto rounded-lg object-contain" />
               <div>
-                <p className="font-display text-sm font-bold text-slate-900 leading-tight">IntelliAttend</p>
-                <p className="font-body text-xs text-slate-400 leading-tight">HRMS Workspace</p>
+                <p className="font-display text-sm font-bold text-slate-900 dark:text-white leading-tight">IntelliAttend</p>
+                <p className="font-body text-xs text-slate-400 dark:text-slate-500 leading-tight">HRMS Workspace</p>
               </div>
             </div>
           )}
@@ -142,8 +142,8 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
                   className={({ isActive }) => clsx(
                     'group font-display flex items-center gap-3 px-3 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-slate-900 text-white shadow-sm font-semibold'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                      ? 'bg-slate-900 dark:bg-teal-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white',
                     collapsed && 'justify-center px-2'
                   )}
                   title={collapsed ? item.label : undefined}
@@ -151,7 +151,10 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
                 >
                   {({ isActive }) => (
                     <>
-                      <item.icon className={clsx("h-5 w-5 flex-shrink-0 transition-colors", isActive ? "text-teal-400" : "text-slate-400 group-hover:text-slate-600")} aria-hidden="true" />
+                      <item.icon className={clsx(
+                        "h-5 w-5 flex-shrink-0 transition-colors", 
+                        isActive ? "text-teal-400 dark:text-white" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-200"
+                      )} aria-hidden="true" />
                       {!collapsed && <span>{item.label}</span>}
                     </>
                   )}
@@ -161,9 +164,9 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
           </ul>
         </nav>
 
-        <div className="p-3 border-t border-slate-200">
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800">
           {!collapsed ? (
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900 text-white shadow-sm">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white shadow-sm border border-slate-800 dark:border-slate-700">
               <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center flex-shrink-0">
                 <Zap className="h-4 w-4 text-teal-400" />
               </div>
@@ -174,7 +177,7 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-teal-500/30 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-slate-800 border border-teal-500/30 flex items-center justify-center">
                 <Zap className="h-4 w-4 text-teal-400" />
               </div>
             </div>
@@ -184,24 +187,24 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
             type="button"
             onClick={handleLogout}
             className={clsx(
-              'mt-2 w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors font-bold text-xs cursor-pointer',
+              'mt-2 w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors font-bold text-xs cursor-pointer',
               collapsed && 'justify-center'
             )}
             title="Logout"
           >
-            <LogOut className="h-4 w-4 flex-shrink-0 text-rose-600" />
-            {!collapsed && <span className="font-display text-xs text-rose-600">Logout</span>}
+            <LogOut className="h-4 w-4 flex-shrink-0 text-rose-600 dark:text-rose-400" />
+            {!collapsed && <span className="font-display text-xs">Logout</span>}
           </button>
 
           <button
             onClick={() => setCollapsed(!collapsed)}
             className={clsx(
-              'mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-muted hover:bg-slate-100 transition-colors',
+              'mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer',
               collapsed && 'justify-center'
             )}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             {!collapsed && <span className="font-body text-xs">Collapse</span>}
           </button>
         </div>
