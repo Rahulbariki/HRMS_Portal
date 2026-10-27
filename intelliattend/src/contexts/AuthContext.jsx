@@ -107,47 +107,30 @@ export function AuthProvider({ children }) {
       // Fallback to enterprise session authentication
     }
 
-    // 2. Resolve role from credentials or email
-    let targetRole = credentials.role;
+    // 2. Enforce strict authorization list for production accounts
+    const ALLOWED_PRODUCTION_EMAILS = {
+      'rahulbariki.intelliattend@gmail.com': 'superadmin',
+      'clientadmin.intelliattend@gmail.com': 'client',
+      'manager.intelliattend@gmail.com': 'manager',
+      'employee.intelliattend@gmail.com': 'employee',
+    };
 
-    if (email === 'rahulbariki.intelliattend@gmail.com') {
-      targetRole = 'superadmin';
-    } else if (email === 'clientadmin.intelliattend@gmail.com') {
-      targetRole = 'client';
-    } else if (email === 'manager.intelliattend@gmail.com') {
-      targetRole = 'manager';
-    } else if (email === 'employee.intelliattend@gmail.com') {
-      targetRole = 'employee';
-    } else if (!targetRole) {
-      if (credentials.isSuperAdmin || email.includes('superadmin')) {
-        targetRole = 'superadmin';
-      } else if (email.includes('client') || email.includes('admin') || credentials.company) {
-        targetRole = 'client';
-      } else if (email.includes('manager') || email.includes('lead')) {
-        targetRole = 'manager';
-      } else {
-        targetRole = 'employee';
-      }
+    const targetRole = ALLOWED_PRODUCTION_EMAILS[email];
+    if (!targetRole) {
+      return {
+        success: false,
+        message: 'Account not recognized. Access is strictly restricted to registered corporate accounts.',
+      };
     }
 
-    const demoUser = DEMO_USERS[targetRole] || {
-      id: `user-${Date.now()}`,
-      name: email ? email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'HRMS User',
+    const officialUser = DEMO_USERS[targetRole];
+    const activeUser = {
+      ...officialUser,
       email: email,
       loginEmail: email,
-      role: targetRole,
-      avatar: (email ? email[0] : targetRole[0]).toUpperCase(),
-      designation: targetRole.toUpperCase(),
-      company: credentials.company || 'IntelliAttend',
     };
 
-    const activeUser = {
-      ...demoUser,
-      email: email || demoUser.email,
-      loginEmail: email || demoUser.loginEmail,
-    };
-
-    const token = `mock-hrms-token-${targetRole}-${Date.now()}`;
+    const token = `prod-hrms-token-${targetRole}-${Date.now()}`;
     localStorage.setItem('token', token);
     localStorage.setItem('hrms_user', JSON.stringify(activeUser));
     setUser(activeUser);

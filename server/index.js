@@ -85,7 +85,19 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
 
-    const rows = await sql`SELECT * FROM users WHERE email = ${email} LIMIT 1`;
+    const ALLOWED_EMAILS = [
+      'rahulbariki.intelliattend@gmail.com',
+      'clientadmin.intelliattend@gmail.com',
+      'manager.intelliattend@gmail.com',
+      'employee.intelliattend@gmail.com'
+    ];
+
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!ALLOWED_EMAILS.includes(normalizedEmail)) {
+      return res.status(403).json({ success: false, message: 'Access denied: Only authorized production accounts are permitted.' });
+    }
+
+    const rows = await sql`SELECT * FROM users WHERE email = ${normalizedEmail} LIMIT 1`;
     if (rows.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid credentials or user not found' });
     }

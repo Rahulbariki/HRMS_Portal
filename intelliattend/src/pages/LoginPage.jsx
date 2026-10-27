@@ -81,7 +81,7 @@ export default function LoginPage() {
     try {
       const demoUser = DEMO_USERS[roleKey];
       const result = await login({
-        email: demoUser?.email || `${roleKey}@company.com`,
+        email: demoUser?.email,
         password: 'password123',
         role: roleKey,
       });
@@ -321,7 +321,7 @@ export default function LoginPage() {
                 />
                 <span className="text-sm text-slate-600">Keep me signed in</span>
               </label>
-              <span className="text-xs text-slate-400 font-mono">Demo mode active</span>
+              <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Production Live</span>
             </div>
 
             <button

@@ -5,9 +5,9 @@ const INITIAL_MANAGERS = [
   {
     id: 1,
     name: 'David Chen',
-    email: 'manager@company.com',
+    email: 'manager.intelliattend@gmail.com',
     department: 'Engineering',
-    title: 'Engineering Director',
+    title: 'Lead Engineering & Delivery Director',
     directReports: 14,
     status: 'active',
     avatar: 'DC',
@@ -16,7 +16,7 @@ const INITIAL_MANAGERS = [
   {
     id: 2,
     name: 'Marcus Brody',
-    email: 'm.brody@company.com',
+    email: 'marcus.brody@intelliattend.com',
     department: 'Product Management',
     title: 'VP of Product',
     directReports: 8,
@@ -27,7 +27,7 @@ const INITIAL_MANAGERS = [
   {
     id: 3,
     name: 'Elena Rostova',
-    email: 'e.rostova@company.com',
+    email: 'elena.rostova@intelliattend.com',
     department: 'People & Culture',
     title: 'Lead Talent Manager',
     directReports: 6,
@@ -38,7 +38,7 @@ const INITIAL_MANAGERS = [
   {
     id: 4,
     name: 'Samantha Lee',
-    email: 's.lee@company.com',
+    email: 'samantha.lee@intelliattend.com',
     department: 'Sales & Growth',
     title: 'Regional Sales Lead',
     directReports: 18,

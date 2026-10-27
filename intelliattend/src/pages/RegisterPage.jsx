@@ -130,7 +130,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   className="input-field pl-10"
-                  placeholder="john@university.edu"
+                  placeholder="employee.intelliattend@gmail.com"
                   disabled={loading}
                 />
               </div>
@@ -148,7 +148,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   className="input-field pl-10"
-                  placeholder="Tech University"
+                  placeholder="IntelliAttend Technologies"
                   disabled={loading}
                 />
               </div>

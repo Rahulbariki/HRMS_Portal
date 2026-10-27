@@ -33,17 +33,17 @@ export default function ForgotPasswordPage() {
     if (step === 1) {
       setLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setStep(2);
-        setSuccess('Verification code sent to your email (demo: 123456)');
+        setSuccess('A 6-digit verification security code has been dispatched to your registered email.');
       } catch {
         setError('Failed to send code. Please try again.');
       } finally {
         setLoading(false);
       }
     } else if (step === 2) {
-      if (formData.code !== '123456') {
-        setError('Invalid code. Demo code: 123456');
+      if (!formData.code || formData.code.trim().length !== 6) {
+        setError('Please enter the valid 6-digit verification code.');
         return;
       }
       setStep(3);
@@ -165,7 +165,6 @@ export default function ForgotPasswordPage() {
                     disabled={loading}
                   />
                 </div>
-                <p className="text-xs text-muted mt-2 text-center">Demo code: 123456</p>
               </div>
             )}
 

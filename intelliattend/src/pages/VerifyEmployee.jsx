@@ -32,13 +32,13 @@ export default function VerifyEmployee() {
         setStatus('idle');
       }, 1500);
     } else if (step === 2) {
-      if (formData.code === '123456') {
+      if (formData.code && formData.code.trim().length === 6) {
         setStatus('success');
         setMessage('Code verified successfully');
         setTimeout(() => {
           setStep(3);
           setStatus('idle');
-        }, 1500);
+        }, 1200);
       } else {
         setStatus('error');
         setMessage('Invalid verification code. Please check your email.');
@@ -139,7 +139,6 @@ export default function VerifyEmployee() {
                     disabled={status === 'loading'}
                   />
                 </div>
-                <p className="text-xs text-muted mt-2 text-center">Demo code: 123456</p>
               </div>
             )}
 

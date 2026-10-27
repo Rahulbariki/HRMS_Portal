@@ -170,6 +170,18 @@ async function migrate() {
     }
     console.log('✓ Production accounts seeded (SuperAdmin, Client Admin, Manager, Employee)');
 
+    // Ensure no other accounts exist in the production database
+    await sql`
+      DELETE FROM users 
+      WHERE email NOT IN (
+        'rahulbariki.intelliattend@gmail.com',
+        'clientadmin.intelliattend@gmail.com',
+        'manager.intelliattend@gmail.com',
+        'employee.intelliattend@gmail.com'
+      );
+    `;
+    console.log('✓ Cleaned up any non-production accounts from database');
+
     // Seed initial companies
     await sql`
       INSERT INTO companies (name, subdomain, plan, status, admin_email, employees, managers, joined_date)

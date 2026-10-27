@@ -12,7 +12,7 @@ const INITIAL_COMPANIES = [
     managers: 32,
     status: 'active',
     joinedDate: 'Jan 15, 2025',
-    adminEmail: 'client@company.com',
+    adminEmail: 'clientadmin.intelliattend@gmail.com',
   },
   {
     id: 2,
@@ -306,7 +306,7 @@ export default function SuperAdminCompanies() {
                   required
                   value={newCompany.adminEmail}
                   onChange={(e) => setNewCompany({ ...newCompany, adminEmail: e.target.value })}
-                  placeholder="admin@company.com"
+                  placeholder="clientadmin.intelliattend@gmail.com"
                   className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
                 />
               </div>
