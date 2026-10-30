@@ -355,3 +355,4 @@ export default function TeamAttendanceWidget({ className = '' }) {
     </div>
   );
 }
+
