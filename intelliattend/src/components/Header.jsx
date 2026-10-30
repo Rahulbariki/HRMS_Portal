@@ -32,11 +32,12 @@ export default function Header({ user, onToggleSidebar }) {
     setAvatarError(false);
   }, [avatarSrc]);
 
-  const applyAccentColor = (accent) => {
+  const applyAccentColor = (accent, currentTheme = theme) => {
     const root = document.documentElement;
     root.style.setProperty('--color-accent', accent.hex);
     root.style.setProperty('--color-accent-hover', accent.hover);
-    root.style.setProperty('--color-accent-light', accent.light);
+    const lightVal = currentTheme === 'dark' ? (accent.darkLight || accent.light) : accent.light;
+    root.style.setProperty('--color-accent-light', lightVal);
     localStorage.setItem('hrms_accent_color', accent.id);
   };
 
@@ -44,20 +45,20 @@ export default function Header({ user, onToggleSidebar }) {
     const savedAccentId = localStorage.getItem('hrms_accent_color') || 'teal';
     const found = ACCENT_COLORS.find(c => c.id === savedAccentId) || ACCENT_COLORS[0];
     setCurrentAccentId(found.id);
-    applyAccentColor(found);
+    applyAccentColor(found, theme);
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    const found = ACCENT_COLORS.find(c => c.id === currentAccentId) || ACCENT_COLORS[0];
+    applyAccentColor(found, theme);
+  }, [theme, currentAccentId]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   useEffect(() => {
@@ -177,7 +178,7 @@ export default function Header({ user, onToggleSidebar }) {
                       key={c.id}
                       onClick={() => {
                         setCurrentAccentId(c.id);
-                        applyAccentColor(c);
+                        applyAccentColor(c, theme);
                         setPaletteOpen(false);
                       }}
                       className={clsx(

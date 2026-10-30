@@ -103,11 +103,21 @@ const menuItems = {
   ],
 };
 
-export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMobileOpen: controlledSetMobileOpen }) {
+export default function Sidebar({
+  user,
+  mobileOpen: controlledMobileOpen,
+  setMobileOpen: controlledSetMobileOpen,
+  leavesCount,
+  tasksCount,
+  counts = {},
+}) {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
+
+  const effectiveLeavesCount = Number(leavesCount ?? counts.leaves ?? user?.pendingLeavesCount ?? user?.leavesCount);
+  const effectiveTasksCount = Number(tasksCount ?? counts.tasks ?? user?.tasksCount ?? user?.pendingTasksCount);
 
   const handleLogout = () => {
     logout();
@@ -179,14 +189,14 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
                       {!collapsed && (
                         <div className="flex items-center justify-between flex-1 min-w-0">
                           <span className="truncate">{item.label}</span>
-                          {item.label === 'Leaves' && (
+                          {item.label === 'Leaves' && Number.isFinite(effectiveLeavesCount) && effectiveLeavesCount > 0 && (
                             <span className="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-teal-600 text-white text-[10px] font-bold px-1.5 shadow-xs">
-                              1
+                              {effectiveLeavesCount}
                             </span>
                           )}
-                          {item.label === 'My Tasks' && (
+                          {item.label === 'My Tasks' && Number.isFinite(effectiveTasksCount) && effectiveTasksCount > 0 && (
                             <span className="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold px-1.5">
-                              5
+                              {effectiveTasksCount}
                             </span>
                           )}
                         </div>

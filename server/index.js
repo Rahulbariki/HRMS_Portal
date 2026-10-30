@@ -490,6 +490,7 @@ app.get('/api/users/directory', async (req, res) => {
       emergencyPhone: u.emergency_phone,
       emergencyContactName: u.emergency_contact_name,
       doj: u.doj,
+      dob: u.dob || '',
       bloodGroup: u.blood_group,
       avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
       avatarUrl: u.avatar_url,

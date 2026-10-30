@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Users, RefreshCw, Search, Clock, CheckCircle2, 
@@ -6,6 +6,15 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import clsx from 'clsx';
+
+const classifyStatus = (status) => {
+  const s = String(status ?? '').trim().toLowerCase();
+  if (s === 'present') return 'present';
+  if (s === 'clocked in' || s === 'working') return 'clocked_in';
+  if (s === 'on break' || s === 'break') return 'on_break';
+  if (s === 'absent' || s === 'off' || !s) return 'absent';
+  return 'absent';
+};
 
 export default function TeamAttendanceWidget({ className = '' }) {
   const [team, setTeam] = useState([]);
@@ -15,22 +24,30 @@ export default function TeamAttendanceWidget({ className = '' }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [lastUpdated, setLastUpdated] = useState(null);
+  const latestRequestId = useRef(0);
 
   const fetchTeamAttendance = async (isManual = false) => {
     if (isManual) setRefreshing(true);
+    const requestId = ++latestRequestId.current;
     try {
       setError(null);
       const res = await api.get('/attendance/team');
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        setTeam(res.data.data);
-        setLastUpdated(new Date());
+      if (requestId === latestRequestId.current) {
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setTeam(res.data.data);
+          setLastUpdated(new Date());
+        }
       }
     } catch (err) {
-      console.error('Failed to load team attendance:', err);
-      setError('Could not update team attendance. Displaying cached data.');
+      if (requestId === latestRequestId.current) {
+        console.error('Failed to load team attendance:', err);
+        setError('Could not update team attendance. Displaying cached data.');
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === latestRequestId.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -43,31 +60,34 @@ export default function TeamAttendanceWidget({ className = '' }) {
   }, []);
 
   const counts = useMemo(() => {
-    const present = team.filter(m => (m.status || '').toLowerCase() === 'present').length;
-    const clockedIn = team.filter(m => (m.status || '').toLowerCase() === 'clocked in' || (m.status || '').toLowerCase() === 'working').length;
-    const onBreak = team.filter(m => (m.status || '').toLowerCase() === 'on break' || (m.status || '').toLowerCase() === 'break').length;
-    const absent = team.filter(m => (m.status || '').toLowerCase() === 'absent' || !m.status).length;
+    let present = 0, clockedIn = 0, onBreak = 0, absent = 0;
+    for (const m of team) {
+      const cat = classifyStatus(m.status);
+      if (cat === 'present') present++;
+      else if (cat === 'clocked_in') clockedIn++;
+      else if (cat === 'on_break') onBreak++;
+      else if (cat === 'absent') absent++;
+    }
     return { all: team.length, present, clockedIn, onBreak, absent };
   }, [team]);
 
   const filteredTeam = useMemo(() => {
+    const trimmedQuery = searchQuery.trim().toLowerCase();
     return team.filter((member) => {
-      const statusLower = (member.status || 'absent').toLowerCase();
+      const cat = classifyStatus(member.status);
       
       // Filter tab check
-      if (selectedFilter === 'present' && statusLower !== 'present') return false;
-      if (selectedFilter === 'clocked_in' && statusLower !== 'clocked in' && statusLower !== 'working') return false;
-      if (selectedFilter === 'on_break' && statusLower !== 'on break' && statusLower !== 'break') return false;
-      if (selectedFilter === 'absent' && statusLower !== 'absent') return false;
+      if (selectedFilter !== 'all' && selectedFilter !== cat) {
+        return false;
+      }
 
       // Search query check
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const nameMatch = (member.name || '').toLowerCase().includes(query);
-        const roleMatch = (member.role || '').toLowerCase().includes(query);
-        const deptMatch = (member.department || '').toLowerCase().includes(query);
-        const idMatch = (member.id || '').toLowerCase().includes(query);
-        const statusMatch = statusLower.includes(query);
+      if (trimmedQuery) {
+        const nameMatch = String(member.name ?? '').toLowerCase().includes(trimmedQuery);
+        const roleMatch = String(member.role ?? '').toLowerCase().includes(trimmedQuery);
+        const deptMatch = String(member.department ?? '').toLowerCase().includes(trimmedQuery);
+        const idMatch = String(member.id ?? '').toLowerCase().includes(trimmedQuery);
+        const statusMatch = String(member.status ?? '').toLowerCase().includes(trimmedQuery);
         return nameMatch || roleMatch || deptMatch || idMatch || statusMatch;
       }
 
@@ -81,8 +101,9 @@ export default function TeamAttendanceWidget({ className = '' }) {
   };
 
   const getStatusBadge = (status) => {
-    const s = (status || 'absent').toLowerCase();
-    switch (s) {
+    const cat = classifyStatus(status);
+    const rawStatus = String(status ?? '').trim().toLowerCase();
+    switch (cat) {
       case 'present':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
@@ -90,27 +111,26 @@ export default function TeamAttendanceWidget({ className = '' }) {
             Present
           </span>
         );
-      case 'clocked in':
-      case 'working':
+      case 'clocked_in':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
             <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
             Working
           </span>
         );
-      case 'on break':
-      case 'break':
+      case 'on_break':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
             On Break
           </span>
         );
+      case 'absent':
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-            Absent
+            {rawStatus === 'off' ? 'Off' : 'Absent'}
           </span>
         );
     }

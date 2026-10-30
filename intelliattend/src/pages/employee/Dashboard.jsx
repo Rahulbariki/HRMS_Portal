@@ -78,11 +78,49 @@ const recentActivities = [
   { type: 'system', title: 'Portal Workspace Live', description: 'Enterprise deployment initialized on Neon PostgreSQL', time: '3 days ago', status: 'info' }
 ];
 
+const isBirthdayInCurrentWeek = (dobString) => {
+  if (!dobString) return false;
+  const birthDate = new Date(dobString);
+  if (isNaN(birthDate.getTime())) return false;
+
+  const now = new Date();
+  const currentDay = now.getDay();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - currentDay);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const thisYearBirthday = new Date(now.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+  if (thisYearBirthday >= startOfWeek && thisYearBirthday <= endOfWeek) {
+    return true;
+  }
+  const nextYearBirthday = new Date(now.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate());
+  if (nextYearBirthday >= startOfWeek && nextYearBirthday <= endOfWeek) {
+    return true;
+  }
+  const prevYearBirthday = new Date(now.getFullYear() - 1, birthDate.getMonth(), birthDate.getDate());
+  if (prevYearBirthday >= startOfWeek && prevYearBirthday <= endOfWeek) {
+    return true;
+  }
+  return false;
+};
+
+const formatBirthdayDate = (dobString) => {
+  const d = new Date(dobString);
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(
+    new Date(new Date().getFullYear(), d.getMonth(), d.getDate())
+  );
+};
+
 export default function EmployeeDashboard() {
   const { user } = useAuth();
-  const userId = user?.employeeId || user?.id || 'IA-EM-001';
-  const firstName = user?.firstName || user?.name?.split(' ')[0] || 'Rahul';
-  const fullName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Rahul Bariki' : 'Rahul Bariki';
+  const userId = user?.employeeId || user?.id || null;
+  const firstName = user?.firstName || user?.name?.split(' ')[0] || 'there';
+  const fullName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Employee' : 'Employee';
 
   // State for live punch & attendance
   const [clockedIn, setClockedIn] = useState(false);
@@ -112,21 +150,19 @@ export default function EmployeeDashboard() {
   });
 
   // Coworker birthdays
-  const [birthdays, setBirthdays] = useState([
-    { name: 'Supriya Enjam', role: 'Employee', department: 'Information Technology', date: '26 Oct', initials: 'SE' },
-    { name: 'Kaviyapriya M', role: 'Employee', department: 'Information Technology', date: '31 Oct', initials: 'KM' }
-  ]);
+  const [birthdays, setBirthdays] = useState([]);
 
   // Current formatted time & date
   const [currentClock, setCurrentClock] = useState(() => new Date().toLocaleTimeString('en-US', { hour12: false }));
 
   // Load initial data from APIs
   useEffect(() => {
+    if (!userId) return;
     let isMounted = true;
 
     const loadDashboardData = async () => {
       try {
-        const [todayRes, logsRes, leavesRes, summaryRes, directoryRes] = await Promise.all([
+        const [todayRes, logsRes, leavesRes, summaryRes, directoryRes] = await Promise.allSettled([
           api.get(`/attendance/today?userId=${userId}`),
           api.get(`/attendance/logs?userId=${userId}`),
           api.get(`/employee/leaves/balance?userId=${userId}`),
@@ -136,44 +172,63 @@ export default function EmployeeDashboard() {
 
         if (!isMounted) return;
 
-        if (todayRes.data?.success && todayRes.data?.data) {
-          const d = todayRes.data.data;
+        if (todayRes.status === 'fulfilled' && todayRes.value?.data?.success && todayRes.value?.data?.data) {
+          const d = todayRes.value.data.data;
           setClockedIn(Boolean(d.clockedIn));
           setClockInTime(d.clockInTime || '—');
           setClockOutTime(d.clockOutTime || '—');
           setWorkSeconds(Number(d.workSeconds) || 0);
         }
 
-        if (logsRes.data?.success && Array.isArray(logsRes.data?.data)) {
-          setAttendanceLogs(logsRes.data.data);
+        if (logsRes.status === 'fulfilled' && logsRes.value?.data?.success && Array.isArray(logsRes.value?.data?.data)) {
+          setAttendanceLogs(logsRes.value.data.data);
         }
 
-        if (summaryRes.data?.success && Array.isArray(summaryRes.data?.data)) {
-          setAttendanceSummary(summaryRes.data.data);
+        if (summaryRes.status === 'fulfilled' && summaryRes.value?.data?.success && Array.isArray(summaryRes.value?.data?.data)) {
+          setAttendanceSummary(summaryRes.value.data.data);
         }
 
-        if (leavesRes.data?.success && leavesRes.data?.data) {
-          const lb = leavesRes.data.data;
+        if (leavesRes.status === 'fulfilled' && leavesRes.value?.data?.success && leavesRes.value?.data?.data) {
+          const lb = leavesRes.value.data.data;
+          const casualVal = lb.casual ?? lb.casual_leave ?? 12;
+          const casualUsedVal = lb.casual_used ?? lb.casualUsed ?? 0;
+          const sickVal = lb.sick ?? lb.sick_leave ?? 12;
+          const sickUsedVal = lb.sick_used ?? lb.sickUsed ?? 0;
+          const annualVal = lb.annual ?? lb.paid_leave ?? 15;
+          const annualUsedVal = lb.annual_used ?? lb.annualUsed ?? 0;
+          const unpaidVal = lb.unpaid ?? lb.unpaid_leave ?? 1;
+
           setLeaveBalances({
-            casual: Number(lb.casual || lb.casual_leave || 12),
-            casualUsed: Number(lb.casual_used || 0),
-            sick: Number(lb.sick || lb.sick_leave || 12),
-            sickUsed: Number(lb.sick_used || 0),
-            annual: Number(lb.annual || lb.paid_leave || 15),
-            annualUsed: Number(lb.annual_used || 0),
-            unpaid: Number(lb.unpaid || 1)
+            casual: Number(casualVal),
+            casualUsed: Number(casualUsedVal),
+            sick: Number(sickVal),
+            sickUsed: Number(sickUsedVal),
+            annual: Number(annualVal),
+            annualUsed: Number(annualUsedVal),
+            unpaid: Number(unpaidVal)
           });
         }
 
-        if (directoryRes.data?.success && Array.isArray(directoryRes.data?.data) && directoryRes.data.data.length > 2) {
-          const staff = directoryRes.data.data.slice(0, 3).map((s, idx) => ({
-            name: `${s.firstName || s.first_name || ''} ${s.lastName || s.last_name || ''}`.trim() || 'Team Member',
-            role: s.role || 'Employee',
-            department: s.department || 'Engineering',
-            date: idx === 0 ? '26 Oct' : (idx === 1 ? '31 Oct' : '05 Nov'),
-            initials: `${(s.firstName || s.first_name || 'U')[0]}${(s.lastName || s.last_name || 'M')[0]}`.toUpperCase()
-          }));
-          setBirthdays(staff);
+        if (directoryRes.status === 'fulfilled' && directoryRes.value?.data?.success && Array.isArray(directoryRes.value?.data?.data)) {
+          const staff = directoryRes.value.data.data;
+          const upcoming = [];
+          for (const s of staff) {
+            const rawDob = s.dob || s.birthday || s.dateOfBirth || s.date_of_birth;
+            if (rawDob && isBirthdayInCurrentWeek(rawDob)) {
+              const fName = s.firstName || s.first_name || '';
+              const lName = s.lastName || s.last_name || '';
+              const fullNameStr = `${fName} ${lName}`.trim() || s.name || 'Team Member';
+              const initials = `${(fName || 'U')[0]}${(lName || 'M')[0]}`.toUpperCase();
+              upcoming.push({
+                name: fullNameStr,
+                role: s.designation || s.role || 'Employee',
+                department: s.department || 'Engineering',
+                date: formatBirthdayDate(rawDob),
+                initials
+              });
+            }
+          }
+          setBirthdays(upcoming);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -214,6 +269,7 @@ export default function EmployeeDashboard() {
 
   // Toggle Clock-In / Clock-Out
   const handlePunchToggle = async () => {
+    if (!userId) return;
     setPunchLoading(true);
     setPunchFeedback('');
     try {
@@ -239,16 +295,20 @@ export default function EmployeeDashboard() {
           setPunchFeedback('Successfully clocked out. Great work today!');
         }
 
-        // Refresh logs & summary
-        const [logsRes, summaryRes] = await Promise.all([
-          api.get(`/attendance/logs?userId=${userId}`),
-          api.get(`/employee/attendance/summary?userId=${userId}`)
-        ]);
-        if (logsRes.data?.success && Array.isArray(logsRes.data?.data)) {
-          setAttendanceLogs(logsRes.data.data);
-        }
-        if (summaryRes.data?.success && Array.isArray(summaryRes.data?.data)) {
-          setAttendanceSummary(summaryRes.data.data);
+        // Refresh logs & summary in its own isolated try/catch
+        try {
+          const [logsRes, summaryRes] = await Promise.allSettled([
+            api.get(`/attendance/logs?userId=${userId}`),
+            api.get(`/employee/attendance/summary?userId=${userId}`)
+          ]);
+          if (logsRes.status === 'fulfilled' && logsRes.value?.data?.success && Array.isArray(logsRes.value?.data?.data)) {
+            setAttendanceLogs(logsRes.value.data.data);
+          }
+          if (summaryRes.status === 'fulfilled' && summaryRes.value?.data?.success && Array.isArray(summaryRes.value?.data?.data)) {
+            setAttendanceSummary(summaryRes.value.data.data);
+          }
+        } catch (refreshErr) {
+          console.error('Failed to refresh attendance logs:', refreshErr);
         }
       }
     } catch (err) {
@@ -430,12 +490,13 @@ export default function EmployeeDashboard() {
                 <button
                   type="button"
                   onClick={handlePunchToggle}
-                  disabled={punchLoading}
+                  disabled={punchLoading || !userId}
+                  title={!userId ? 'Employee profile not loaded' : undefined}
                   className={`font-display inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer active:scale-95 ${
                     clockedIn
                       ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
                       : 'bg-teal-600 hover:bg-teal-700 shadow-teal-500/20'
-                  } disabled:opacity-50`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {clockedIn ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
                   <span>{punchLoading ? 'Processing...' : clockedIn ? 'Clock Out' : 'Clock In'}</span>
@@ -687,52 +748,54 @@ export default function EmployeeDashboard() {
       </div>
 
       {/* 5. Team Culture: Birthdays This Week */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
-              <Cake className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-teal-600 dark:text-teal-400">
-                Celebrations
-              </p>
-              <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
-                Birthdays This Week
-              </h2>
-            </div>
-          </div>
-          <span className="font-display text-xs font-semibold px-3 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-            {birthdays.length} upcoming
-          </span>
-        </div>
-
-        <div className="p-4 sm:p-5 space-y-3">
-          {birthdays.map((person, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200 font-bold text-xs">
-                  {person.initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-display text-sm font-semibold truncate text-slate-900 dark:text-white">
-                    {person.name}
-                  </p>
-                  <p className="text-xs truncate text-slate-400 dark:text-slate-500">
-                    {person.role} • {person.department}
-                  </p>
-                </div>
+      {birthdays.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                <Cake className="w-5 h-5" />
               </div>
-              <span className="text-xs font-semibold flex-shrink-0 px-3 py-1 rounded-lg border bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
-                {person.date}
-              </span>
+              <div>
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-teal-600 dark:text-teal-400">
+                  Celebrations
+                </p>
+                <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                  Birthdays This Week
+                </h2>
+              </div>
             </div>
-          ))}
+            <span className="font-display text-xs font-semibold px-3 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+              {birthdays.length} upcoming
+            </span>
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-3">
+            {birthdays.map((person, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200 font-bold text-xs">
+                    {person.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display text-sm font-semibold truncate text-slate-900 dark:text-white">
+                      {person.name}
+                    </p>
+                    <p className="text-xs truncate text-slate-400 dark:text-slate-500">
+                      {person.role} • {person.department}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold flex-shrink-0 px-3 py-1 rounded-lg border bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                  {person.date}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 6. Recent Activity Timeline & Quick Access Shortcuts (from previous dashboard) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
