@@ -64,29 +64,23 @@ const colorStyles = {
 };
 
 const attendanceStatus = [
-  { label: 'Present', value: '18', colorClass: 'text-emerald-600 dark:text-emerald-400' },
-  { label: 'Absent', value: '2', colorClass: 'text-rose-600 dark:text-rose-400' },
-  { label: 'Late', value: '1', colorClass: 'text-amber-600 dark:text-amber-400' },
-  { label: 'WFH', value: '4', colorClass: 'text-teal-600 dark:text-teal-400' },
+  { label: 'Present', value: '0', colorClass: 'text-emerald-600 dark:text-emerald-400' },
+  { label: 'Absent', value: '0', colorClass: 'text-rose-600 dark:text-rose-400' },
+  { label: 'Late', value: '0', colorClass: 'text-amber-600 dark:text-amber-400' },
+  { label: 'WFH', value: '0', colorClass: 'text-teal-600 dark:text-teal-400' },
 ];
 
 const recentActivity = [
-  { type: 'leave_approved', title: 'Leave Request Approved', description: 'Diwali Festival Break (Nov 09-11, 2026)', time: '2 hours ago', status: 'success' },
-  { type: 'expense_submitted', title: 'Expense Claim Submitted', description: 'AWS Certified Solutions Architect Exam ₹12,500.00', time: '5 hours ago', status: 'pending' },
-  { type: 'task_assigned', title: 'Active Sprint Task Assigned', description: 'Implement Face Biometrics & Geo Attendance verification', time: '1 day ago', status: 'info' },
-  { type: 'payslip_available', title: 'October 2026 Payslip Available', description: 'Net Disbursed: ₹82,750 via HDFC Direct Transfer', time: '2 days ago', status: 'success' },
-  { type: 'document_shared', title: 'Corporate Policy Document Published', description: 'Enterprise Remote Work & Infosec Protocols v3.0', time: '3 days ago', status: 'info' },
+  { type: 'system_start', title: 'Portal Workspace Live', description: 'Fresh enterprise deployment initialized. Clock in or track daily activities.', time: 'Today', status: 'info' }
 ];
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState(attendanceStatus);
-  const [leaveBalance, setLeaveBalance] = useState({ annual: 15, sick: 8, casual: 5 });
+  const [leaveBalance, setLeaveBalance] = useState({ annual: 15, sick: 12, casual: 12 });
 
 
   useEffect(() => {
-    const token = localStorage.getItem('token') || '';
-    if (token.startsWith('mock-')) return;
     const fetchData = async () => {
       try {
         const [attRes, leaveRes] = await Promise.all([
@@ -181,7 +175,7 @@ export default function EmployeeDashboard() {
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">This Month</p>
               <p className="font-display text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                {attendance.find(a => a.label === 'Present')?.value || '18'}
+                {attendance.find(a => a.label === 'Present')?.value ?? 0}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Days present</p>
             </div>

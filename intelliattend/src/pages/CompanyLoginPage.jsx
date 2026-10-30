@@ -10,10 +10,10 @@ export default function CompanyLoginPage() {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: 'clientadmin.intelliattend@gmail.com',
-    password: 'password123',
-    company: companySlug || 'IntelliAttend',
-    remember: true,
+    email: '',
+    password: '',
+    company: companySlug || '',
+    remember: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

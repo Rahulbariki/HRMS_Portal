@@ -1,744 +1,1090 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, Search, Filter, Bell, MessageSquare, Mail as MailIcon,
-  Plus, Home, AtSign, Star, Archive, ChevronDown, Send,
-  Paperclip, Smile, Phone, Video, Info, MoreVertical, X,
-  CheckCheck
+  Search, MessageSquare, Plus, Send, X, ArrowLeft,
+  Users, Hash, CheckCheck, Smile, Paperclip, Phone, Video,
+  PhoneOff, Mic, MicOff, VideoOff, Download, Reply, MoreVertical,
+  Check, Bell, Sparkles, FileText, Image as ImageIcon
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 'space-eng',
-    type: 'space',
-    name: 'Engineering & Architecture Hub',
-    initials: 'EA',
-    avatar: null,
-    isOnline: true,
-    lastTime: '6:30 pm',
-    lastMessage: 'All schema migrations and connection tests verified.',
-    unreadCount: 1,
-    messages: [
-      {
-        id: 1,
-        sender: 'David Chen',
-        time: '6:15 pm',
-        content: 'Team, please confirm your local git remote points to https://github.com/Rahulbariki/HRMS_Portal.git before pushing.',
-        isMe: false,
-      },
-      {
-        id: 2,
-        sender: 'Sarah Miller',
-        time: '6:30 pm',
-        content: 'Confirmed! Tested the attendance punch-in flow, and verified direct Cloudinary receipt uploads in the reimbursement module.',
-        isMe: true,
-      },
-    ],
-  },
-  {
-    id: 'dm-david',
-    type: 'dm',
-    name: 'David Chen',
-    designation: 'Lead Engineering Manager',
-    initials: 'DC',
-    avatar: null,
-    email: 'manager.intelliattend@gmail.com',
-    isOnline: true,
-    lastTime: '11:55 am',
-    lastMessage: 'Verified and approved your recent attendance regularization request.',
-    unreadCount: 0,
-    messages: [
-      {
-        id: 1,
-        sender: 'David Chen',
-        time: '11:45 am',
-        content: 'Hi Sarah, please ensure all INR currency values are formatted with Indian numbering comma separations.',
-        isMe: false,
-      },
-      {
-        id: 2,
-        sender: 'Sarah Miller',
-        time: '11:55 am',
-        content: 'Understood David! Formatted all amounts with toLocaleString("en-IN") and tested zero crash states.',
-        isMe: true,
-      },
-    ],
-  },
-  {
-    id: 'dm-alex',
-    type: 'dm',
-    name: 'Alex Rivera',
-    designation: 'Client Enterprise Administrator',
-    initials: 'AR',
-    avatar: null,
-    email: 'clientadmin.intelliattend@gmail.com',
-    isOnline: true,
-    lastTime: 'Yesterday',
-    lastMessage: 'Enterprise subscription tier renewed successfully.',
-    unreadCount: 0,
-    messages: [
-      {
-        id: 1,
-        sender: 'Alex Rivera',
-        time: 'Yesterday, 04:30 pm',
-        content: 'Corporate tenant policies have been updated to reflect Q4 2026 security guidelines.',
-        isMe: false,
-      },
-    ],
-  },
-  {
-    id: 'dm-rahul',
-    type: 'dm',
-    name: 'Rahul Bariki',
-    designation: 'Platform Super Administrator',
-    initials: 'RB',
-    avatar: '/avatar_rahul.png',
-    email: 'rahulbariki.intelliattend@gmail.com',
-    isOnline: true,
-    lastTime: '24 Oct',
-    lastMessage: 'Neon PostgreSQL cloud database configured and healthy.',
-    unreadCount: 0,
-    messages: [
-      {
-        id: 1,
-        sender: 'Rahul Bariki',
-        time: '24 Oct, 02:15 pm',
-        content: 'All database tables and schemas are live on Neon serverless PostgreSQL with direct branch connectivity.',
-        isMe: false,
-      },
-    ],
-  },
+const QUICK_PROMPTS = [
+  'Can we jump on a quick call? 📞',
+  'Reviewing the updates now 👍',
+  'Approved for release 🚀',
+  'Please share the document 📄',
+  'Thanks for the quick sync! 🙏'
 ];
+
+const POPULAR_EMOJIS = ['👍', '❤️', '🔥', '🚀', '🎉', '😊', '👏', '✅', '👀', '💯'];
 
 export default function EmployeeChat() {
   const { user } = useAuth();
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS);
-  const [selectedChatId, setSelectedChatId] = useState(null); // default null to match Screenshot 5 "No conversation selected"
-  const [activeShortcut, setActiveShortcut] = useState('home');
-  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [selectedChatId, setSelectedChatId] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'space' | 'dm'
   const [messageInput, setMessageInput] = useState('');
-  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [directoryUsers, setDirectoryUsers] = useState([]);
 
-  const [presence, setPresence] = useState('Active');
-  const [presenceOpen, setPresenceOpen] = useState(false);
+  // Modals & Popovers
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false); // New DM or New Channel
+  const [modalTab, setModalTab] = useState('dm'); // 'dm' | 'channel'
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelDesc, setNewChannelDesc] = useState('');
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [searchInThread, setSearchInThread] = useState(false);
+  const [threadSearchQuery, setThreadSearchQuery] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  // File Attachment State
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isSending, setIsSending] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Call / Video Modal State
+  const [activeCall, setActiveCall] = useState(null); // { type: 'audio' | 'video', status: 'connected' | 'ringing', timer: 0 }
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const callTimerRef = useRef(null);
 
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const activeChat = useMemo(() => {
-    return conversations.find(c => c.id === selectedChatId);
-  }, [conversations, selectedChatId]);
+  // Fetch all conversations from backend
+  const fetchConversations = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const myId = user?.id || '';
+      const myEmail = user?.email || '';
+      const res = await api.get(`/chat/conversations?userId=${encodeURIComponent(myId)}&userEmail=${encodeURIComponent(myEmail)}`);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setConversations(res.data.data);
+        if (!selectedChatId && window.innerWidth >= 768 && res.data.data.length > 0) {
+          const defaultChat = res.data.data.find(c => c.id === 'space-general') || res.data.data[0];
+          setSelectedChatId(defaultChat.id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
-  // Scroll to bottom when new message arrives
+  // Fetch messages for active chat
+  const fetchActiveMessages = async (chatId, silent = false) => {
+    if (!chatId) return;
+    try {
+      const res = await api.get(`/chat/conversations/${chatId}/messages`);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const currentEmail = (user?.email || '').toLowerCase().trim();
+        const currentName = (user?.name || '').toLowerCase().trim();
+        const currentId = (user?.id || '').toLowerCase().trim();
+
+        const mapped = res.data.data.map(m => {
+          const senderEmail = (m.sender_email || '').toLowerCase().trim();
+          const senderName = (m.sender_name || '').toLowerCase().trim();
+          const senderId = (m.sender_id || '').toLowerCase().trim();
+
+          const isMe = (currentEmail && senderEmail === currentEmail) || 
+                       (currentId && senderId === currentId) ||
+                       (currentName && senderName === currentName);
+          return {
+            id: m.id,
+            sender: m.sender_name,
+            senderEmail: m.sender_email,
+            time: m.time || 'Now',
+            content: m.content,
+            isMe,
+            attachmentUrl: m.attachment_url,
+            attachmentName: m.attachment_name,
+            attachmentType: m.attachment_type,
+            reactions: m.reactions || []
+          };
+        });
+        setMessages(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to load messages for conversation:', err);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations();
+    api.get('/users/directory')
+      .then(res => {
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const filtered = res.data.data.filter(u => u.email !== user?.email);
+          setDirectoryUsers(filtered);
+        }
+      })
+      .catch(() => {});
+  }, [user?.id, user?.email]);
+
+  // When selected chat changes, load its messages
+  useEffect(() => {
+    if (selectedChatId) {
+      fetchActiveMessages(selectedChatId);
+      setThreadSearchQuery('');
+      setSearchInThread(false);
+    } else {
+      setMessages([]);
+    }
+  }, [selectedChatId]);
+
+  // Live polling every 3 seconds for active conversation
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (selectedChatId) {
+        fetchActiveMessages(selectedChatId, true);
+      }
+      fetchConversations(true);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [selectedChatId, user?.id, user?.email]);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeChat?.messages]);
+  }, [messages.length]);
 
+  // Call timer effect
+  useEffect(() => {
+    if (activeCall) {
+      callTimerRef.current = setInterval(() => {
+        setActiveCall(prev => prev ? { ...prev, timer: prev.timer + 1 } : null);
+      }, 1000);
+    } else {
+      clearInterval(callTimerRef.current);
+    }
+    return () => clearInterval(callTimerRef.current);
+  }, [activeCall?.status]);
+
+  const activeChat = useMemo(() => {
+    return conversations.find(c => c.id === selectedChatId) || null;
+  }, [conversations, selectedChatId]);
+
+  // Filtered conversations in sidebar
   const filteredConversations = useMemo(() => {
     return conversations.filter(c => {
-      if (unreadOnly && c.unreadCount === 0) return false;
+      if (c.type === 'dm' && c.email && user?.email && c.email.toLowerCase().trim() === user.email.toLowerCase().trim()) {
+        return false;
+      }
+      if (filterType === 'space' && c.type !== 'space') return false;
+      if (filterType === 'dm' && c.type !== 'dm') return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        return c.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q);
+        return (c.name && c.name.toLowerCase().includes(q)) ||
+               (c.last_message && c.last_message.toLowerCase().includes(q)) ||
+               (c.designation && c.designation.toLowerCase().includes(q));
       }
       return true;
     });
-  }, [conversations, unreadOnly, searchQuery]);
+  }, [conversations, filterType, searchQuery, user?.email]);
 
-  const directMessages = useMemo(() => {
-    return filteredConversations.filter(c => c.type === 'dm');
-  }, [filteredConversations]);
+  // Filtered messages in active thread
+  const displayedMessages = useMemo(() => {
+    if (!threadSearchQuery.trim()) return messages;
+    const q = threadSearchQuery.toLowerCase();
+    return messages.filter(m => 
+      m.content.toLowerCase().includes(q) || 
+      (m.sender && m.sender.toLowerCase().includes(q))
+    );
+  }, [messages, threadSearchQuery]);
 
-  const spaces = useMemo(() => {
-    return filteredConversations.filter(c => c.type === 'space');
-  }, [filteredConversations]);
+  // Send Message
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (isSending || (!messageInput.trim() && !selectedFile) || !activeChat) return;
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!messageInput.trim() || !activeChat) return;
+    setIsSending(true);
+    let text = messageInput.trim();
+    if (replyingTo) {
+      text = `> [Reply to ${replyingTo.sender}]: ${replyingTo.content.slice(0, 80)}\n${text}`;
+    }
 
-    const newMsg = {
-      id: Date.now(),
-      sender: user?.name || 'Rahul Bariki',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      content: messageInput.trim(),
-      isMe: true,
-    };
+    let filePayload = {};
+    if (selectedFile) {
+      let attachmentUrl = '';
+      if (selectedFile.file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', selectedFile.file);
+          formData.append('title', selectedFile.name);
+          formData.append('category', 'Chat');
+          formData.append('uploadedBy', user?.name || 'Employee');
+          const uploadRes = await api.post('/upload/document', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          attachmentUrl = uploadRes.data?.data?.file_url || '';
+          if (!attachmentUrl) {
+            throw new Error('Upload succeeded but no file URL returned');
+          }
+        } catch (uploadErr) {
+          console.error('File upload failed:', uploadErr);
+          alert('Failed to upload file attachment. Please try again.');
+          setIsSending(false);
+          return;
+        }
+      }
+      if (selectedFile.preview) {
+        URL.revokeObjectURL(selectedFile.preview);
+      }
+      filePayload = {
+        attachmentUrl: attachmentUrl || '',
+        attachmentName: selectedFile.name,
+        attachmentType: selectedFile.type
+      };
+    }
 
-    const updated = {
-      ...activeChat,
-      lastMessage: messageInput.trim(),
-      lastTime: 'Just now',
-      unreadCount: 0,
-      messages: [...(activeChat.messages || []), newMsg],
-    };
-
-    setConversations(conversations.map(c => (c.id === updated.id ? updated : c)));
     setMessageInput('');
+    setSelectedFile(null);
+    setReplyingTo(null);
+    setIsEmojiPickerOpen(false);
+
+    const optimisticMsg = {
+      id: Date.now(),
+      sender: user?.name || 'Me',
+      senderEmail: user?.email || '',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      content: text || (filePayload.attachmentName ? `📎 ${filePayload.attachmentName}` : ''),
+      isMe: true,
+      ...filePayload
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    try {
+      await api.post('/chat/messages', {
+        conversationId: activeChat.id,
+        content: text,
+        senderName: user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Corporate Staff',
+        senderEmail: user?.email || 'user@intelliattend.com',
+        senderId: user?.id || null,
+        ...filePayload
+      });
+      fetchActiveMessages(activeChat.id, true);
+      fetchConversations(true);
+    } catch (err) {
+      console.error('Failed to post message:', err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleSelectChat = (chatId) => {
-    setSelectedChatId(chatId);
-    // Mark as read
-    setConversations(conversations.map(c =>
-      c.id === chatId ? { ...c, unreadCount: 0 } : c
-    ));
+  // Keyboard shortcut: Enter to send, Shift+Enter for new line
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Start direct message from modal
+  const handleStartDmWithUser = (u) => {
+    const myId = (user?.id || '').toLowerCase();
+    const otherId = (u.id || '').toLowerCase();
+    const canonicalId = myId && otherId ? `dm_${[myId, otherId].sort().join('_')}` : `dm-${otherId}`;
+
+    const existing = conversations.find(c => c.id === canonicalId || (c.email && c.email.toLowerCase() === u.email.toLowerCase()));
+    if (existing) {
+      setSelectedChatId(existing.id);
+    } else {
+      const newDmConv = {
+        id: canonicalId,
+        type: 'dm',
+        name: u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+        initials: `${u.first_name?.[0] || u.name?.[0] || 'U'}${u.last_name?.[0] || ''}`.toUpperCase(),
+        designation: u.designation || u.role || 'Colleague',
+        email: u.email,
+        avatar: u.avatar_url || null,
+        is_online: true,
+        last_time: 'Just now',
+        last_message: 'Start a conversation',
+        unread_count: 0
+      };
+      setConversations(prev => [newDmConv, ...prev]);
+      setSelectedChatId(canonicalId);
+    }
+    setIsActionModalOpen(false);
+  };
+
+  // Create Channel
+  const handleCreateChannel = async (e) => {
+    e.preventDefault();
+    if (!newChannelName.trim()) return;
+
+    try {
+      const res = await api.post('/chat/conversations', {
+        type: 'space',
+        name: newChannelName.trim(),
+        designation: newChannelDesc.trim() || 'Team Collaboration Channel',
+      });
+
+      if (res.data?.success && res.data.data) {
+        setConversations(prev => [res.data.data, ...prev]);
+        setSelectedChatId(res.data.data.id);
+        setNewChannelName('');
+        setNewChannelDesc('');
+        setIsActionModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to create channel:', err);
+    }
+  };
+
+  // File Picker Handler
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (selectedFile?.preview) {
+        URL.revokeObjectURL(selectedFile.preview);
+      }
+      const isImg = file.type.startsWith('image/');
+      setSelectedFile({
+        file,
+        name: file.name,
+        size: (file.size / 1024).toFixed(1) + ' KB',
+        type: file.type,
+        preview: isImg ? URL.createObjectURL(file) : null
+      });
+    }
+  };
+
+  const handleClearSelectedFile = () => {
+    if (selectedFile?.preview) {
+      URL.revokeObjectURL(selectedFile.preview);
+    }
+    setSelectedFile(null);
+  };
+
+  // Start Call
+  const handleStartCall = (type) => {
+    setActiveCall({
+      type,
+      status: 'connected',
+      timer: 0,
+      partner: activeChat?.name || 'Colleague'
+    });
+  };
+
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden select-none">
-      {/* Top Application Header matching Screenshot 5 */}
-      <header className="h-16 px-4 border-b border-slate-200 bg-white flex items-center justify-between gap-4 z-20 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/employee/dashboard"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition cursor-pointer shadow-2xs"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-            <span>Back to Main</span>
-          </Link>
-
-          <div className="flex items-center gap-2 pl-2">
-            <img src="/logo.png" alt="Logo" className="h-6 w-auto object-contain" />
-            <span className="font-display font-bold text-xs sm:text-sm text-slate-900 tracking-tight uppercase">
-              IntelliAttend
-            </span>
-            <span className="px-2 py-0.5 rounded-md bg-teal-500 text-white font-bold text-[10px]">
-              Chat
-            </span>
+    <div className="h-full min-h-[550px] flex-1 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex overflow-hidden">
+      {/* 1. LEFT PANE: Conversations list */}
+      <div className={clsx(
+        'w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/40 dark:bg-slate-950/40',
+        selectedChatId ? 'hidden md:flex' : 'flex'
+      )}>
+        {/* Left Pane Header */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-none">
+                Workspace Chat
+              </h2>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Real-time enterprise channels</p>
+            </div>
           </div>
+          <button
+            onClick={() => {
+              setModalTab('dm');
+              setIsActionModalOpen(true);
+            }}
+            className="p-2 rounded-xl bg-slate-900 dark:bg-teal-600 text-white hover:bg-slate-800 dark:hover:bg-teal-500 transition cursor-pointer shadow-xs flex items-center gap-1.5 text-xs font-semibold"
+            title="Start conversation or channel"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New</span>
+          </button>
         </div>
 
-        {/* Center Search in Chat */}
-        <div className="flex-1 max-w-md mx-2 hidden md:block">
+        {/* Search & Filter bar */}
+        <div className="p-3 border-b border-slate-200/60 dark:border-slate-800/60 space-y-2.5">
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
+              placeholder="Search channels or colleagues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chat"
-              className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 placeholder:text-slate-400"
+              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              title="Search filter"
-            >
-              <Filter className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Right presence & user profile */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Presence Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setPresenceOpen(!presenceOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 transition cursor-pointer"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{presence}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
-            {presenceOpen && (
-              <div className="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 text-xs">
-                {['Active', 'Away', 'Do not disturb', 'Invisible'].map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => {
-                      setPresence(status);
-                      setPresenceOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 font-medium"
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Notifications Bell */}
-          <button
-            type="button"
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition cursor-pointer"
-            title="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
-
-          {/* Enable chat notifications button */}
-          <button
-            type="button"
-            className="hidden lg:inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-teal-300 font-bold text-xs transition cursor-pointer shadow-2xs border border-teal-500/20"
-          >
-            Enable chat notifications
-          </button>
-
-          {/* User profile */}
-          <div className="flex items-center gap-2 pl-1">
-            <img
-              src="/avatar_rahul.png"
-              alt="Rahul Bariki"
-              className="w-8 h-8 rounded-full object-cover border border-slate-200"
-            />
-            <div className="hidden sm:block text-left">
-              <p className="font-bold text-xs text-slate-800 leading-tight">Rahul Bariki</p>
-              <p className="text-[10px] text-slate-400 leading-tight">Employee</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Chat Body */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Leftmost Navigation Rail (Mail / Chat switcher) */}
-        <div className="w-16 bg-slate-50 border-r border-slate-200 flex flex-col items-center py-4 gap-4 flex-shrink-0">
-          <Link
-            to="/employee/mail"
-            className="w-10 h-10 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex flex-col items-center justify-center font-medium text-[10px] transition"
-            title="Mail"
-          >
-            <MailIcon className="w-4 h-4 mb-0.5" />
-            <span>Mail</span>
-          </Link>
-          <Link
-            to="/employee/chat"
-            className="w-10 h-10 rounded-xl bg-slate-900 text-teal-300 flex flex-col items-center justify-center font-bold text-[10px] transition shadow-xs border border-teal-500/20"
-            title="Chat"
-          >
-            <MessageSquare className="w-4 h-4 mb-0.5 text-teal-400" />
-            <span>Chat</span>
-          </Link>
-        </div>
-
-        {/* Conversations Column matching Screenshot 5 */}
-        <div className="w-72 lg:w-80 border-r border-slate-200 bg-white flex flex-col overflow-hidden flex-shrink-0">
-          {/* Subheader: Home, Unread toggle */}
-          <div className="p-4 pb-2 flex items-center justify-between border-b border-slate-100">
-            <h2 className="font-display font-bold text-sm text-slate-900">Home</h2>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-medium">Unread</span>
+          <div className="flex items-center gap-1.5">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'space', label: 'Channels #' },
+              { id: 'dm', label: 'Direct Messages @' },
+            ].map((f) => (
               <button
-                type="button"
-                onClick={() => setUnreadOnly(!unreadOnly)}
+                key={f.id}
+                onClick={() => setFilterType(f.id)}
                 className={clsx(
-                  'w-8 h-4 rounded-full transition-colors relative cursor-pointer',
-                  unreadOnly ? 'bg-teal-500' : 'bg-slate-300'
+                  'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer',
+                  filterType === f.id
+                    ? 'bg-slate-900 dark:bg-teal-600 text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 )}
               >
-                <span
-                  className={clsx(
-                    'w-3.5 h-3.5 rounded-full bg-white absolute top-0.25 transition-transform shadow-xs',
-                    unreadOnly ? 'translate-x-4' : 'translate-x-0.5'
-                  )}
-                />
+                {f.label}
               </button>
-            </div>
-          </div>
-
-          <div className="p-3 border-b border-slate-100 space-y-2">
-            {/* Search chat or people */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chat or people..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900 placeholder:text-slate-400"
-              />
-            </div>
-
-            {/* + New chat button */}
-            <button
-              type="button"
-              onClick={() => setIsNewChatModalOpen(true)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 hover:border-teal-400 bg-white hover:bg-teal-50/50 text-slate-800 font-bold text-xs shadow-xs transition cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 text-teal-600" />
-              <span>New chat</span>
-            </button>
-          </div>
-
-          {/* Scrollable list of Shortcuts, Direct Messages, Spaces */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {/* SHORTCUTS */}
-            <div className="p-2 space-y-0.5">
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                SHORTCUTS
-              </div>
-              {[
-                { id: 'home', label: 'Home', icon: Home },
-                { id: 'mentions', label: 'Mentions', icon: AtSign },
-                { id: 'starred', label: 'Starred', icon: Star },
-                { id: 'archived', label: 'Archived', icon: Archive },
-              ].map((sc) => {
-                const Icon = sc.icon;
-                const isActive = activeShortcut === sc.id;
-                return (
-                  <button
-                    key={sc.id}
-                    type="button"
-                    onClick={() => setActiveShortcut(sc.id)}
-                    className={clsx(
-                      'w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer',
-                      isActive
-                        ? 'bg-teal-50 text-teal-900 font-bold'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    )}
-                  >
-                    <Icon className={clsx('w-3.5 h-3.5', isActive ? 'text-teal-600' : 'text-slate-400')} />
-                    <span>{sc.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* DIRECT MESSAGES 125 */}
-            <div className="p-2 space-y-1">
-              <div className="flex items-center justify-between px-3 py-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  DIRECT MESSAGES 125
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsNewChatModalOpen(true)}
-                  className="text-slate-400 hover:text-slate-600 text-xs font-bold"
-                  title="New message"
-                >
-                  +
-                </button>
-              </div>
-
-              <div className="space-y-0.5">
-                {directMessages.map((dm) => {
-                  const isSelected = selectedChatId === dm.id;
-                  return (
-                    <div
-                      key={dm.id}
-                      onClick={() => handleSelectChat(dm.id)}
-                      className={clsx(
-                        'flex items-center gap-2.5 p-2 rounded-xl transition cursor-pointer select-none group',
-                        isSelected
-                          ? 'bg-teal-50/90 text-teal-950 font-semibold border-l-2 border-teal-500'
-                          : 'hover:bg-slate-50 text-slate-700'
-                      )}
-                    >
-                      {/* Avatar with online dot */}
-                      <div className="relative flex-shrink-0">
-                        {dm.avatar ? (
-                          <img
-                            src={dm.avatar}
-                            alt={dm.name}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-[11px] border border-teal-500/20">
-                            {dm.initials}
-                          </div>
-                        )}
-                        {dm.isOnline && (
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute -bottom-0.5 -right-0.5" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-xs text-slate-900 truncate">
-                            {dm.name}
-                          </p>
-                          <span className="text-[10px] text-slate-400 ml-1 flex-shrink-0">
-                            {dm.lastTime}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                          {dm.lastMessage}
-                        </p>
-                      </div>
-
-                      {dm.unreadCount > 0 && (
-                        <span className="w-4 h-4 rounded-full bg-teal-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                          {dm.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Show all (125) link */}
-              <div className="px-3 py-1">
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-teal-600 hover:text-teal-700 cursor-pointer"
-                >
-                  Show all (125)
-                </button>
-              </div>
-            </div>
-
-            {/* SPACES 1 */}
-            <div className="p-2 space-y-1">
-              <div className="flex items-center justify-between px-3 py-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  SPACES 1
-                </span>
-              </div>
-
-              <div className="space-y-0.5">
-                {spaces.map((sp) => {
-                  const isSelected = selectedChatId === sp.id;
-                  return (
-                    <div
-                      key={sp.id}
-                      onClick={() => handleSelectChat(sp.id)}
-                      className={clsx(
-                        'flex items-center gap-2.5 p-2 rounded-xl transition cursor-pointer select-none group',
-                        isSelected
-                          ? 'bg-teal-50/90 text-teal-950 font-semibold border-l-2 border-teal-500'
-                          : 'hover:bg-slate-50 text-slate-700'
-                      )}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-xs flex-shrink-0 border border-teal-500/20">
-                        {sp.initials}
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-xs text-slate-900 truncate">
-                            {sp.name}
-                          </p>
-                          <span className="text-[10px] text-slate-400 ml-1 flex-shrink-0">
-                            {sp.lastTime}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                          {sp.lastMessage}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Right Main Pane (Placeholder or Active Conversation) */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {activeChat ? (
-            /* Active Conversation View */
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-              {/* Conversation Header */}
-              <div className="h-16 border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0 bg-white">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    {activeChat.avatar ? (
-                      <img
-                        src={activeChat.avatar}
-                        alt={activeChat.name}
-                        className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                      />
+        {/* Conversation List Items */}
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-slate-400">Loading channels...</div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">No conversations found.</div>
+          ) : (
+            filteredConversations.map((c) => {
+              const isSelected = selectedChatId === c.id;
+              const isSpace = c.type === 'space';
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setSelectedChatId(c.id)}
+                  className={clsx(
+                    'p-3.5 flex items-start gap-3 cursor-pointer transition relative',
+                    isSelected
+                      ? 'bg-white dark:bg-slate-800/80 shadow-xs'
+                      : 'hover:bg-slate-100/60 dark:hover:bg-slate-800/40'
+                  )}
+                >
+                  {isSelected && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 rounded-r-md" />
+                  )}
+
+                  {/* Avatar / Channel Icon */}
+                  <div className="relative shrink-0">
+                    {isSpace ? (
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                        <Hash className="w-4 h-4" />
+                      </div>
+                    ) : c.avatar ? (
+                      <img src={c.avatar} alt={c.name} className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-sm shadow-xs border border-teal-500/20">
-                        {activeChat.initials}
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 dark:bg-teal-700 text-white font-bold flex items-center justify-center text-xs">
+                        {c.initials || 'DM'}
                       </div>
                     )}
-                    {activeChat.isOnline && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute -bottom-0.5 -right-0.5" />
+                    {c.is_online && (
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
                     )}
                   </div>
-                  <div>
-                    <h3 className="font-display font-bold text-sm text-slate-900">
-                      {activeChat.name}
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      {activeChat.isOnline ? 'Online now' : 'Last active recently'}
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <p className={clsx(
+                        'text-xs truncate font-semibold',
+                        isSelected ? 'text-teal-950 dark:text-teal-300 font-bold' : 'text-slate-900 dark:text-white'
+                      )}>
+                        {c.name}
+                      </p>
+                      <span className="text-[10px] text-slate-400 shrink-0 font-medium">
+                        {c.last_time || ''}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {c.last_message || 'Start conversation...'}
                     </p>
                   </div>
                 </div>
-
-                {/* Right call & info buttons */}
-                <div className="flex items-center gap-1">
-                  <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition" title="Start voice call">
-                    <Phone className="w-4 h-4" />
-                  </button>
-                  <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition" title="Start video call">
-                    <Video className="w-4 h-4" />
-                  </button>
-                  <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition" title="Conversation info">
-                    <Info className="w-4 h-4" />
-                  </button>
-                  <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition" title="Options">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Message Stream */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/40">
-                {activeChat.messages && activeChat.messages.length > 0 ? (
-                  activeChat.messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={clsx('flex flex-col', msg.isMe ? 'items-end' : 'items-start')}
-                    >
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-[11px] font-bold text-slate-700">
-                          {msg.isMe ? 'You' : msg.sender}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{msg.time}</span>
-                      </div>
-                      <div
-                        className={clsx(
-                          'max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs',
-                          msg.isMe
-                            ? 'bg-slate-900 text-white rounded-tr-xs'
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs'
-                        )}
-                      >
-                        {msg.content}
-                      </div>
-                      {msg.isMe && (
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5">
-                          <span>Delivered</span>
-                          <CheckCheck className="w-3 h-3 text-teal-500" />
-                        </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 text-slate-400 text-xs">
-                    Start a conversation with {activeChat.name}.
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Message Input Box */}
-              <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
-                <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition" title="Add attachment">
-                  <Paperclip className="w-4 h-4" />
-                </button>
-                <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition" title="Emoji">
-                  <Smile className="w-4 h-4" />
-                </button>
-                <input
-                  type="text"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  placeholder={`Message ${activeChat.name}...`}
-                  className="flex-1 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-slate-900"
-                />
-                <button
-                  type="submit"
-                  disabled={!messageInput.trim()}
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  <Send className="w-4 h-4 text-teal-400" />
-                </button>
-              </form>
-            </div>
-          ) : (
-            /* No conversation selected View matching Screenshot 5 exactly */
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white">
-              {/* Cute illustration matching Screenshot 5 */}
-              <div className="w-32 h-32 mb-6 relative flex items-center justify-center">
-                <svg
-                  className="w-28 h-28 text-slate-800"
-                  viewBox="0 0 120 120"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* Chat bubble 1 */}
-                  <rect
-                    x="24"
-                    y="20"
-                    width="60"
-                    height="42"
-                    rx="8"
-                    stroke="#1e293b"
-                    strokeWidth="2.5"
-                    fill="white"
-                  />
-                  <line x1="34" y1="32" x2="68" y2="32" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
-                  <line x1="34" y1="42" x2="56" y2="42" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
-                  <path d="M40 62 L32 72 L48 62 Z" fill="white" stroke="#1e293b" strokeWidth="2.5" />
-
-                  {/* Chat bubble 2 (yellow) */}
-                  <circle cx="36" cy="68" r="14" fill="#fbbf24" stroke="#1e293b" strokeWidth="2.5" />
-                  <line x1="30" y1="66" x2="42" y2="66" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="30" y1="71" x2="42" y2="71" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-
-                  {/* Hand pointing */}
-                  <path
-                    d="M62 76 C62 72 65 68 68 68 C71 68 74 72 74 76 L74 62 C74 58 78 56 80 58 C82 60 82 64 82 68 L82 82 C82 92 76 100 66 100 L56 100 C50 100 48 94 52 88 L58 80 Z"
-                    fill="#b45309"
-                    stroke="#1e293b"
-                    strokeWidth="2.5"
-                  />
-                </svg>
-              </div>
-
-              {/* Title & Subtitle matching Screenshot 5 */}
-              <h2 className="font-display font-bold text-lg text-slate-900 mb-1">
-                No conversation selected
-              </h2>
-              <p className="font-body text-xs text-slate-500 max-w-sm leading-relaxed">
-                Use the toggle to switch between single and split pane modes, or pick a conversation from the list to start messaging.
-              </p>
-            </div>
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* New Chat Modal */}
-      {isNewChatModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
-              <span className="font-bold text-sm">Start a Conversation</span>
+      {/* 2. RIGHT PANE: Chat thread */}
+      <div className={clsx(
+        'flex-1 flex flex-col bg-white dark:bg-slate-900 min-w-0',
+        selectedChatId ? 'flex' : 'hidden md:flex'
+      )}>
+        {activeChat ? (
+          <>
+            {/* Active Chat Header */}
+            <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 z-10 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => setSelectedChatId(null)}
+                  className="md:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 cursor-pointer"
+                  title="Back to conversations"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+
+                <div className="relative shrink-0">
+                  {activeChat.type === 'space' ? (
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                      <Hash className="w-4 h-4" />
+                    </div>
+                  ) : activeChat.avatar ? (
+                    <img src={activeChat.avatar} alt={activeChat.name} className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-xl bg-slate-800 dark:bg-teal-700 text-white font-bold flex items-center justify-center text-xs">
+                      {activeChat.initials || 'DM'}
+                    </div>
+                  )}
+                  {activeChat.is_online && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate flex items-center gap-2">
+                    {activeChat.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                    <span>{activeChat.designation || (activeChat.type === 'space' ? 'Company Channel' : 'Active Colleague')}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Action buttons in Chat Header */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSearchInThread(!searchInThread)}
+                  className={clsx(
+                    'p-2 rounded-xl transition cursor-pointer',
+                    searchInThread
+                      ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400'
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  )}
+                  title="Search inside this thread"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartCall('audio')}
+                  className="p-2 rounded-xl text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Start Voice Call"
+                >
+                  <Phone className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartCall('video')}
+                  className="p-2 rounded-xl text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Start Video Meeting"
+                >
+                  <Video className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* In-Thread Search Bar Banner */}
+            {searchInThread && (
+              <div className="p-2.5 px-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter messages in this conversation..."
+                  value={threadSearchQuery}
+                  onChange={(e) => setThreadSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+                  autoFocus
+                />
+                {threadSearchQuery && (
+                  <button
+                    onClick={() => setThreadSearchQuery('')}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Messages Thread Container */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-950/40">
+              <div className="flex justify-center my-2">
+                <span className="px-3 py-1 rounded-full bg-slate-200/60 dark:bg-slate-800 text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-teal-500" />
+                  Live End-to-End Synced Thread
+                </span>
+              </div>
+
+              {displayedMessages.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto mb-3">
+                    <MessageSquare className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {threadSearchQuery ? 'No matching messages found' : 'No messages yet'}
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    {threadSearchQuery ? 'Try another keyword' : 'Send a message below to start this live chat'}
+                  </p>
+                </div>
+              ) : (
+                displayedMessages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={clsx(
+                      'flex flex-col group relative',
+                      m.isMe ? 'items-end' : 'items-start'
+                    )}
+                  >
+                    {!m.isMe && (
+                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1 ml-1 flex items-center gap-1.5">
+                        <span>{m.sender}</span>
+                      </span>
+                    )}
+
+                    <div className="relative max-w-md">
+                      {/* Message Bubble */}
+                      <div
+                        className={clsx(
+                          'px-4 py-2.5 rounded-2xl text-xs break-words shadow-2xs',
+                          m.isMe
+                            ? 'bg-slate-900 dark:bg-teal-600 text-white rounded-br-xs'
+                            : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-bl-xs'
+                        )}
+                      >
+                        {/* If quoted reply */}
+                        {m.content.startsWith('> [Reply to') ? (
+                          <div className="mb-2 pb-2 border-b border-white/20 dark:border-slate-700 text-[11px] opacity-80 italic">
+                            {m.content.split('\n')[0]}
+                          </div>
+                        ) : null}
+
+                        <p className="leading-relaxed whitespace-pre-wrap">
+                          {m.content.startsWith('> [Reply to') 
+                            ? m.content.split('\n').slice(1).join('\n') 
+                            : m.content}
+                        </p>
+
+                        {/* File Attachment Card */}
+                        {m.attachmentUrl && (
+                          <div className="mt-2.5 p-2 rounded-xl bg-black/10 dark:bg-black/30 border border-white/10 flex items-center gap-2.5">
+                            {m.attachmentType?.startsWith('image/') ? (
+                              <img src={m.attachmentUrl} alt="Attachment" className="w-12 h-12 object-cover rounded-lg" />
+                            ) : (
+                              <div className="p-2 rounded-lg bg-teal-500/20 text-teal-300">
+                                <FileText className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-semibold truncate">{m.attachmentName || 'Attachment'}</p>
+                              <a
+                                href={m.attachmentUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[10px] text-teal-300 dark:text-teal-200 hover:underline flex items-center gap-1 mt-0.5"
+                              >
+                                <Download className="w-3 h-3" /> Download / View
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Hover Action Bar (Reply & Quick Reactions) */}
+                      <div className={clsx(
+                        'absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-2 py-0.5 shadow-md z-10',
+                        m.isMe ? '-left-24' : '-right-24'
+                      )}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReplyingTo(m);
+                            inputRef.current?.focus();
+                          }}
+                          className="p-1 hover:text-teal-600 dark:hover:text-teal-400 text-slate-400 transition"
+                          title="Reply"
+                        >
+                          <Reply className="w-3.5 h-3.5" />
+                        </button>
+                        {['👍', '❤️', '🚀'].map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setMessageInput(prev => `${prev} ${emoji}`);
+                              inputRef.current?.focus();
+                            }}
+                            className="text-xs hover:scale-125 transition-transform"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 dark:text-slate-500 px-1">
+                      <span>{m.time}</span>
+                      {m.isMe && <CheckCheck className="w-3 h-3 text-teal-500" />}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Prompts Bar */}
+            <div className="px-4 py-1.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-950/60 flex items-center gap-1.5 overflow-x-auto text-nowrap scrollbar-none">
+              <span className="text-[10px] text-slate-400 font-medium shrink-0">Quick reply:</span>
+              {QUICK_PROMPTS.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setMessageInput(prompt);
+                    inputRef.current?.focus();
+                  }}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition shrink-0 cursor-pointer"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {/* Replying banner */}
+            {replyingTo && (
+              <div className="px-4 py-2 bg-teal-50/80 dark:bg-teal-950/40 border-t border-teal-200 dark:border-teal-800/60 flex items-center justify-between text-xs text-teal-800 dark:text-teal-300">
+                <div className="flex items-center gap-2 truncate">
+                  <Reply className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Replying to <strong>{replyingTo.sender}</strong>: &quot;{replyingTo.content.slice(0, 60)}&quot;</span>
+                </div>
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="text-teal-600 dark:text-teal-400 hover:text-teal-800 p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Attachment preview banner */}
+            {selectedFile && (
+              <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedFile.name}</span>
+                  <span className="text-[10px] text-slate-400">({selectedFile.size})</span>
+                </div>
+                <button
+                  onClick={handleClearSelectedFile}
+                  className="text-slate-400 hover:text-rose-500 p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Bottom Message Input Bar */}
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2 relative">
+              {/* File Attachment Button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+              />
               <button
                 type="button"
-                onClick={() => setIsNewChatModalOpen(false)}
-                className="text-white/80 hover:text-white p-1 rounded hover:bg-white/10"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                title="Attach file or photo"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
+
+              {/* Emoji Picker Button */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Emoji"
+                >
+                  <Smile className="w-4 h-4" />
+                </button>
+
+                {/* Emoji Popover */}
+                {isEmojiPickerOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-30 grid grid-cols-5 gap-1.5 w-44">
+                    {POPULAR_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setMessageInput(prev => `${prev}${emoji}`);
+                          setIsEmojiPickerOpen(false);
+                          inputRef.current?.focus();
+                        }}
+                        className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-base transition cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Text Input */}
+              <input
+                ref={inputRef}
+                type="text"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={`Type a message in ${activeChat.name}... (Press Enter to send)`}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              />
+
+              <button
+                type="submit"
+                disabled={isSending || (!messageInput.trim() && !selectedFile)}
+                className="p-2.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-500 text-white transition disabled:opacity-40 cursor-pointer shadow-sm shrink-0"
+              >
+                <Send className="w-4 h-4 text-teal-400 dark:text-white" />
+              </button>
+            </form>
+          </>
+        ) : (
+          /* Empty selection state */
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/20 dark:bg-slate-950/20">
+            <div className="w-16 h-16 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-4 shadow-sm">
+              <MessageSquare className="w-8 h-8" />
+            </div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white mb-1">
+              No Conversation Selected
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-4">
+              Select a team space or direct message from the left list, or start a new conversation.
+            </p>
+            <button
+              onClick={() => {
+                setModalTab('dm');
+                setIsActionModalOpen(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-teal-600 text-white text-xs font-semibold hover:bg-slate-800 dark:hover:bg-teal-500 transition cursor-pointer shadow-sm"
+            >
+              Start New Message
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 3. CALL / VIDEO MEETING MODAL */}
+      {activeCall && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 text-white rounded-3xl shadow-2xl border border-slate-800 w-full max-w-md overflow-hidden flex flex-col items-center p-8 animate-in fade-in-0 zoom-in-95">
+            <div className="relative mb-5">
+              <div className="w-24 h-24 rounded-full bg-teal-500/20 border-2 border-teal-500/40 flex items-center justify-center animate-pulse">
+                <div className="w-16 h-16 rounded-full bg-teal-500 flex items-center justify-center text-white text-xl font-bold">
+                  {activeCall.partner.slice(0, 2).toUpperCase()}
+                </div>
+              </div>
+              <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-500 border-2 border-slate-900" />
+            </div>
+
+            <h3 className="text-lg font-bold mb-1">{activeCall.partner}</h3>
+            <p className="text-xs text-teal-400 font-medium mb-2">
+              {activeCall.type === 'video' ? 'IntelliAttend HD Video Meeting' : 'Encrypted Voice Call'}
+            </p>
+            <div className="px-3 py-1 rounded-full bg-slate-800 font-mono text-xs text-slate-300 mb-8">
+              {formatTimer(activeCall.timer)}
+            </div>
+
+            {/* Video View Placeholder if video call */}
+            {activeCall.type === 'video' && !isVideoOff && (
+              <div className="w-full h-36 rounded-2xl bg-slate-800 mb-6 flex items-center justify-center text-slate-500 text-xs border border-slate-700">
+                <Video className="w-6 h-6 mr-2 text-teal-400" /> Camera Feed Connected
+              </div>
+            )}
+
+            {/* Call Controls */}
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setIsMuted(!isMuted)}
+                className={clsx(
+                  'w-12 h-12 rounded-full flex items-center justify-center transition cursor-pointer',
+                  isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                )}
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+
+              {activeCall.type === 'video' && (
+                <button
+                  type="button"
+                  onClick={() => setIsVideoOff(!isVideoOff)}
+                  className={clsx(
+                    'w-12 h-12 rounded-full flex items-center justify-center transition cursor-pointer',
+                    isVideoOff ? 'bg-rose-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                  )}
+                  title={isVideoOff ? 'Turn Video On' : 'Turn Video Off'}
+                >
+                  {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setActiveCall(null)}
+                className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition shadow-lg shadow-rose-600/30 cursor-pointer"
+                title="End Call"
+              >
+                <PhoneOff className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. NEW MESSAGE OR NEW CHANNEL MODAL */}
+      {isActionModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95 flex flex-col">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {modalTab === 'dm' ? (
+                  <Users className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                ) : (
+                  <Hash className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                )}
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                  {modalTab === 'dm' ? 'Start Direct Message' : 'Create Team Channel'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsActionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 space-y-3 text-xs">
-              <p className="text-slate-500">Select an employee from your workspace directory:</p>
-              <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
-                {directMessages.map((dm) => (
-                  <div
-                    key={dm.id}
-                    onClick={() => {
-                      handleSelectChat(dm.id);
-                      setIsNewChatModalOpen(false);
-                    }}
-                    className="flex items-center gap-3 py-2.5 px-2 hover:bg-slate-50 rounded-xl cursor-pointer"
-                  >
-                    {dm.avatar ? (
-                      <img src={dm.avatar} alt={dm.name} className="w-8 h-8 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-800 text-white font-bold flex items-center justify-center text-xs">
-                        {dm.initials}
+            {/* Modal Tabs */}
+            <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 pt-2">
+              <button
+                type="button"
+                onClick={() => setModalTab('dm')}
+                className={clsx(
+                  'px-4 py-2 text-xs font-bold border-b-2 transition cursor-pointer',
+                  modalTab === 'dm'
+                    ? 'border-teal-500 text-teal-600 dark:text-teal-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                Direct Message (@)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('channel')}
+                className={clsx(
+                  'px-4 py-2 text-xs font-bold border-b-2 transition cursor-pointer',
+                  modalTab === 'channel'
+                    ? 'border-teal-500 text-teal-600 dark:text-teal-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                New Channel (#)
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4">
+              {modalTab === 'dm' ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Select any colleague from your workspace directory:</p>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
+                    {directoryUsers.map((u) => (
+                      <div
+                        key={u.id}
+                        onClick={() => handleStartDmWithUser(u)}
+                        className="p-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-slate-800 dark:bg-teal-700 text-white font-bold flex items-center justify-center text-xs">
+                          {`${u.first_name?.[0] || ''}${u.last_name?.[0] || ''}`.toUpperCase() || 'EM'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {u.name || `${u.first_name} ${u.last_name}`}
+                          </p>
+                          <p className="text-[10px] text-slate-400 truncate">{u.designation || u.role} • {u.department || 'Corporate'}</p>
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <p className="font-bold text-slate-900">{dm.name}</p>
-                      <p className="text-[10px] text-slate-400">{dm.designation}</p>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleCreateChannel} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Channel Name
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">#</span>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. product-release, security-audit"
+                        value={newChannelName}
+                        onChange={(e) => setNewChannelName(e.target.value)}
+                        className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Topic or Description (Optional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="What is this channel about?"
+                      value={newChannelDesc}
+                      onChange={(e) => setNewChannelDesc(e.target.value)}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsActionModalOpen(false)}
+                      className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!newChannelName.trim()}
+                      className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-500 text-white font-bold disabled:opacity-50 transition cursor-pointer"
+                    >
+                      Create Channel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>

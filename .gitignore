@@ -4,3 +4,5 @@ dist
 .env
 .env.local
 .neon
+server/uploads/*
+!server/uploads/**/.gitkeep

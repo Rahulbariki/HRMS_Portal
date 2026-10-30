@@ -83,13 +83,7 @@ export default function EmployeeOrgChart() {
 
   // Filter or show only my branch
   const activeTree = useMemo(() => {
-    if (!showOnlyMyBranch) return ORG_DATA;
-    // Return only branch containing user
-    const userBranch = {
-      ...ORG_DATA,
-      children: ORG_DATA.children.filter(c => c.id === 'mgr-1'),
-    };
-    return userBranch;
+    return ORG_DATA;
   }, [showOnlyMyBranch]);
 
   // Flattened list for list view or search

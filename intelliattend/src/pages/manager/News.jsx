@@ -73,7 +73,7 @@ export default function ManagerNews() {
   const handleOpenComments = async (newsId) => {
     setActiveCommentsNewsId(newsId);
     try {
-      const res = await api.get(`/api/news/${newsId}/comments`);
+      const res = await api.get(`/news/${newsId}/comments`);
       if (res.data?.success) {
         setComments(res.data.data);
       }
@@ -86,7 +86,7 @@ export default function ManagerNews() {
     e.preventDefault();
     if (!newComment.trim() || !activeCommentsNewsId) return;
     try {
-      const res = await api.post(`/api/news/${activeCommentsNewsId}/comments`, {
+      const res = await api.post(`/news/${activeCommentsNewsId}/comments`, {
         comment: newComment,
         user_name: 'David Chen (Manager)',
         user_id: 'IA-MG-001'

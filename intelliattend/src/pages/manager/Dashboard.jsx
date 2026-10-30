@@ -34,12 +34,12 @@ const pages = [
 export default function ManagerDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
-    reporteesCount: 1,
+    reporteesCount: 5,
     pendingLeavesCount: 0,
     pendingExpensesCount: 0,
-    pendingRegularizationsCount: 1,
+    pendingRegularizationsCount: 0,
     attendanceRate: '100%',
-    tasks: { total: 4, completed: 2, inProgress: 1, pending: 1 }
+    tasks: { total: 0, completed: 0, inProgress: 0, pending: 0 }
   });
 
   useEffect(() => {

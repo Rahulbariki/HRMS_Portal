@@ -203,6 +203,8 @@ function AppRoutes() {
             <ProtectedRoute allowedRoles={['superadmin']}>
               <Routes>
                 <Route path="dashboard" element={<SuperAdminDashboard />} />
+                <Route path="chat" element={<EmployeeChat />} />
+                <Route path="mail" element={<EmployeeMail />} />
                 <Route path="companies" element={<SuperAdminCompanies />} />
                 <Route path="plan-management" element={<SuperAdminPlanManagement />} />
                 <Route path="transactions" element={<SuperAdminTransactions />} />
@@ -230,6 +232,8 @@ function AppRoutes() {
             <ProtectedRoute allowedRoles={['client']}>
               <Routes>
                 <Route path="dashboard" element={<ClientDashboard />} />
+                <Route path="chat" element={<EmployeeChat />} />
+                <Route path="mail" element={<EmployeeMail />} />
                 <Route path="managers" element={<ClientManagers />} />
                 <Route path="policies" element={<ClientPolicies />} />
                 <Route path="billings" element={<ClientBillings />} />
@@ -248,23 +252,70 @@ function AppRoutes() {
             <ProtectedRoute allowedRoles={['manager']}>
               <Routes>
                 <Route path="dashboard" element={<ManagerDashboard />} />
-                <Route path="leaves" element={<ManagerLeaves />} />
-                <Route path="tasks" element={<ManagerTasks />} />
+                <Route path="employees" element={<ManagerEmployees />} />
+                <Route path="departments-designations" element={<ManagerDepartmentDesignations />} />
                 <Route path="chat" element={<EmployeeChat />} />
                 <Route path="mail" element={<EmployeeMail />} />
-                <Route path="policies" element={<ManagerPolicies />} />
-                <Route path="documents" element={<ManagerDocuments />} />
+                <Route path="tasks" element={<ManagerTasks />} />
                 <Route path="news" element={<ManagerNews />} />
+                <Route path="documents" element={<ManagerDocuments />} />
+                <Route path="leaves" element={<ManagerLeaves />} />
+                <Route path="allocate-leaves" element={<ManagerAllocateLeaves />} />
                 <Route path="holidays" element={<ManagerHolidays />} />
                 <Route path="attendance" element={<ManagerAttendance />} />
                 <Route path="regularization" element={<EmployeeRegularization />} />
                 <Route path="expenses" element={<ManagerExpenses />} />
+                <Route path="internal-expenses" element={<ManagerInternalExpenses />} />
+                <Route path="income" element={<ManagerIncome />} />
+                <Route path="employee-salaries" element={<ManagerEmployeeSalaries />} />
                 <Route path="salary" element={<ManagerSalary />} />
-                <Route path="offboarding" element={<ManagerOffboarding />} />
+                <Route path="payroll-admins" element={<ManagerPayrollAdmins />} />
                 <Route path="letters" element={<ManagerLetters />} />
+                <Route path="offboarding" element={<ManagerOffboarding />} />
+                <Route path="policies" element={<ManagerPolicies />} />
                 <Route path="org-chart" element={<EmployeeOrgChart />} />
                 <Route path="queries" element={<ManagerQueries />} />
                 <Route path="settings" element={<ManagerSettings />} />
+                <Route path="profile" element={<ManagerProfile />} />
+
+                {/* Manager Self Workspace (/manager/self/*) */}
+                <Route path="self/dashboard" element={<EmployeeDashboard />} />
+                <Route path="self/chat" element={<EmployeeChat />} />
+                <Route path="self/mail" element={<EmployeeMail />} />
+                <Route path="self/attendance" element={<EmployeeAttendance />} />
+                <Route path="self/regularization" element={<EmployeeRegularization />} />
+                <Route path="self/leaves" element={<EmployeeLeaves />} />
+                <Route path="self/expenses" element={<EmployeeExpenses />} />
+                <Route path="self/salary" element={<EmployeeSalary />} />
+                <Route path="self/letters" element={<EmployeeLetters />} />
+                <Route path="self/offboarding" element={<EmployeeOffboarding />} />
+                <Route path="self/tasks" element={<EmployeeTasks />} />
+                <Route path="self/documents" element={<EmployeeDocuments />} />
+                <Route path="self/news" element={<EmployeeNews />} />
+                <Route path="self/holidays" element={<EmployeeHolidays />} />
+                <Route path="self/policies" element={<EmployeePolicies />} />
+                <Route path="self/org-chart" element={<EmployeeOrgChart />} />
+                <Route path="self/support-query" element={<EmployeeSupportQuery />} />
+                <Route path="self/settings" element={<EmployeeSettings />} />
+                <Route path="self/profile" element={<EmployeeProfile />} />
+
+                <Route path="*" element={<Navigate to="dashboard" replace />} />
+              </Routes>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/payroll-admin/*"
+          element={
+            <ProtectedRoute allowedRoles={['payroll_admin']}>
+              <Routes>
+                <Route path="dashboard" element={<PayrollAdminDashboard />} />
+                <Route path="chat" element={<EmployeeChat />} />
+                <Route path="mail" element={<EmployeeMail />} />
+                <Route path="employees" element={<PayrollAdminEmployees />} />
+                <Route path="invoices" element={<PayrollAdminInvoices />} />
+                <Route path="settings" element={<PayrollAdminSettings />} />
                 <Route path="profile" element={<ManagerProfile />} />
                 <Route path="*" element={<Navigate to="dashboard" replace />} />
               </Routes>

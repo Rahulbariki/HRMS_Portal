@@ -1,12 +1,54 @@
 import bcrypt from 'bcryptjs';
+import defaultSql from './db.js';
 
-export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, formatUserResponse }) {
+export const isDmParticipant = async (convId, userId, userEmail = null, sqlClient = defaultSql) => {
+  if (!convId || (!userId && !userEmail)) return false;
+  if (!convId.startsWith('dm_') && !convId.startsWith('dm-')) {
+    return true; // Not a DM (e.g. space channel)
+  }
+
+  const uid = (userId || '').toLowerCase().trim();
+  const uemail = (userEmail || '').toLowerCase().trim();
+
+  // For dm_ where both participant IDs are embedded, check them directly
+  if (convId.startsWith('dm_')) {
+    const parts = convId.slice(3).toLowerCase().split('_');
+    if (uid && parts.includes(uid)) return true;
+  }
+
+  // Verify membership against the conversation's stored participant list in chat_conversations
+  try {
+    const rows = await sqlClient`
+      SELECT participants, email 
+      FROM chat_conversations 
+      WHERE id = ${convId} 
+      LIMIT 1;
+    `;
+    if (rows.length > 0) {
+      const conv = rows[0];
+      const pList = Array.isArray(conv.participants) ? conv.participants : [];
+      if (pList.length > 0) {
+        const lowerList = pList.map(p => String(p).toLowerCase().trim());
+        if (uid && lowerList.includes(uid)) return true;
+        if (uemail && lowerList.includes(uemail)) return true;
+        return false;
+      }
+    }
+  } catch (err) {
+    console.error('Error verifying DM participant against stored conversation list:', err);
+  }
+
+  // Reject access when no stored participant list confirms the user
+  return false;
+};
+
+export function setupEnhancedRoutes(app, { sql, authenticateToken, authorizeRoles, upload, formatUserResponse }) {
   console.log('✓ Registering Enhanced Architecture API routes...');
 
   // ----------------------------------------------------
   // 1. DEPARTMENTS & DESIGNATIONS
   // ----------------------------------------------------
-  app.get(['/api/manager/departments', '/api/client/departments'], async (req, res) => {
+  app.get(['/api/departments', '/api/manager/departments', '/api/client/departments'], async (req, res) => {
     try {
       const rows = await sql`
         SELECT d.*, 
@@ -86,7 +128,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
   });
 
   // DESIGNATIONS
-  app.get(['/api/manager/designations', '/api/client/designations'], async (req, res) => {
+  app.get(['/api/designations', '/api/manager/designations', '/api/client/designations'], async (req, res) => {
     try {
       const rows = await sql`
         SELECT des.*,
@@ -258,8 +300,18 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
         return res.status(400).json({ success: false, message: 'First name, last name, and email required' });
       }
 
-      const countResult = await sql`SELECT COUNT(*)::int AS count FROM users`;
-      const newId = `IA-EM-${String(countResult[0].count + 1).padStart(3, '0')}`;
+      const maxEm = await sql`
+        SELECT id FROM users 
+        WHERE id ~ '^IA-EM-[0-9]+$' 
+        ORDER BY CAST(SUBSTRING(id FROM '[0-9]+$') AS INTEGER) DESC 
+        LIMIT 1
+      `;
+      let nextNum = 1;
+      if (maxEm.length > 0) {
+        const match = maxEm[0].id.match(/IA-EM-(\d+)/);
+        if (match) nextNum = parseInt(match[1], 10) + 1;
+      }
+      const newId = `IA-EM-${String(nextNum).padStart(3, '0')}`;
       const passwordHash = await bcrypt.hash('password123', 10);
 
       const [newUser] = await sql`
@@ -375,6 +427,13 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
   app.put('/api/manager/employees/:id/reset-password', async (req, res) => {
     try {
       const { id } = req.params;
+      // Prevent unauthorized or lower-role password resets
+      const [target] = await sql`SELECT role FROM users WHERE id = ${id} LIMIT 1`;
+      if (!target) return res.status(404).json({ success: false, message: 'Target user not found' });
+      if (target.role === 'superadmin' && req.user?.role !== 'superadmin') {
+        return res.status(403).json({ success: false, message: 'Forbidden: Cannot reset superadmin credentials' });
+      }
+
       const defaultHash = await bcrypt.hash('password123', 10);
       await sql`UPDATE users SET password_hash = ${defaultHash} WHERE id = ${id}`;
       res.json({ success: true, message: 'Password reset to "password123"' });
@@ -386,6 +445,12 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
   app.delete('/api/manager/employees/:id', async (req, res) => {
     try {
       const { id } = req.params;
+      const [target] = await sql`SELECT role FROM users WHERE id = ${id} LIMIT 1`;
+      if (!target) return res.status(404).json({ success: false, message: 'Employee not found' });
+      if (target.role === 'superadmin') {
+        return res.status(403).json({ success: false, message: 'Forbidden: Superadmin accounts cannot be deactivated' });
+      }
+
       await sql`UPDATE users SET status = 'inactive', is_active = false WHERE id = ${id}`;
       res.json({ success: true, message: 'Employee deactivated successfully' });
     } catch (err) {
@@ -404,21 +469,25 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
         const usersInDept = await sql`SELECT id FROM users WHERE department = ${targetId}`;
         for (const u of usersInDept) {
           await sql`
-            UPDATE leave_balances SET
-              annual_total = ${annual},
-              sick_total = ${sick},
-              casual_total = ${casual}
-            WHERE user_id = ${u.id}
+            INSERT INTO leave_balances (user_id, annual_total, annual_used, sick_total, sick_used, casual_total, casual_used, updated_at)
+            VALUES (${u.id}, ${annual}, 0, ${sick}, 0, ${casual}, 0, NOW())
+            ON CONFLICT (user_id) DO UPDATE SET
+              annual_total = EXCLUDED.annual_total,
+              sick_total = EXCLUDED.sick_total,
+              casual_total = EXCLUDED.casual_total,
+              updated_at = NOW()
           `;
         }
         res.json({ success: true, message: `Leaves allocated to department "${targetId}" (${usersInDept.length} staff)` });
       } else {
         await sql`
-          UPDATE leave_balances SET
-            annual_total = ${annual},
-            sick_total = ${sick},
-            casual_total = ${casual}
-          WHERE user_id = ${targetId}
+          INSERT INTO leave_balances (user_id, annual_total, annual_used, sick_total, sick_used, casual_total, casual_used, updated_at)
+          VALUES (${targetId}, ${annual}, 0, ${sick}, 0, ${casual}, 0, NOW())
+          ON CONFLICT (user_id) DO UPDATE SET
+            annual_total = EXCLUDED.annual_total,
+            sick_total = EXCLUDED.sick_total,
+            casual_total = EXCLUDED.casual_total,
+            updated_at = NOW()
         `;
         res.json({ success: true, message: 'Leaves quota updated successfully' });
       }
@@ -612,7 +681,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.get('/api/payroll-admin/dashboard', async (req, res) => {
+  app.get('/api/payroll-admin/dashboard', authorizeRoles('payroll_admin', 'superadmin', 'client', 'client_admin'), async (req, res) => {
     try {
       const [totalStaff] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE role IN ('employee', 'manager') AND is_active = true`;
       const [pendingInvoices] = await sql`SELECT COUNT(*)::int AS count FROM payroll_invoices WHERE status = 'submitted'`;
@@ -632,7 +701,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.get('/api/payroll-admin/invoices', async (req, res) => {
+  app.get('/api/payroll-admin/invoices', authorizeRoles('payroll_admin', 'superadmin', 'client', 'client_admin'), async (req, res) => {
     try {
       const rows = await sql`SELECT * FROM payroll_invoices ORDER BY year DESC, id DESC`;
       res.json({ success: true, data: rows });
@@ -641,7 +710,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.post('/api/payroll-admin/invoices', async (req, res) => {
+  app.post('/api/payroll-admin/invoices', authorizeRoles('payroll_admin', 'superadmin', 'client', 'client_admin'), async (req, res) => {
     try {
       const { month, year = 2026, notes } = req.body;
       const salaryRows = await sql`SELECT monthly_gross_inr, pf_deduction, tds_deduction, monthly_net_inr FROM salary_structures`;
@@ -670,7 +739,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.post('/api/payroll-admin/invoices/:id/submit', async (req, res) => {
+  app.post('/api/payroll-admin/invoices/:id/submit', authorizeRoles('payroll_admin', 'superadmin', 'client', 'client_admin'), async (req, res) => {
     try {
       const { id } = req.params;
       const [inv] = await sql`
@@ -682,7 +751,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.post('/api/payroll-admin/invoices/:id/cancel', async (req, res) => {
+  app.post('/api/payroll-admin/invoices/:id/cancel', authorizeRoles('payroll_admin', 'superadmin', 'client', 'client_admin'), async (req, res) => {
     try {
       const { id } = req.params;
       const [inv] = await sql`
@@ -720,7 +789,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.get(['/api/manager/letters', '/api/employee/letters'], async (req, res) => {
+  app.get('/api/manager/letters', async (req, res) => {
     try {
       const { userId } = req.query;
       let rows;
@@ -786,6 +855,13 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
       const [off] = await sql`SELECT * FROM offboarding_requests WHERE id = ${id}`;
       if (!off) return res.status(404).json({ success: false, message: 'Request not found' });
 
+      if (off.kt_status !== 'completed' || off.asset_return_status !== 'returned') {
+        return res.status(400).json({
+          success: false,
+          message: 'Both Knowledge Transfer (KT) and hardware asset return clearances must be completed before issuing a relieving letter'
+        });
+      }
+
       const letterContent = `This is to certify that ${off.user_name} has successfully completed knowledge transfer and separation clearances as ${off.designation} at IntelliAttend Technologies.`;
       await sql`
         INSERT INTO issued_letters (user_id, user_name, letter_type, title, issued_by, status, content)
@@ -805,35 +881,7 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
-  app.get('/api/employee/offboarding', async (req, res) => {
-    try {
-      const rows = await sql`SELECT * FROM offboarding_requests WHERE user_id = 'IA-EM-001' ORDER BY id DESC LIMIT 1`;
-      res.json({ success: true, data: rows[0] || null });
-    } catch (err) {
-      res.status(500).json({ success: false, message: 'Failed to fetch offboarding status' });
-    }
-  });
 
-  app.post('/api/employee/offboarding/resign', async (req, res) => {
-    try {
-      const { reason, requested_last_working_day, personal_email } = req.body;
-      const [reqObj] = await sql`
-        INSERT INTO offboarding_requests (
-          user_id, user_name, department, designation, resignation_date,
-          requested_last_working_day, reason, personal_email, status
-        )
-        VALUES (
-          'IA-EM-001', 'Sarah Miller', 'Engineering', 'Lead Full-Stack Engineer',
-          CURRENT_DATE, ${requested_last_working_day || new Date(Date.now() + 30*86400000).toISOString().split('T')[0]},
-          ${reason}, ${personal_email || 'sarah.personal@gmail.com'}, 'pending'
-        )
-        RETURNING *
-      `;
-      res.status(201).json({ success: true, data: reqObj, message: 'Resignation submitted to management' });
-    } catch (err) {
-      res.status(500).json({ success: false, message: 'Failed to submit resignation' });
-    }
-  });
 
   // ----------------------------------------------------
   // 10. NEWS & ANNOUNCEMENT COMMENTS
@@ -939,5 +987,975 @@ export function setupEnhancedRoutes(app, { sql, authenticateToken, upload, forma
     }
   });
 
+  // ----------------------------------------------------
+  // 13. REAL-TIME CHAT & MESSAGING
+  // ----------------------------------------------------
+  app.get('/api/chat/conversations', async (req, res) => {
+    try {
+      const currentUserId = req.user?.id || req.query.userId;
+      const currentUserEmail = req.user?.email || req.query.userEmail;
+
+      // 1. Ensure core corporate channels exist
+      await sql`
+        INSERT INTO chat_conversations (id, type, name, initials, designation, email, is_online, last_time, last_message, unread_count)
+        VALUES 
+          ('space-general', 'space', 'Company Announcements & All Hands', 'AH', 'All Corporate Staff', 'all@intelliattend.com', TRUE, 'Live', 'Welcome to the official company workspace chat.', 0),
+          ('space-eng', 'space', 'Engineering & Technology Hub', 'ET', 'Tech & Platform Team', 'engineering@intelliattend.com', TRUE, 'Live', 'Sprint planning and deployment logs.', 0),
+          ('space-ops', 'space', 'Operations & Leadership Hub', 'OL', 'Operations & Management Team', 'operations@intelliattend.com', TRUE, 'Live', 'Daily operations and workspace sync.', 0)
+        ON CONFLICT (id) DO NOTHING;
+      `;
+
+      // 2. Resolve current user identity if provided
+      let currentUser = null;
+      if (currentUserId) {
+        const [u] = await sql`SELECT * FROM users WHERE LOWER(id) = ${currentUserId.toLowerCase().trim()} LIMIT 1`;
+        currentUser = u;
+      } else if (currentUserEmail) {
+        const [u] = await sql`SELECT * FROM users WHERE LOWER(email) = ${currentUserEmail.toLowerCase().trim()} LIMIT 1`;
+        currentUser = u;
+      }
+
+      // 3. Single query to fetch latest message per conversation
+      const latestMessages = await sql`
+        SELECT DISTINCT ON (conversation_id) conversation_id, content, time
+        FROM chat_messages
+        ORDER BY conversation_id, id DESC
+      `;
+      const latestMsgMap = new Map();
+      for (const m of latestMessages) {
+        latestMsgMap.set(m.conversation_id, m);
+      }
+
+      // 4. Load all workspace channels from database
+      const dbSpaces = await sql`
+        SELECT * FROM chat_conversations 
+        WHERE type = 'space' 
+        ORDER BY created_at ASC, id ASC
+      `;
+
+      const spaceRows = dbSpaces.map(sp => {
+        const lastMsg = latestMsgMap.get(sp.id);
+        return {
+          id: sp.id,
+          type: 'space',
+          name: sp.name,
+          initials: sp.initials || sp.name.substring(0, 2).toUpperCase(),
+          designation: sp.designation || 'Workspace Channel',
+          email: sp.email || 'all@intelliattend.com',
+          avatar: null,
+          is_online: true,
+          last_time: lastMsg ? lastMsg.time : sp.last_time || 'Live',
+          last_message: lastMsg ? lastMsg.content : sp.last_message || 'Welcome to the channel.',
+          unread_count: 0
+        };
+      });
+
+      // 5. Prepare symmetric 1-on-1 direct messages
+      let colleagues = [];
+      if (currentUser) {
+        colleagues = await sql`
+          SELECT id, first_name, last_name, designation, email, role, avatar_url 
+          FROM users 
+          WHERE LOWER(id) != ${currentUser.id.toLowerCase()} 
+          ORDER BY first_name ASC
+        `;
+      } else {
+        colleagues = await sql`
+          SELECT id, first_name, last_name, designation, email, role, avatar_url 
+          FROM users 
+          ORDER BY first_name ASC
+        `;
+      }
+
+      const dmRows = colleagues.map(colleague => {
+        const canonicalId = currentUser
+          ? `dm_${[currentUser.id.toLowerCase(), colleague.id.toLowerCase()].sort().join('_')}`
+          : `dm-${colleague.id.toLowerCase()}`;
+
+        const lastMsg = latestMsgMap.get(canonicalId);
+        const fullName = `${colleague.first_name} ${colleague.last_name}`.trim();
+        const initials = `${colleague.first_name?.[0] || ''}${colleague.last_name?.[0] || ''}`.toUpperCase() || 'U';
+
+        return {
+          id: canonicalId,
+          type: 'dm',
+          name: fullName,
+          initials,
+          designation: colleague.designation || colleague.role,
+          email: colleague.email,
+          avatar: colleague.avatar_url || null,
+          is_online: true,
+          last_time: lastMsg ? lastMsg.time : 'Active',
+          last_message: lastMsg ? lastMsg.content : 'Click to send message',
+          unread_count: 0,
+          otherUserId: colleague.id
+        };
+      });
+
+      res.json({ success: true, data: [...spaceRows, ...dmRows] });
+    } catch (err) {
+      console.error('Error fetching chat conversations:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch conversations' });
+    }
+  });
+
+  app.get('/api/chat/conversations/:id/messages', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Verify conversation membership for direct messages
+      if ((id.startsWith('dm_') || id.startsWith('dm-')) && req.user?.id) {
+        const isAllowed = await isDmParticipant(id, req.user.id, req.user.email, sql);
+        if (!isAllowed) {
+          return res.status(403).json({ success: false, message: 'Forbidden: You are not a participant in this conversation' });
+        }
+      }
+
+      const rows = await sql`
+        SELECT * FROM chat_messages 
+        WHERE conversation_id = ${id} 
+        ORDER BY id ASC
+      `;
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error('Error fetching chat messages:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch messages' });
+    }
+  });
+
+  app.post('/api/chat/messages', authenticateToken, async (req, res) => {
+    try {
+      const { 
+        conversationId, 
+        content, 
+        senderName = 'Corporate Staff', 
+        senderEmail = 'staff@intelliattend.com', 
+        senderId = null,
+        attachmentUrl = null,
+        attachmentName = null,
+        attachmentType = null
+      } = req.body;
+
+      if (!conversationId || (!content && !attachmentUrl)) {
+        return res.status(400).json({ success: false, message: 'conversationId and content/attachment are required' });
+      }
+
+      const currentSenderId = req.user?.id || senderId;
+      const currentSenderEmail = req.user?.email || senderEmail;
+      const currentSenderName = req.user?.name || `${req.user?.first_name || ''} ${req.user?.last_name || ''}`.trim() || senderName;
+
+      // Verify conversation membership for direct messages
+      if ((conversationId.startsWith('dm_') || conversationId.startsWith('dm-')) && currentSenderId) {
+        const isAllowed = await isDmParticipant(conversationId, currentSenderId, currentSenderEmail, sql);
+        if (!isAllowed) {
+          return res.status(403).json({ success: false, message: 'Forbidden: You are not a participant in this conversation' });
+        }
+      }
+
+      const timeNow = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+      const snippet = content || (attachmentName ? `📎 Attached: ${attachmentName}` : 'File shared');
+
+      const [newMsg] = await sql`
+        INSERT INTO chat_messages (
+          conversation_id, sender_name, sender_email, sender_id, content, time, is_me,
+          attachment_url, attachment_name, attachment_type
+        )
+        VALUES (
+          ${conversationId}, ${currentSenderName}, ${currentSenderEmail}, ${currentSenderId}, ${snippet}, ${timeNow}, TRUE,
+          ${attachmentUrl}, ${attachmentName}, ${attachmentType}
+        )
+        RETURNING *
+      `;
+
+      // Update conversation last message & time
+      await sql`
+        UPDATE chat_conversations SET
+          last_message = ${snippet},
+          last_time = ${timeNow}
+        WHERE id = ${conversationId}
+      `;
+
+      res.status(201).json({ success: true, data: newMsg });
+    } catch (err) {
+      console.error('Error sending chat message:', err);
+      res.status(500).json({ success: false, message: 'Failed to send message' });
+    }
+  });
+
+  app.post('/api/chat/conversations', async (req, res) => {
+    try {
+      const { id, type = 'space', name, initials, designation, email, avatar = null } = req.body;
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'Channel/conversation name is required' });
+      }
+
+      const convId = id || (type === 'space' 
+        ? `space-${name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}`
+        : `dm-${Date.now()}`
+      );
+      const computedInitials = initials || name.substring(0, 2).toUpperCase();
+
+      const [conv] = await sql`
+        INSERT INTO chat_conversations (id, type, name, initials, designation, email, avatar, is_online, last_time, last_message, unread_count)
+        VALUES (
+          ${convId}, ${type}, ${name}, ${computedInitials}, 
+          ${designation || (type === 'space' ? 'Team Channel' : 'Team Member')}, 
+          ${email || (type === 'space' ? `${convId}@intelliattend.com` : '')}, 
+          ${avatar}, TRUE, 'Just now', 'Channel created', 0
+        )
+        ON CONFLICT (id) DO UPDATE SET 
+          name = EXCLUDED.name,
+          designation = EXCLUDED.designation,
+          is_online = TRUE
+        RETURNING *
+      `;
+      res.status(201).json({ success: true, data: conv, message: 'Channel created successfully' });
+    } catch (err) {
+      console.error('Error creating conversation:', err);
+      res.status(500).json({ success: false, message: 'Failed to create conversation' });
+    }
+  });
+
+  app.delete('/api/chat/messages/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await sql`DELETE FROM chat_messages WHERE id = ${id}`;
+      res.json({ success: true, message: 'Message deleted' });
+    } catch (err) {
+      console.error('Error deleting chat message:', err);
+      res.status(500).json({ success: false, message: 'Failed to delete message' });
+    }
+  });
+
+  // ----------------------------------------------------
+  // 14. REAL-TIME CORPORATE MAIL
+  // ----------------------------------------------------
+  app.get('/api/mail/emails', async (req, res) => {
+    try {
+      const { folder } = req.query;
+      const currentUserEmail = (req.user?.email || req.query.userEmail || '').toLowerCase().trim();
+
+      // Seed initial corporate broadcast announcements if absent
+      const [sysCount] = await sql`SELECT count(*)::int as count FROM corporate_emails WHERE is_system = TRUE`;
+      if (!sysCount || sysCount.count === 0) {
+        await sql`
+          INSERT INTO corporate_emails (
+            sender_name, sender_email, sender_initial, recipient_email, is_system,
+            subject, snippet, body, folder, is_unread, is_starred, label, time, date
+          )
+          VALUES 
+            (
+              'IntelliAttend System', 'system@intelliattend.com', 'IS', 'all@intelliattend.com', TRUE,
+              'Welcome to IntelliAttend Enterprise Cloud HRMS',
+              'Welcome to your enterprise HRMS portal. Explore Attendance, Regularization, Chat, Mail, Leaves...',
+              'Welcome to the unified IntelliAttend Enterprise HRMS portal!\n\nAll departments and staff members have full access to real-time chat, corporate mail, attendance tracking, shift scheduling, and leave approvals.\n\nPlease complete your profile verification and reach out to IT or HR for any workspace assistance.',
+              'inbox', FALSE, TRUE, 'Corporate', '9:00 AM', 'Today'
+            ),
+            (
+              'Executive Directorate', 'executive@intelliattend.com', 'ED', 'all@intelliattend.com', TRUE,
+              'Quarterly Strategic Objectives & Innovation All-Hands',
+              'Join us for our upcoming quarterly all-hands meeting focusing on next-generation platform releases...',
+              'Dear Team,\n\nWe are pleased to invite everyone to our upcoming Quarterly All-Hands briefing. We will review key organizational milestones, platform scalability targets, and employee development initiatives.\n\nDate: This Friday at 4:00 PM EST.\nVenue: Executive Auditorium & Virtual Live Stream.',
+              'inbox', TRUE, FALSE, 'Announcement', '10:30 AM', 'Today'
+            ),
+            (
+              'IT Security & Infrastructure', 'security@intelliattend.com', 'SC', 'all@intelliattend.com', TRUE,
+              'Workplace Security & Compliance Standard Operating Procedures',
+              'Please review our updated information security protocols, 2FA credentials, and data privacy policies...',
+              'All Personnel,\n\nAs part of our continuous commitment to SOC-2 and ISO compliance, please ensure your corporate credentials are kept confidential and two-factor authentication is active on all managed devices.\n\nFor any security inquiries, please contact security@intelliattend.com.',
+              'inbox', TRUE, FALSE, 'Security', '11:15 AM', 'Today'
+            );
+        `;
+      }
+
+      let rows;
+      if (folder === 'sent') {
+        if (currentUserEmail) {
+          rows = await sql`
+            SELECT * FROM corporate_emails 
+            WHERE folder = 'sent' AND LOWER(sender_email) = ${currentUserEmail}
+            ORDER BY id DESC
+          `;
+        } else {
+          rows = await sql`SELECT * FROM corporate_emails WHERE folder = 'sent' ORDER BY id DESC`;
+        }
+      } else if (folder === 'drafts') {
+        if (currentUserEmail) {
+          rows = await sql`
+            SELECT * FROM corporate_emails 
+            WHERE folder = 'drafts' AND LOWER(sender_email) = ${currentUserEmail}
+            ORDER BY id DESC
+          `;
+        } else {
+          rows = await sql`SELECT * FROM corporate_emails WHERE folder = 'drafts' ORDER BY id DESC`;
+        }
+      } else if (folder === 'trash') {
+        if (currentUserEmail) {
+          rows = await sql`
+            SELECT * FROM corporate_emails 
+            WHERE folder = 'trash' AND (
+              LOWER(recipient_email) = ${currentUserEmail} OR 
+              LOWER(sender_email) = ${currentUserEmail}
+            )
+            ORDER BY id DESC
+          `;
+        } else {
+          rows = await sql`SELECT * FROM corporate_emails WHERE folder = 'trash' ORDER BY id DESC`;
+        }
+      } else if (folder === 'starred') {
+        if (currentUserEmail) {
+          rows = await sql`
+            SELECT * FROM corporate_emails 
+            WHERE is_starred = TRUE AND (
+              LOWER(recipient_email) = ${currentUserEmail} OR 
+              LOWER(sender_email) = ${currentUserEmail} OR
+              LOWER(recipient_email) = 'all@intelliattend.com' OR
+              is_system = TRUE
+            )
+            ORDER BY id DESC
+          `;
+        } else {
+          rows = await sql`SELECT * FROM corporate_emails WHERE is_starred = TRUE ORDER BY id DESC`;
+        }
+      } else if (folder === 'inbox') {
+        if (currentUserEmail) {
+          rows = await sql`
+            SELECT * FROM corporate_emails 
+            WHERE folder = 'inbox' AND (
+              LOWER(recipient_email) = ${currentUserEmail} OR 
+              LOWER(recipient_email) = 'all' OR 
+              LOWER(recipient_email) = 'all@intelliattend.com' OR
+              (is_system = TRUE AND subject NOT IN (
+                SELECT subject FROM corporate_emails 
+                WHERE folder = 'trash' AND LOWER(recipient_email) = ${currentUserEmail}
+              ))
+            )
+            ORDER BY id DESC
+          `;
+        } else {
+          rows = await sql`SELECT * FROM corporate_emails WHERE folder = 'inbox' ORDER BY id DESC`;
+        }
+      } else {
+        // All active emails for user
+        if (currentUserEmail) {
+          rows = await sql`
+            SELECT * FROM corporate_emails 
+            WHERE (
+              (folder = 'inbox' AND (
+                LOWER(recipient_email) = ${currentUserEmail} OR 
+                LOWER(recipient_email) = 'all' OR 
+                LOWER(recipient_email) = 'all@intelliattend.com' OR
+                (is_system = TRUE AND subject NOT IN (
+                  SELECT subject FROM corporate_emails 
+                  WHERE folder = 'trash' AND LOWER(recipient_email) = ${currentUserEmail}
+                ))
+              )) OR
+              (folder = 'sent' AND LOWER(sender_email) = ${currentUserEmail}) OR
+              (folder = 'drafts' AND LOWER(sender_email) = ${currentUserEmail}) OR
+              (folder = 'trash' AND (
+                LOWER(recipient_email) = ${currentUserEmail} OR 
+                LOWER(sender_email) = ${currentUserEmail}
+              ))
+            )
+            ORDER BY id DESC
+          `;
+        } else {
+          rows = await sql`SELECT * FROM corporate_emails ORDER BY id DESC`;
+        }
+      }
+
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error('Error fetching emails:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch emails' });
+    }
+  });
+
+  app.post('/api/mail/send', async (req, res) => {
+    try {
+      const { 
+        to, 
+        cc = '', 
+        bcc = '', 
+        subject, 
+        body, 
+        senderName = 'Corporate Staff', 
+        senderEmail = 'staff@intelliattend.com', 
+        label = 'General',
+        attachments = '',
+        draftId = null
+      } = req.body;
+
+      if (!to || !subject || !body) {
+        return res.status(400).json({ success: false, message: 'Recipient, subject, and body are required' });
+      }
+
+      const actualSenderEmail = req.user?.email || senderEmail;
+      const actualSenderName = req.user?.name || `${req.user?.first_name || ''} ${req.user?.last_name || ''}`.trim() || senderName;
+
+      // Exact recipient resolution: require exact email or exact full name
+      const cleanTo = to.trim().toLowerCase();
+      let recipientEmail = cleanTo;
+      let recipientName = to.trim();
+
+      if (cleanTo === 'all' || cleanTo === 'all@intelliattend.com') {
+        recipientEmail = 'all@intelliattend.com';
+        recipientName = 'All Staff';
+      } else {
+        const [userByEmail] = await sql`SELECT id, first_name, last_name, email FROM users WHERE LOWER(email) = ${cleanTo} LIMIT 1`;
+        if (userByEmail) {
+          recipientEmail = userByEmail.email.toLowerCase();
+          recipientName = `${userByEmail.first_name} ${userByEmail.last_name}`;
+        } else {
+          const [userByName] = await sql`SELECT id, first_name, last_name, email FROM users WHERE LOWER(TRIM(first_name || ' ' || last_name)) = ${cleanTo} LIMIT 1`;
+          if (userByName) {
+            recipientEmail = userByName.email.toLowerCase();
+            recipientName = `${userByName.first_name} ${userByName.last_name}`;
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: `Recipient '${to}' could not be resolved. Please enter a valid employee email or exact full name.`
+            });
+          }
+        }
+      }
+
+      const timeNow = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const snippet = body.substring(0, 100);
+      const hasAttachment = Boolean(attachments && attachments.length > 0);
+
+      // Save copy in sender's Sent folder
+      const [sentMail] = await sql`
+        INSERT INTO corporate_emails (
+          sender_name, sender_email, sender_initial, recipient_email, is_system,
+          subject, snippet, body, folder, is_unread, is_starred, label, time, date,
+          cc, bcc, attachments, has_attachment
+        )
+        VALUES (
+          ${actualSenderName}, ${actualSenderEmail}, ${actualSenderName.substring(0, 2).toUpperCase()}, ${recipientEmail}, FALSE,
+          ${subject}, ${snippet}, ${body}, 'sent', FALSE, FALSE, ${label}, ${timeNow}, 'Today',
+          ${cc || null}, ${bcc || null}, ${attachments || null}, ${hasAttachment}
+        )
+        RETURNING *
+      `;
+
+      // Deliver copy to primary recipient's Inbox
+      await sql`
+        INSERT INTO corporate_emails (
+          sender_name, sender_email, sender_initial, recipient_email, is_system,
+          subject, snippet, body, folder, is_unread, is_starred, label, time, date,
+          cc, bcc, attachments, has_attachment
+        )
+        VALUES (
+          ${actualSenderName}, ${actualSenderEmail}, ${actualSenderName.substring(0, 2).toUpperCase()}, ${recipientEmail}, FALSE,
+          ${subject}, ${snippet}, ${body}, 'inbox', TRUE, FALSE, ${label}, ${timeNow}, 'Today',
+          ${cc || null}, ${bcc || null}, ${attachments || null}, ${hasAttachment}
+        )
+      `;
+
+      // Deliver copy to any CC recipients
+      if (cc && cc.trim()) {
+        const ccList = cc.split(/[,;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+        for (const ccEmail of ccList) {
+          if (ccEmail !== recipientEmail) {
+            await sql`
+              INSERT INTO corporate_emails (
+                sender_name, sender_email, sender_initial, recipient_email, is_system,
+                subject, snippet, body, folder, is_unread, is_starred, label, time, date,
+                cc, attachments, has_attachment
+              )
+              VALUES (
+                ${senderName}, ${senderEmail}, ${senderName.substring(0, 2).toUpperCase()}, ${ccEmail}, FALSE,
+                ${subject}, ${snippet}, ${body}, 'inbox', TRUE, FALSE, ${label}, ${timeNow}, 'Today',
+                ${cc}, ${attachments || null}, ${hasAttachment}
+              )
+            `;
+          }
+        }
+      }
+
+      // If sent from a saved draft, clean up the draft
+      if (draftId) {
+        await sql`DELETE FROM corporate_emails WHERE id = ${draftId} AND folder = 'drafts'`;
+      }
+
+      res.status(201).json({ 
+        success: true, 
+        data: sentMail, 
+        message: `Email sent to ${recipientName} (${recipientEmail})` 
+      });
+    } catch (err) {
+      console.error('Error sending email:', err);
+      res.status(500).json({ success: false, message: 'Failed to send email' });
+    }
+  });
+
+  app.post('/api/mail/drafts', async (req, res) => {
+    try {
+      const { id, to = '', cc = '', subject = '(No Subject)', body = '', senderName = 'Corporate Staff', senderEmail = 'staff@intelliattend.com', label = 'Draft' } = req.body;
+      const timeNow = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const snippet = body ? body.substring(0, 100) : 'Draft message';
+
+      let draft;
+      if (id) {
+        const [updated] = await sql`
+          UPDATE corporate_emails SET
+            recipient_email = ${to},
+            cc = ${cc || null},
+            subject = ${subject},
+            snippet = ${snippet},
+            body = ${body},
+            label = ${label},
+            time = ${timeNow}
+          WHERE id = ${id} AND folder = 'drafts'
+          RETURNING *
+        `;
+        draft = updated;
+      } else {
+        const [inserted] = await sql`
+          INSERT INTO corporate_emails (
+            sender_name, sender_email, sender_initial, recipient_email, is_system,
+            subject, snippet, body, folder, is_unread, is_starred, label, time, date, cc
+          )
+          VALUES (
+            ${senderName}, ${senderEmail}, ${senderName.substring(0, 2).toUpperCase()}, ${to}, FALSE,
+            ${subject}, ${snippet}, ${body}, 'drafts', FALSE, FALSE, ${label}, ${timeNow}, 'Today', ${cc || null}
+          )
+          RETURNING *
+        `;
+        draft = inserted;
+      }
+      res.status(201).json({ success: true, data: draft, message: 'Draft saved successfully' });
+    } catch (err) {
+      console.error('Error saving draft:', err);
+      res.status(500).json({ success: false, message: 'Failed to save draft' });
+    }
+  });
+
+  app.post('/api/mail/bulk', async (req, res) => {
+    try {
+      const { ids, action } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0 || !action) {
+        return res.status(400).json({ success: false, message: 'ids array and action required' });
+      }
+
+      if (action === 'read') {
+        await sql`UPDATE corporate_emails SET is_unread = FALSE WHERE id = ANY(${ids})`;
+      } else if (action === 'unread') {
+        await sql`UPDATE corporate_emails SET is_unread = TRUE WHERE id = ANY(${ids})`;
+      } else if (action === 'star') {
+        await sql`UPDATE corporate_emails SET is_starred = TRUE WHERE id = ANY(${ids})`;
+      } else if (action === 'unstar') {
+        await sql`UPDATE corporate_emails SET is_starred = FALSE WHERE id = ANY(${ids})`;
+      } else if (action === 'trash') {
+        const callerEmail = (req.user?.email || '').toLowerCase().trim();
+        if (callerEmail) {
+          await sql`
+            UPDATE corporate_emails 
+            SET previous_folder = folder, folder = 'trash' 
+            WHERE id = ANY(${ids}) 
+              AND is_system = FALSE 
+              AND folder != 'trash'
+              AND (LOWER(recipient_email) = ${callerEmail} OR LOWER(sender_email) = ${callerEmail})
+          `;
+        } else {
+          await sql`
+            UPDATE corporate_emails 
+            SET previous_folder = folder, folder = 'trash' 
+            WHERE id = ANY(${ids}) 
+              AND is_system = FALSE 
+              AND folder != 'trash'
+          `;
+        }
+
+        const systemMails = await sql`
+          SELECT * FROM corporate_emails 
+          WHERE id = ANY(${ids}) AND is_system = TRUE AND folder != 'trash'
+        `;
+        for (const sMail of systemMails) {
+          const userTarget = callerEmail || sMail.recipient_email;
+          const existing = await sql`
+            SELECT id FROM corporate_emails 
+            WHERE folder = 'trash' 
+              AND LOWER(recipient_email) = ${userTarget.toLowerCase()} 
+              AND subject = ${sMail.subject} 
+            LIMIT 1
+          `;
+          if (existing.length === 0) {
+            await sql`
+              INSERT INTO corporate_emails (
+                sender_name, sender_email, sender_initial, recipient_email, is_system,
+                subject, snippet, body, folder, previous_folder, is_unread, is_starred, label, time, date
+              )
+              VALUES (
+                ${sMail.sender_name}, ${sMail.sender_email}, ${sMail.sender_initial}, ${userTarget}, TRUE,
+                ${sMail.subject}, ${sMail.snippet}, ${sMail.body}, 'trash', ${sMail.folder}, ${sMail.is_unread}, ${sMail.is_starred}, ${sMail.label}, ${sMail.time}, ${sMail.date}
+              )
+            `;
+          }
+        }
+      } else if (action === 'restore') {
+        const callerEmail = (req.user?.email || '').toLowerCase().trim();
+        if (callerEmail) {
+          await sql`
+            DELETE FROM corporate_emails 
+            WHERE id = ANY(${ids}) 
+              AND folder = 'trash' 
+              AND is_system = TRUE 
+              AND (LOWER(recipient_email) = ${callerEmail} OR LOWER(sender_email) = ${callerEmail})
+          `;
+          await sql`
+            UPDATE corporate_emails 
+            SET folder = COALESCE(previous_folder, 'inbox'), previous_folder = NULL 
+            WHERE id = ANY(${ids}) 
+              AND folder = 'trash' 
+              AND is_system = FALSE
+              AND (LOWER(recipient_email) = ${callerEmail} OR LOWER(sender_email) = ${callerEmail})
+          `;
+        } else {
+          await sql`
+            DELETE FROM corporate_emails 
+            WHERE id = ANY(${ids}) 
+              AND folder = 'trash' 
+              AND is_system = TRUE
+          `;
+          await sql`
+            UPDATE corporate_emails 
+            SET folder = COALESCE(previous_folder, 'inbox'), previous_folder = NULL 
+            WHERE id = ANY(${ids}) 
+              AND folder = 'trash' 
+              AND is_system = FALSE
+          `;
+        }
+      } else if (action === 'delete') {
+        await sql`DELETE FROM corporate_emails WHERE id = ANY(${ids}) AND (is_system = FALSE OR folder = 'trash')`;
+      }
+
+      res.json({ success: true, message: `Bulk action ${action} completed on ${ids.length} emails` });
+    } catch (err) {
+      console.error('Error performing bulk mail action:', err);
+      res.status(500).json({ success: false, message: 'Bulk action failed' });
+    }
+  });
+
+  app.post('/api/mail/empty-trash', async (req, res) => {
+    try {
+      const currentUserEmail = (req.user?.email || req.body?.userEmail || '').toLowerCase().trim();
+      if (currentUserEmail) {
+        await sql`DELETE FROM corporate_emails WHERE folder = 'trash' AND (LOWER(recipient_email) = ${currentUserEmail} OR LOWER(sender_email) = ${currentUserEmail})`;
+      } else {
+        await sql`DELETE FROM corporate_emails WHERE folder = 'trash'`;
+      }
+      res.json({ success: true, message: 'Trash emptied successfully' });
+    } catch (err) {
+      console.error('Error emptying trash:', err);
+      res.status(500).json({ success: false, message: 'Failed to empty trash' });
+    }
+  });
+
+  app.post(['/api/mail/emails/:id/restore', '/api/mail/restore/:id'], async (req, res) => {
+    try {
+      const { id } = req.params;
+      const callerEmail = (req.user?.email || '').toLowerCase().trim();
+      const [mail] = await sql`SELECT * FROM corporate_emails WHERE id = ${id} LIMIT 1`;
+      if (!mail) {
+        return res.status(404).json({ success: false, message: 'Email not found' });
+      }
+
+      if (mail.folder !== 'trash') {
+        return res.status(400).json({ success: false, message: 'Email is not in trash folder' });
+      }
+
+      if (callerEmail) {
+        const isOwner = (mail.recipient_email && mail.recipient_email.toLowerCase() === callerEmail) ||
+                        (mail.sender_email && mail.sender_email.toLowerCase() === callerEmail);
+        if (!isOwner) {
+          return res.status(403).json({ success: false, message: 'Forbidden: You do not own this email' });
+        }
+      }
+
+      if (mail.is_system) {
+        // Delete per-user copy so the original broadcast reappears alone
+        await sql`DELETE FROM corporate_emails WHERE id = ${id}`;
+        return res.json({ success: true, message: 'Email restored to inbox' });
+      }
+
+      const targetFolder = mail.previous_folder || 'inbox';
+      const [restored] = await sql`
+        UPDATE corporate_emails
+        SET folder = ${targetFolder}, previous_folder = NULL
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      res.json({ success: true, data: restored, message: `Email restored to ${targetFolder}` });
+    } catch (err) {
+      console.error('Error restoring email:', err);
+      res.status(500).json({ success: false, message: 'Failed to restore email' });
+    }
+  });
+
+  app.patch('/api/mail/emails/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isStarred, isUnread, folder } = req.body;
+
+      const [updated] = await sql`
+        UPDATE corporate_emails SET
+          is_starred = COALESCE(${isStarred !== undefined ? isStarred : null}, is_starred),
+          is_unread = COALESCE(${isUnread !== undefined ? isUnread : null}, is_unread),
+          folder = COALESCE(${folder || null}, folder)
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      console.error('Error updating email:', err);
+      res.status(500).json({ success: false, message: 'Failed to update email' });
+    }
+  });
+
+  app.delete('/api/mail/emails/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUserEmail = (req.user?.email || '').toLowerCase().trim();
+      const [mail] = await sql`SELECT * FROM corporate_emails WHERE id = ${id} LIMIT 1`;
+      if (!mail) {
+        return res.status(404).json({ success: false, message: 'Email not found' });
+      }
+
+      if (mail.is_system && mail.folder !== 'trash') {
+        // Avoid inserting another trash copy when this user already has one with the same subject
+        const userTarget = currentUserEmail || mail.recipient_email;
+        const existing = await sql`
+          SELECT id FROM corporate_emails 
+          WHERE folder = 'trash' 
+            AND LOWER(recipient_email) = ${userTarget.toLowerCase()} 
+            AND subject = ${mail.subject} 
+          LIMIT 1;
+        `;
+        if (existing.length === 0) {
+          await sql`
+            INSERT INTO corporate_emails (
+              sender_name, sender_email, sender_initial, recipient_email, is_system,
+              subject, snippet, body, folder, previous_folder, is_unread, is_starred, label, time, date
+            )
+            VALUES (
+              ${mail.sender_name}, ${mail.sender_email}, ${mail.sender_initial}, ${userTarget}, TRUE,
+              ${mail.subject}, ${mail.snippet}, ${mail.body}, 'trash', ${mail.folder}, ${mail.is_unread}, ${mail.is_starred}, ${mail.label}, ${mail.time}, ${mail.date}
+            )
+          `;
+        }
+        return res.json({ success: true, message: 'Email moved to trash' });
+      }
+
+      if (mail.folder !== 'trash') {
+        await sql`UPDATE corporate_emails SET previous_folder = folder, folder = 'trash' WHERE id = ${id}`;
+        res.json({ success: true, message: 'Email moved to trash' });
+      } else {
+        await sql`DELETE FROM corporate_emails WHERE id = ${id}`;
+        res.json({ success: true, message: 'Email permanently deleted' });
+      }
+    } catch (err) {
+      console.error('Error deleting email:', err);
+      res.status(500).json({ success: false, message: 'Failed to delete email' });
+    }
+  });
+
+  // ----------------------------------------------------
+  // 15. EMPLOYEE OFFBOARDING & CLEARANCE
+  // ----------------------------------------------------
+  app.get(['/api/employee/offboarding', '/api/offboarding/status'], async (req, res) => {
+    try {
+      const userId = req.user?.id || req.query.userId || req.query.employeeId || 'IA-EM-001';
+      const rows = await sql`
+        SELECT * FROM offboarding_requests 
+        WHERE LOWER(user_id) = ${userId.toLowerCase()} 
+        ORDER BY id DESC LIMIT 1
+      `;
+      if (rows.length === 0) {
+        return res.json({ success: true, data: null, status: 'not_submitted' });
+      }
+      res.json({ success: true, data: rows[0], status: rows[0].status });
+    } catch (err) {
+      console.error('Error fetching employee offboarding:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch offboarding status' });
+    }
+  });
+
+  app.post(['/api/employee/offboarding/apply', '/api/offboarding/apply', '/api/employee/offboarding/resign'], async (req, res) => {
+    try {
+      const { employeeId, employeeName, reason, customComments = '', noticePeriodDays = 60, requested_last_working_day } = req.body;
+      const actualUserId = req.user?.id || employeeId || 'IA-EM-001';
+      const actualUserName = req.user?.name || employeeName || 'Sarah Miller';
+
+      let lwdFormatted;
+      if (requested_last_working_day) {
+        lwdFormatted = requested_last_working_day;
+      } else {
+        const lastWorkingDay = new Date();
+        lastWorkingDay.setDate(lastWorkingDay.getDate() + parseInt(noticePeriodDays || 60));
+        lwdFormatted = lastWorkingDay.toISOString().split('T')[0];
+      }
+
+      const [reqRow] = await sql`
+        INSERT INTO offboarding_requests (
+          company_id, user_id, user_name, department, designation,
+          resignation_date, requested_last_working_day, reason, status, kt_status, asset_return_status
+        )
+        VALUES (
+          1, ${actualUserId}, ${actualUserName}, 'Engineering', 'Lead Full Stack Engineer',
+          CURRENT_DATE, ${lwdFormatted}, ${reason || customComments || 'Career Growth'}, 'pending', 'pending', 'pending'
+        )
+        RETURNING *
+      `;
+      res.status(201).json({ success: true, data: reqRow, message: 'Resignation notice submitted successfully' });
+    } catch (err) {
+      console.error('Error applying for resignation:', err);
+      res.status(500).json({ success: false, message: 'Failed to submit resignation notice' });
+    }
+  });
+
+  // ----------------------------------------------------
+  // 16. EMPLOYEE LETTERS & CERTIFICATES
+  // ----------------------------------------------------
+  app.get(['/api/employee/letters', '/api/letters/my'], async (req, res) => {
+    try {
+      const userId = req.user?.id || req.query.userId || req.query.employeeId || 'IA-EM-001';
+      const rows = await sql`
+        SELECT *
+        FROM issued_letters
+        WHERE LOWER(user_id) = ${userId.toLowerCase()}
+        ORDER BY issue_date DESC, id DESC
+      `;
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error('Error fetching employee letters:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch issued letters' });
+    }
+  });
+
+  app.post(['/api/employee/letters/request', '/api/letters/request'], async (req, res) => {
+    try {
+      const { 
+        employeeId, 
+        employeeName, 
+        letterType = 'Employment Verification Letter'
+      } = req.body;
+      const actualUserId = req.user?.id || employeeId || 'IA-EM-001';
+      const actualUserName = req.user?.name || employeeName || 'Sarah Miller';
+
+      // Accept only allow-listed letterType values
+      const ALLOWED_LETTER_TYPES = {
+        'employment-verification': 'Employment Verification Letter',
+        'salary-certificate': 'Salary & Compensation Certificate',
+        'bonafide-letter': 'Bonafide Corporate Certificate',
+        'experience-certificate': 'Provisional Service Certificate',
+        'Employment Verification Letter': 'Employment Verification Letter',
+        'Salary & Compensation Certificate': 'Salary & Compensation Certificate',
+        'Bonafide Corporate Certificate': 'Bonafide Corporate Certificate',
+        'Provisional Service Certificate': 'Provisional Service Certificate'
+      };
+
+      const canonicalType = ALLOWED_LETTER_TYPES[letterType];
+      if (!canonicalType) {
+        return res.status(400).json({ success: false, message: 'Invalid letter type requested' });
+      }
+
+      // Generate content on the server instead of using request-supplied title or content
+      const letterTitle = canonicalType;
+      const letterContent = `This is an official request for ${canonicalType} submitted by ${actualUserName} (${actualUserId}). Certification and verification details are maintained under IntelliAttend Corporate Governance.`;
+
+      const [letter] = await sql`
+        INSERT INTO issued_letters (
+          company_id, user_id, user_name, letter_type, title,
+          issue_date, issued_by, status, content
+        )
+        VALUES (
+          1, ${actualUserId}, ${actualUserName}, ${canonicalType}, ${letterTitle},
+          CURRENT_DATE, 'Pending Approval', 'Pending', ${letterContent}
+        )
+        RETURNING *
+      `;
+      res.status(201).json({ success: true, data: letter, message: 'Letter issuance request recorded successfully' });
+    } catch (err) {
+      console.error('Error requesting letter:', err);
+      res.status(500).json({ success: false, message: 'Failed to record letter request' });
+    }
+  });
+
+  // ----------------------------------------------------
+  // 17. SUPERADMIN & CLIENT BACKOFFICE
+  // ----------------------------------------------------
+  app.get('/api/superadmin/contact-queries', async (req, res) => {
+    try {
+      const rows = await sql`SELECT * FROM contact_queries ORDER BY created_at DESC`;
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Failed to fetch contact queries' });
+    }
+  });
+
+  app.patch('/api/superadmin/contact-queries/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const [updated] = await sql`
+        UPDATE contact_queries SET status = ${status} WHERE id = ${id} RETURNING *
+      `;
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Failed to update query status' });
+    }
+  });
+
+  app.get('/api/superadmin/audit-logs', authorizeRoles('superadmin'), async (req, res) => {
+    try {
+      const rows = await sql`SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100`;
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Failed to fetch audit logs' });
+    }
+  });
+
+  app.get('/api/client/settings', async (req, res) => {
+    try {
+      const [comp] = await sql`
+        SELECT attendance_selfie_required, geo_fencing_enabled, subdomain, plan, status 
+        FROM companies WHERE id = 1 LIMIT 1
+      `;
+      res.json({
+        success: true,
+        data: {
+          attendanceSelfieRequired: comp?.attendance_selfie_required || false,
+          geoFencingEnabled: comp?.geo_fencing_enabled || false,
+          subdomain: comp?.subdomain || 'acme.hrms.portal',
+          plan: comp?.plan || 'Enterprise Tier',
+          status: comp?.status || 'active',
+          geofenceRadiusMeters: 250,
+          officeLatitude: 17.448294,
+          officeLongitude: 78.374187
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Failed to fetch client settings' });
+    }
+  });
+
+  app.put('/api/client/settings', async (req, res) => {
+    try {
+      const { attendanceSelfieRequired, geoFencingEnabled } = req.body;
+      await sql`
+        UPDATE companies SET
+          attendance_selfie_required = COALESCE(${attendanceSelfieRequired !== undefined ? attendanceSelfieRequired : null}, attendance_selfie_required),
+          geo_fencing_enabled = COALESCE(${geoFencingEnabled !== undefined ? geoFencingEnabled : null}, geo_fencing_enabled)
+        WHERE id = 1
+      `;
+      res.json({ success: true, message: 'Tenant security parameters saved in Neon PostgreSQL' });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Failed to save settings' });
+    }
+  });
+
   console.log('✓ All Enhanced API routes successfully bound.');
 }
+

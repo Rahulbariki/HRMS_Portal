@@ -18,15 +18,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const token = localStorage.getItem('token') || '';
-    const isMockToken = token.startsWith('mock-');
-    const hasDemoUser = Boolean(localStorage.getItem('hrms_user'));
-
-    // Only redirect if it's an authenticated session from a real server that expired
-    if (error.response?.status === 401 && !isMockToken && !hasDemoUser) {
+    // If token is missing, expired or rejected with 401, clear credentials and redirect to login
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('hrms_user');
-      if (window.location.pathname !== '/login') {
+      const publicPaths = ['/login', '/company-login', '/superadmin/login'];
+      if (!publicPaths.some(p => window.location.pathname.startsWith(p))) {
         window.location.href = '/login';
       }
     }

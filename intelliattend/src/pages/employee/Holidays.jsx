@@ -164,20 +164,25 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const formatLocalDate = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function EmployeeHolidays() {
   const [holidays, setHolidays] = useState(HOLIDAYS_DATA);
   const [loading, setLoading] = useState(false);
+  const today = new Date();
+  const todayStr = formatLocalDate(today);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' | 'table'
-  // Default to October 2026 matching reference screenshot
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(9); // 9 = October
-  const [selectedDate, setSelectedDate] = useState('2026-10-26');
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [modalHoliday, setModalHoliday] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
-
-  // Today reference is 2026-10-26 matching screenshots
-  const todayStr = '2026-10-26';
 
   useEffect(() => {
     const fetchHolidays = async () => {
@@ -281,9 +286,10 @@ export default function EmployeeHolidays() {
   };
 
   const handleToday = () => {
-    setCurrentYear(2026);
-    setCurrentMonth(9); // October
-    setSelectedDate('2026-10-26');
+    const now = new Date();
+    setCurrentYear(now.getFullYear());
+    setCurrentMonth(now.getMonth());
+    setSelectedDate(formatLocalDate(now));
   };
 
   // Filtered list for Table List View

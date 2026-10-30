@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Shield, Search, Download, Filter, CheckCircle2,
   AlertTriangle, Key, Database, RefreshCw, Clock, Globe
 } from 'lucide-react';
 import clsx from 'clsx';
+import api from '../../services/api';
 
 const AUDIT_EVENTS = [
   {
@@ -62,6 +63,38 @@ export default function SuperAdminAuditLogs() {
   const [logs, setLogs] = useState(AUDIT_EVENTS);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await api.get('/superadmin/audit-logs');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const formatRole = (role) => {
+            if (!role) return 'System';
+            const r = role.toLowerCase();
+            if (r === 'superadmin') return 'SuperAdmin';
+            if (r === 'client_admin' || r === 'client') return 'Client Admin';
+            return role.charAt(0).toUpperCase() + role.slice(1);
+          };
+
+          const mapped = res.data.data.map(l => ({
+            id: `AUD-${l.id}`,
+            event: l.action || 'System Audit Event',
+            user: l.user_email || 'System Process',
+            role: formatRole(l.user_role),
+            ip: l.ip_address || '127.0.0.1',
+            timestamp: l.created_at ? new Date(l.created_at).toLocaleString('en-IN') : 'Recent',
+            status: 'success',
+            details: l.details || 'Audit event logged in Neon DB.'
+          }));
+          setLogs(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load audit logs:', err);
+      }
+    };
+    fetchLogs();
+  }, []);
 
   const filteredLogs = logs.filter(l => {
     const matchesSearch =

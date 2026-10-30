@@ -13,14 +13,18 @@ import {
   Calendar,
   ShieldCheck
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
 export default function EmployeeOffboarding() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [resignationStatus, setResignationStatus] = useState('not_submitted'); // 'not_submitted', 'pending', 'approved', 'in_clearance'
   const [reason, setReason] = useState('Career Growth & New Opportunities');
   const [customComments, setCustomComments] = useState('');
   const [noticePeriodDays, setNoticePeriodDays] = useState(60);
   const [submittedAt, setSubmittedAt] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [clearanceItems, setClearanceItems] = useState([
     { id: 1, title: 'Company MacBook Pro & Accessories', dept: 'IT Systems', status: 'Pending Return', icon: Laptop },
     { id: 2, title: 'Corporate Access Badge & Smart Card', dept: 'Facilities', status: 'Pending Return', icon: CreditCard },
@@ -30,21 +34,50 @@ export default function EmployeeOffboarding() {
   ]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('user');
-      if (stored) {
-        setUser(JSON.parse(stored));
+    const fetchStatus = async () => {
+      try {
+        const res = await api.get(`/offboarding/status?userId=${user?.id || 'IA-EM-001'}`);
+        if (res.data?.success && res.data.data) {
+          setResignationStatus(res.data.data.status || 'pending');
+          setReason(res.data.data.reason || reason);
+          if (res.data.data.resignation_date) {
+            setSubmittedAt(new Date(res.data.data.resignation_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load offboarding record from Neon DB:', err);
       }
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
+    };
+    fetchStatus();
+  }, [user?.id]);
 
-  const handleApplyResignation = (e) => {
+  const handleApplyResignation = async (e) => {
     e.preventDefault();
     if (!confirm('Are you sure you want to submit your formal resignation notice? Your manager and HR will be notified immediately.')) return;
-    setResignationStatus('pending');
-    setSubmittedAt(new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+    
+    setSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const res = await api.post('/offboarding/apply', {
+        employeeId: user?.id || 'IA-EM-001',
+        employeeName: user?.name || 'Sarah Miller',
+        reason,
+        customComments,
+        noticePeriodDays
+      });
+      if (res.data?.success !== false) {
+        setResignationStatus('pending');
+        setSubmittedAt(new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+      } else {
+        setErrorMessage(res.data?.message || 'Failed to submit resignation. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to save resignation to Neon DB:', err);
+      setErrorMessage(err.response?.data?.message || 'Failed to submit resignation request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const calculatedLWD = () => {
@@ -151,13 +184,20 @@ export default function EmployeeOffboarding() {
                   </span>
                 </div>
 
+                {errorMessage && (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-300">
+                    {errorMessage}
+                  </div>
+                )}
+
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm shadow-md transition flex items-center gap-2"
+                    disabled={submitting}
+                    className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-semibold text-sm shadow-md transition flex items-center gap-2 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
-                    Submit Formal Resignation
+                    {submitting ? 'Submitting...' : 'Submit Formal Resignation'}
                   </button>
                 </div>
               </form>

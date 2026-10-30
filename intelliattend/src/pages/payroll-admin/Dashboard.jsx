@@ -11,8 +11,8 @@ export default function PayrollAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     activeEmployees: 5,
-    pendingInvoices: 1,
-    totalDisbursed: 1083000,
+    pendingInvoices: 0,
+    totalDisbursed: 0,
     payrollCycle: 'Monthly (30th EOM)'
   });
   const [recentInvoices, setRecentInvoices] = useState([]);
@@ -87,7 +87,7 @@ export default function PayrollAdminDashboard() {
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Settled Disbursal (YTD)</p>
             <p className="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-              ₹{Number(stats.totalDisbursed || 1083000).toLocaleString('en-IN')}
+              ₹{Number(stats.totalDisbursed ?? 0).toLocaleString('en-IN')}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Direct bank wires</p>
           </div>
@@ -183,3 +183,4 @@ export default function PayrollAdminDashboard() {
     </div>
   );
 }
+

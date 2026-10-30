@@ -3,11 +3,14 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import sql from './db.js';
 import { uploadBufferToCloudinary, deleteFromCloudinary } from './cloudinary.js';
-import { setupEnhancedRoutes } from './enhancedRoutes.js';
+import { setupEnhancedRoutes, isDmParticipant } from './enhancedRoutes.js';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,66 +23,205 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'intelliattend-secret-key-2026';
 
+// 1. Security Headers (Helmet)
+app.use(helmet({
+  contentSecurityPolicy: false, // Dev/local assets compatibility
+  crossOriginEmbedderPolicy: false
+}));
+app.disable('x-powered-by');
+
+// 2. Controlled CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5001',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5001',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(ao => origin.startsWith(ao) || origin.endsWith('.intelliattend.com'))) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// 3. Payload size limiting (mitigate DoS / memory exhaustion)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// 3.1 Public static avatars directory (only user profile photos are public)
+const uploadsDir = path.resolve(__dirname, 'uploads');
+const avatarsDir = path.resolve(uploadsDir, 'avatars');
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+app.use('/uploads/avatars', express.static(avatarsDir));
+app.use('/api/uploads/avatars', express.static(avatarsDir));
+
+// 4. Rate Limiting
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 400, // 400 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again shortly.' }
+});
+app.use('/api/', generalLimiter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 attempts per 15 min to prevent brute force
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many authentication attempts. Please try again after 15 minutes.' }
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 } // 15MB limit
 });
 
-app.use(cors());
-app.use(express.json());
-
-// 1. Health check & database connection probe
+// 5. Sanitized Health check probe (no internal db info leakage)
 app.get('/api/health', async (req, res) => {
   try {
-    const result = await sql`
-      SELECT 
-        1 AS connected, 
-        NOW() AS server_time, 
-        current_database() AS database_name,
-        current_user AS user_name,
-        version() AS pg_version
-    `;
+    await sql`SELECT 1`;
     res.json({
       status: 'healthy',
-      database: 'connected',
-      neon: {
-        database: result[0].database_name,
-        user: result[0].user_name,
-        serverTime: result[0].server_time,
-        version: result[0].pg_version
-      },
-      objectStorage: {
-        provider: 'Cloudinary',
-        cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'intelliattend',
-        status: 'configured',
-        hasSecret: Boolean(process.env.CLOUDINARY_API_SECRET)
-      }
+      timestamp: new Date().toISOString(),
+      database: 'connected'
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(503).json({
       status: 'unhealthy',
-      database: 'disconnected',
-      error: error.message
+      timestamp: new Date().toISOString(),
+      database: 'disconnected'
     });
   }
 });
 
-// Middleware: Authenticate JWT Token
-const authenticateToken = (req, res, next) => {
+// Shared helper: Format User Response
+export const formatUserResponse = (u) => ({
+  id: u.id,
+  employeeId: u.id,
+  email: u.email,
+  loginEmail: u.email,
+  corporateEmail: u.corporate_email || `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
+  role: u.role,
+  name: `${u.first_name} ${u.last_name}`,
+  firstName: u.first_name,
+  lastName: u.last_name,
+  fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
+  designation: u.designation,
+  department: u.department,
+  phone: u.phone || '',
+  emergencyPhone: u.emergency_phone || '',
+  emergencyContactName: u.emergency_contact_name || '',
+  bloodGroup: u.blood_group || 'O+',
+  doj: u.doj || '',
+  dob: u.dob || '',
+  gender: u.gender || '',
+  address: u.address || '',
+  workLocation: u.work_location || '',
+  employmentType: u.employment_type || 'Full-time Permanent',
+  shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
+  panNumber: u.pan_number || '',
+  bankAccount: u.bank_account || '',
+  pfNumber: u.pf_number || '',
+  avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
+  avatarUrl: u.avatar_url || '',
+  company: u.company_name || 'IntelliAttend Technologies',
+  manager: u.manager_name || 'Board of Directors'
+});
+
+// 6. Robust Cryptographic JWT Authentication Middleware
+export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.status(401).json({ success: false, message: 'Access token required' });
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Access token required. Please sign in.' });
+  }
 
   jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
-    if (err) return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+    if (err) {
+      return res.status(403).json({ success: false, message: 'Invalid or expired access token' });
+    }
     req.user = decodedUser;
     next();
   });
 };
 
-// 2. Auth: Login
-app.post('/api/auth/login', async (req, res) => {
+// 7. Role-Based Access Control (RBAC) Middleware
+export const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: `Forbidden: Access requires one of [${roles.join(', ')}] permissions` 
+      });
+    }
+    next();
+  };
+};
+
+// 8. API Authentication Gateway
+// Protects all /api endpoints except health check probe, login, and static avatars
+app.use('/api', (req, res, next) => {
+  const publicPaths = ['/health', '/auth/login'];
+  if (publicPaths.includes(req.path) || req.path.startsWith('/uploads/avatars')) {
+    return next();
+  }
+  return authenticateToken(req, res, next);
+});
+
+// Protected file download endpoint enforcing JWT authentication and message access checks
+app.get(['/api/uploads/:folder/:filename', '/uploads/:folder/:filename'], authenticateToken, async (req, res) => {
+  const { folder, filename } = req.params;
+  const sanitizedFolder = path.basename(folder);
+  const sanitizedFilename = path.basename(filename);
+  const filePath = path.resolve(uploadsDir, sanitizedFolder, sanitizedFilename);
+
+  if (!filePath.startsWith(uploadsDir) || !fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, message: 'Attachment not found' });
+  }
+
+  // Access check for chat attachments in direct messages
+  if (sanitizedFolder === 'documents' || sanitizedFolder === 'attachments') {
+    const fileUrlFragment = `/${sanitizedFolder}/${sanitizedFilename}`;
+    const chatMsg = await sql`
+      SELECT conversation_id 
+      FROM chat_messages 
+      WHERE attachment_url LIKE ${'%' + fileUrlFragment} 
+      LIMIT 1;
+    `;
+    if (chatMsg.length > 0) {
+      const convId = chatMsg[0].conversation_id;
+      if (convId && (convId.startsWith('dm_') || convId.startsWith('dm-'))) {
+        const isAllowed = await isDmParticipant(convId, req.user?.id, req.user?.email, sql);
+        if (!isAllowed) {
+          return res.status(403).json({ success: false, message: 'Forbidden: Access to this attachment is restricted to conversation participants' });
+        }
+      }
+    }
+  }
+
+  res.sendFile(filePath);
+});
+
+// 9. Auth: Login (with rate-limiting and secure password verification)
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -97,7 +239,7 @@ app.post('/api/auth/login', async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const isDomainAllowed = normalizedEmail.endsWith('.intelliattend@gmail.com') || normalizedEmail.endsWith('@intelliattend.com');
     if (!ALLOWED_EMAILS.includes(normalizedEmail) && !isDomainAllowed) {
-      return res.status(403).json({ success: false, message: 'Access denied: Only authorized production accounts are permitted.' });
+      return res.status(403).json({ success: false, message: 'Access denied: Only authorized accounts are permitted.' });
     }
 
     const rows = await sql`SELECT * FROM users WHERE email = ${normalizedEmail} LIMIT 1`;
@@ -108,41 +250,8 @@ app.post('/api/auth/login', async (req, res) => {
     const user = rows[0];
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: 'Invalid password' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
-
-    const formatUserResponse = (u) => ({
-      id: u.id,
-      employeeId: u.id,
-      email: u.email,
-      loginEmail: u.email,
-      corporateEmail: u.corporate_email || `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
-      role: u.role,
-      name: `${u.first_name} ${u.last_name}`,
-      firstName: u.first_name,
-      lastName: u.last_name,
-      fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
-      designation: u.designation,
-      department: u.department,
-      phone: u.phone || '',
-      emergencyPhone: u.emergency_phone || '',
-      emergencyContactName: u.emergency_contact_name || '',
-      bloodGroup: u.blood_group || 'O+',
-      doj: u.doj || '',
-      dob: u.dob || '',
-      gender: u.gender || '',
-      address: u.address || '',
-      workLocation: u.work_location || '',
-      employmentType: u.employment_type || 'Full-time Permanent',
-      shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
-      panNumber: u.pan_number || '',
-      bankAccount: u.bank_account || '',
-      pfNumber: u.pf_number || '',
-      avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
-      avatarUrl: u.avatar_url || '',
-      company: u.company_name || 'IntelliAttend Technologies',
-      manager: u.manager_name || 'Board of Directors'
-    });
 
     const tokenPayload = {
       id: user.id,
@@ -154,11 +263,16 @@ app.post('/api/auth/login', async (req, res) => {
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+    const formattedUser = formatUserResponse(user);
 
     res.json({
       success: true,
       token,
-      user: formatUserResponse(user)
+      user: formattedUser,
+      data: {
+        token,
+        user: formattedUser
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -166,7 +280,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// 3. Auth: Current User (/api/auth/me)
+// 10. Auth: Current User (/api/auth/me)
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const rows = await sql`SELECT * FROM users WHERE id = ${req.user.id} LIMIT 1`;
@@ -270,33 +384,66 @@ app.get('/api/users/profile/:id', getProfileHandler);
 app.put('/api/users/profile', async (req, res) => {
   try {
     const {
-      id, email, firstName, lastName, phone, emergencyPhone,
+      id, employeeId, email, loginEmail, firstName, lastName, phone, emergencyPhone,
       emergencyContactName, bloodGroup, dob, gender, address,
-      workLocation, shift, panNumber, bankAccount, pfNumber, avatarUrl
+      workLocation, shift, panNumber, bankAccount, pfNumber, avatarUrl, avatar,
+      designation, department
     } = req.body;
 
-    const targetUser = id || email;
+    // Authorization check: SuperAdmin, Manager, ClientAdmin, and PayrollAdmin can manage records.
+    // Regular employees update their own profile only.
+    const isPrivileged = req.user && ['superadmin', 'manager', 'client_admin', 'client', 'payroll_admin'].includes(req.user.role);
+    const targetUser = isPrivileged
+      ? (id || employeeId || loginEmail || email || req.user?.id)
+      : (req.user?.id || req.user?.email);
+
     if (!targetUser) {
       return res.status(400).json({ success: false, message: 'User identifier required' });
     }
 
-    const updated = await sql`
+    // Protect avatar: Only update if a valid non-empty string is provided. Never wipe with empty string.
+    const cleanAvatar = (typeof avatarUrl === 'string' && avatarUrl.trim() !== '')
+      ? avatarUrl.trim()
+      : (typeof avatar === 'string' && (avatar.startsWith('http') || avatar.startsWith('/') || avatar.startsWith('data:')) ? avatar.trim() : null);
+
+    const updated = isPrivileged ? await sql`
       UPDATE users SET
-        first_name = COALESCE(${firstName}, first_name),
-        last_name = COALESCE(${lastName}, last_name),
-        phone = COALESCE(${phone}, phone),
-        emergency_phone = COALESCE(${emergencyPhone}, emergency_phone),
-        emergency_contact_name = COALESCE(${emergencyContactName}, emergency_contact_name),
-        blood_group = COALESCE(${bloodGroup}, blood_group),
-        dob = COALESCE(${dob}, dob),
-        gender = COALESCE(${gender}, gender),
-        address = COALESCE(${address}, address),
-        work_location = COALESCE(${workLocation}, work_location),
-        shift = COALESCE(${shift}, shift),
-        pan_number = COALESCE(${panNumber}, pan_number),
-        bank_account = COALESCE(${bankAccount}, bank_account),
-        pf_number = COALESCE(${pfNumber}, pf_number),
-        avatar_url = COALESCE(${avatarUrl}, avatar_url)
+        first_name = COALESCE(${firstName && firstName.trim() !== '' ? firstName.trim() : null}, first_name),
+        last_name = COALESCE(${lastName && lastName.trim() !== '' ? lastName.trim() : null}, last_name),
+        phone = COALESCE(${phone !== undefined ? phone : null}, phone),
+        emergency_phone = COALESCE(${emergencyPhone !== undefined ? emergencyPhone : null}, emergency_phone),
+        emergency_contact_name = COALESCE(${emergencyContactName !== undefined ? emergencyContactName : null}, emergency_contact_name),
+        blood_group = COALESCE(${bloodGroup !== undefined ? bloodGroup : null}, blood_group),
+        dob = COALESCE(${dob !== undefined ? dob : null}, dob),
+        gender = COALESCE(${gender !== undefined ? gender : null}, gender),
+        address = COALESCE(${address !== undefined ? address : null}, address),
+        work_location = COALESCE(${workLocation !== undefined ? workLocation : null}, work_location),
+        shift = COALESCE(${shift !== undefined ? shift : null}, shift),
+        pan_number = COALESCE(${panNumber !== undefined ? panNumber : null}, pan_number),
+        bank_account = COALESCE(${bankAccount !== undefined ? bankAccount : null}, bank_account),
+        pf_number = COALESCE(${pfNumber !== undefined ? pfNumber : null}, pf_number),
+        designation = COALESCE(${designation && designation.trim() !== '' ? designation.trim() : null}, designation),
+        department = COALESCE(${department && department.trim() !== '' ? department.trim() : null}, department),
+        avatar_url = COALESCE(${cleanAvatar}, avatar_url)
+      WHERE id = ${targetUser} OR email = ${targetUser} OR id = ${id || employeeId || ''} OR email = ${loginEmail || email || ''}
+      RETURNING *;
+    ` : await sql`
+      UPDATE users SET
+        first_name = COALESCE(${firstName && firstName.trim() !== '' ? firstName.trim() : null}, first_name),
+        last_name = COALESCE(${lastName && lastName.trim() !== '' ? lastName.trim() : null}, last_name),
+        phone = COALESCE(${phone !== undefined ? phone : null}, phone),
+        emergency_phone = COALESCE(${emergencyPhone !== undefined ? emergencyPhone : null}, emergency_phone),
+        emergency_contact_name = COALESCE(${emergencyContactName !== undefined ? emergencyContactName : null}, emergency_contact_name),
+        blood_group = COALESCE(${bloodGroup !== undefined ? bloodGroup : null}, blood_group),
+        dob = COALESCE(${dob !== undefined ? dob : null}, dob),
+        gender = COALESCE(${gender !== undefined ? gender : null}, gender),
+        address = COALESCE(${address !== undefined ? address : null}, address),
+        work_location = COALESCE(${workLocation !== undefined ? workLocation : null}, work_location),
+        shift = COALESCE(${shift !== undefined ? shift : null}, shift),
+        pan_number = COALESCE(${panNumber !== undefined ? panNumber : null}, pan_number),
+        bank_account = COALESCE(${bankAccount !== undefined ? bankAccount : null}, bank_account),
+        pf_number = COALESCE(${pfNumber !== undefined ? pfNumber : null}, pf_number),
+        avatar_url = COALESCE(${cleanAvatar}, avatar_url)
       WHERE id = ${targetUser} OR email = ${targetUser}
       RETURNING *;
     `;
@@ -309,38 +456,7 @@ app.put('/api/users/profile', async (req, res) => {
     res.json({
       success: true,
       message: 'Profile updated successfully in Neon PostgreSQL',
-      data: {
-        id: u.id,
-        employeeId: u.id,
-        email: u.email,
-        loginEmail: u.email,
-        corporateEmail: `${u.email.split('@')[0].split('.')[0]}@intelliattend.com`,
-        role: u.role,
-        name: `${u.first_name} ${u.last_name}`,
-        firstName: u.first_name,
-        lastName: u.last_name,
-        fullName: `${u.first_name} ${u.last_name}`.toUpperCase(),
-        designation: u.designation,
-        department: u.department,
-        phone: u.phone || '',
-        emergencyPhone: u.emergency_phone || '',
-        emergencyContactName: u.emergency_contact_name || '',
-        bloodGroup: u.blood_group || 'O+',
-        doj: u.doj || '',
-        dob: u.dob || '',
-        gender: u.gender || '',
-        address: u.address || '',
-        workLocation: u.work_location || '',
-        employmentType: u.employment_type || 'Full-time Permanent',
-        shift: u.shift || 'General Day (09:00 AM - 06:30 PM)',
-        panNumber: u.pan_number || '',
-        bankAccount: u.bank_account || '',
-        pfNumber: u.pf_number || '',
-        avatar: u.avatar_url || (u.first_name ? u.first_name[0] : 'U'),
-        avatarUrl: u.avatar_url || '',
-        company: u.company_name || 'IntelliAttend Technologies',
-        manager: u.manager_name || 'Board of Directors'
-      }
+      data: formatUserResponse(u)
     });
   } catch (error) {
     console.error('Update profile error:', error);
@@ -409,10 +525,10 @@ const handleSuperAdminStats = async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalCompanies: String(companiesCount.count || 3),
-        activeUsers: String(usersCount.count || 4),
-        monthlyRevenue: `₹${Number(revenueData.total || 150000).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-        pendingRequests: String(ticketsCount?.count || 0)
+        totalCompanies: String(companiesCount?.count ?? 0),
+        activeUsers: String(usersCount?.count ?? 0),
+        monthlyRevenue: `₹${Number(revenueData?.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        pendingRequests: String(ticketsCount?.count ?? 0)
       }
     });
   } catch (error) {
@@ -438,6 +554,28 @@ app.get('/api/superadmin/transactions', async (req, res) => {
   try {
     const txns = await sql`SELECT * FROM transactions ORDER BY created_at DESC`;
     res.json({ success: true, data: txns });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// SuperAdmin: Subdomain Requests List
+app.get('/api/superadmin/subdomain-requests', authorizeRoles('superadmin'), async (req, res) => {
+  try {
+    const companies = await sql`
+      SELECT 
+        id, 
+        name AS company_name, 
+        subdomain, 
+        subdomain || '.intelliattend.io' AS requested_subdomain,
+        'Active (Auto-Renewing SSL)' AS ssl_status,
+        'cname.intelliattend.io' AS cname_record,
+        status, 
+        created_at 
+      FROM companies 
+      ORDER BY id ASC
+    `;
+    res.json({ success: true, data: companies });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -693,10 +831,10 @@ app.get('/api/employee/attendance/summary', async (req, res) => {
     res.json({
       success: true,
       data: [
-        { label: 'Present', value: String(c.present_count || 18), color: 'success' },
+        { label: 'Present', value: String(c.present_count || 0), color: 'success' },
         { label: 'Absent', value: String(c.absent_count || 0), color: 'error' },
-        { label: 'Late', value: String(c.late_count || 1), color: 'warning' },
-        { label: 'WFH', value: String(c.wfh_count || 1), color: 'accent' },
+        { label: 'Late', value: String(c.late_count || 0), color: 'warning' },
+        { label: 'WFH', value: String(c.wfh_count || 0), color: 'accent' },
       ]
     });
   } catch (error) {
@@ -899,10 +1037,14 @@ app.get('/api/leaves/team', async (req, res) => {
 });
 
 // 9f. Manager updates leave status (Approve / Reject)
-app.patch('/api/leaves/:id/status', async (req, res) => {
+const handleLeaveStatusUpdate = async (req, res) => {
   try {
-    const leaveId = req.params.id;
-    const { status, approvedBy = 'David Chen (Manager)' } = req.body;
+    const leaveId = req.params.id || req.body.leaveId || req.body.id;
+    let { status, action, approvedBy = 'David Chen (Manager)' } = req.body;
+    if (!status && action) {
+      status = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : action;
+    }
+    if (status) status = status.toLowerCase();
 
     if (!['approved', 'rejected', 'pending'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
@@ -947,7 +1089,10 @@ app.patch('/api/leaves/:id/status', async (req, res) => {
     console.error('Error updating leave status:', error);
     res.status(500).json({ success: false, message: 'Failed to update leave status' });
   }
-});
+};
+
+app.patch('/api/leaves/:id/status', handleLeaveStatusUpdate);
+app.post('/api/leaves/action', handleLeaveStatusUpdate);
 
 // ==========================================
 // MODULE 3: EXPENSES & REIMBURSEMENTS API
@@ -1152,6 +1297,7 @@ app.get('/api/salary/structure', async (req, res) => {
         annual_ctc_inr AS "annualCtcInr",
         monthly_gross_inr AS "monthlyGrossInr",
         basic_salary AS "basicSalary",
+        basic_salary AS "base_salary",
         hra,
         special_allowance AS "specialAllowance",
         performance_bonus AS "performanceBonus",
@@ -1564,34 +1710,48 @@ app.delete('/api/tickets/:id', async (req, res) => {
   }
 });
 
-// 12. Cloudinary Object Storage: Upload User Avatar
+// 12. Object Storage / Cloudinary: Upload User Avatar
 app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No image uploaded' });
     }
 
-    const userId = req.body.userId || req.body.email || '';
+    const isPrivileged = req.user && ['superadmin', 'manager', 'client_admin', 'client', 'payroll_admin'].includes(req.user.role);
+    const callerSupplied = req.body.userId || req.body.employeeId || req.body.email || req.body.loginEmail;
+    const userId = (isPrivileged && callerSupplied) ? callerSupplied : (req.user?.id || req.user?.email || callerSupplied || '');
+    const rawExt = req.file.mimetype ? req.file.mimetype.split('/')[1] : 'png';
+    const ext = (rawExt || 'png').replace('jpeg', 'jpg');
 
     const result = await uploadBufferToCloudinary(req.file.buffer, {
       folder: 'intelliattend/avatars',
       resource_type: 'image',
+      format: ext,
       public_id: `avatar_${userId || 'user'}_${Date.now()}`
     });
+
+    const finalUrl = result.secure_url || result.url;
 
     if (userId) {
       await sql`
         UPDATE users 
-        SET avatar_url = ${result.secure_url} 
+        SET avatar_url = ${finalUrl} 
         WHERE id = ${userId} OR email = ${userId};
       `;
     }
 
     res.json({
       success: true,
-      message: 'Avatar uploaded to Cloudinary object storage and saved to database',
-      url: result.secure_url,
-      publicId: result.public_id
+      message: 'Avatar uploaded and saved to profile successfully',
+      url: finalUrl,
+      avatarUrl: finalUrl,
+      avatar: finalUrl,
+      publicId: result.public_id,
+      data: {
+        url: finalUrl,
+        avatarUrl: finalUrl,
+        avatar: finalUrl
+      }
     });
   } catch (error) {
     console.error('Avatar upload error:', error);
@@ -2185,11 +2345,11 @@ app.post('/api/regularizations', async (req, res) => {
       originalClockOut = 'Missed Punch',
       requestedClockIn,
       requestedClockOut,
-      reasonType,
-      reasonDetails
+      reasonType = req.body.reason || 'Missed Punch',
+      reasonDetails = req.body.reason || 'Regularization request'
     } = req.body;
 
-    if (!attendanceDate || !requestedClockIn || !requestedClockOut || !reasonType) {
+    if (!attendanceDate || !requestedClockIn || !requestedClockOut) {
       return res.status(400).json({ success: false, message: 'All regularization fields are required' });
     }
 
@@ -2239,15 +2399,19 @@ app.post('/api/regularizations', async (req, res) => {
   }
 });
 
-app.patch('/api/regularizations/:id/status', async (req, res) => {
+const handleRegularizationStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, managerComment = '' } = req.body;
+    let { status, action, managerComment = '' } = req.body;
+    if (!status && action) {
+      status = action.toLowerCase() === 'approve' ? 'Approved' : action.toLowerCase() === 'reject' ? 'Rejected' : action;
+    }
+    const normalizedStatus = (status && status.toLowerCase() === 'approved') ? 'Approved' : ((status && status.toLowerCase() === 'rejected') ? 'Rejected' : status);
 
     const updated = await sql`
       UPDATE regularizations
       SET 
-        status = ${status},
+        status = ${normalizedStatus},
         manager_comment = ${managerComment}
       WHERE id = ${Number(id)}
       RETURNING *;
@@ -2260,30 +2424,96 @@ app.patch('/api/regularizations/:id/status', async (req, res) => {
     const reg = updated[0];
 
     // If approved, sync attendance record for that user and date
-    if (status === 'Approved') {
-      await sql`
-        INSERT INTO attendance_records (user_id, date, clock_in, clock_out, status, total_hours, location, device)
-        VALUES (
-          ${reg.user_id},
-          ${reg.attendance_date},
-          ${reg.requested_clock_in},
-          ${reg.requested_clock_out},
-          'present',
-          8.5,
-          'Headquarters (Regularized)',
-          'Manager Verified'
-        )
-        ON CONFLICT (user_id, date) DO UPDATE SET
-          clock_in = EXCLUDED.clock_in,
-          clock_out = EXCLUDED.clock_out,
-          status = 'present',
-          location = EXCLUDED.location;
-      `;
+    if (normalizedStatus === 'Approved') {
+      const userRows = await sql`SELECT first_name, last_name, department FROM users WHERE id = ${reg.user_id} LIMIT 1;`;
+      const userName = userRows.length > 0 ? `${userRows[0].first_name} ${userRows[0].last_name}` : (reg.user_name || 'Staff');
+      const dept = userRows.length > 0 ? (userRows[0].department || 'General') : 'General';
+      const existingAtt = await sql`SELECT id FROM attendance_records WHERE user_id = ${reg.user_id} AND punch_date = ${reg.attendance_date} LIMIT 1;`;
+
+      let workSec = 28800; // 8-hour standard fallback
+      if (reg.requested_clock_in && reg.requested_clock_out) {
+        try {
+          const parseTimeToMinutes = (t) => {
+            if (!t || typeof t !== 'string') return NaN;
+            const str = t.trim().toLowerCase();
+            const isPM = str.includes('pm');
+            const isAM = str.includes('am');
+            const clean = str.replace(/[^\d:]/g, '');
+            if (!clean || !clean.includes(':')) return NaN;
+            const parts = clean.split(':').map(Number);
+            if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) {
+              return NaN;
+            }
+            let hours = parts[0];
+            const minutes = parts[1];
+            if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+              return NaN;
+            }
+            if (isPM && hours < 12) hours += 12;
+            if (isAM && hours === 12) hours = 0;
+            return hours * 60 + minutes;
+          };
+          const inMin = parseTimeToMinutes(reg.requested_clock_in);
+          const outMin = parseTimeToMinutes(reg.requested_clock_out);
+          if (Number.isFinite(inMin) && Number.isFinite(outMin) && inMin >= 0 && outMin >= 0) {
+            let diffMin = outMin - inMin;
+            if (diffMin < 0) {
+              // Valid overnight shift: adds a day rollover (24 hours = 1440 minutes)
+              diffMin += 1440;
+            } else if (diffMin === 0) {
+              // Separate fallback for invalid zero duration
+              diffMin = 480;
+            }
+            workSec = diffMin * 60;
+          } else {
+            workSec = 28800; // 8-hour fallback for invalid clock times
+          }
+        } catch {
+          workSec = 28800;
+        }
+      }
+      const hrs = Math.floor(workSec / 3600);
+      const mins = Math.floor((workSec % 3600) / 60);
+      const totalHoursStr = `${hrs}h ${mins}m`;
+
+      if (existingAtt.length > 0) {
+        await sql`
+          UPDATE attendance_records
+          SET 
+            check_in = ${reg.requested_clock_in},
+            check_out = ${reg.requested_clock_out},
+            status = 'present',
+            total_hours = ${totalHoursStr},
+            work_seconds = ${workSec},
+            verified_by = 'Manager Verified (Regularized)'
+          WHERE id = ${existingAtt[0].id};
+        `;
+      } else {
+        await sql`
+          INSERT INTO attendance_records (
+            user_id, user_name, department, punch_date, check_in, check_out,
+            status, total_hours, work_seconds, mode, verified_by
+          )
+          VALUES (
+            ${reg.user_id},
+            ${userName},
+            ${dept},
+            ${reg.attendance_date},
+            ${reg.requested_clock_in},
+            ${reg.requested_clock_out},
+            'present',
+            ${totalHoursStr},
+            ${workSec},
+            'Office',
+            'Manager Verified (Regularized)'
+          );
+        `;
+      }
     }
 
     res.json({
       success: true,
-      message: `Regularization request ${status}`,
+      message: `Regularization request ${normalizedStatus}`,
       data: {
         id: reg.id,
         userId: reg.user_id,
@@ -2296,7 +2526,7 @@ app.patch('/api/regularizations/:id/status', async (req, res) => {
         requestedClockOut: reg.requested_clock_out,
         reasonType: reg.reason_type,
         reasonDetails: reg.reason_details,
-        status: reg.status,
+        status: normalizedStatus,
         managerComment: reg.manager_comment,
         appliedDate: reg.applied_date
       }
@@ -2305,7 +2535,10 @@ app.patch('/api/regularizations/:id/status', async (req, res) => {
     console.error('Error updating regularization status:', error);
     res.status(500).json({ success: false, message: 'Failed to update regularization' });
   }
-});
+};
+
+app.patch('/api/regularizations/:id/status', handleRegularizationStatus);
+app.post('/api/regularizations/:id/action', handleRegularizationStatus);
 
 // 19. Announcements / News API (Neon PostgreSQL backed)
 app.get('/api/announcements', async (req, res) => {
@@ -2411,16 +2644,16 @@ app.get('/api/manager/dashboard-stats', async (req, res) => {
     res.json({
       success: true,
       data: {
-        reporteesCount: reportees.count || 1,
-        pendingLeavesCount: pendingLeaves.count || 0,
-        pendingExpensesCount: pendingExpenses.count || 0,
-        pendingRegularizationsCount: pendingRegularizations.count || 0,
+        reporteesCount: Number(reportees?.count ?? 0),
+        pendingLeavesCount: Number(pendingLeaves?.count ?? 0),
+        pendingExpensesCount: Number(pendingExpenses?.count ?? 0),
+        pendingRegularizationsCount: Number(pendingRegularizations?.count ?? 0),
         attendanceRate: '100%',
         tasks: {
-          total: totalTasks.count || 0,
-          completed: completedTasks.count || 0,
-          inProgress: inProgressTasks.count || 0,
-          pending: (totalTasks.count || 0) - (completedTasks.count || 0) - (inProgressTasks.count || 0)
+          total: Number(totalTasks?.count ?? 0),
+          completed: Number(completedTasks?.count ?? 0),
+          inProgress: Number(inProgressTasks?.count ?? 0),
+          pending: Math.max(0, Number(totalTasks?.count ?? 0) - Number(completedTasks?.count ?? 0) - Number(inProgressTasks?.count ?? 0))
         }
       }
     });
@@ -2442,13 +2675,13 @@ app.get('/api/client/dashboard-stats', async (req, res) => {
     res.json({
       success: true,
       data: {
-        supervisedManagers: managers.count || 1,
-        totalEmployees: employees.count || 1,
-        activePolicies: policies.count || 4,
-        unresolvedTickets: openTickets.count || 0,
+        supervisedManagers: Number(managers?.count ?? 0),
+        totalEmployees: Number(employees?.count ?? 0),
+        activePolicies: Number(policies?.count ?? 0),
+        unresolvedTickets: Number(openTickets?.count ?? 0),
         planLicense: company?.plan || 'Enterprise Tier',
         planStatus: company?.status || 'Active',
-        supportStatus: openTickets.count > 0 ? `${openTickets.count} Open Query` : '24x7 Priority'
+        supportStatus: (openTickets?.count ?? 0) > 0 ? `${openTickets.count} Open Query` : '24x7 Priority'
       }
     });
   } catch (error) {
@@ -2458,7 +2691,12 @@ app.get('/api/client/dashboard-stats', async (req, res) => {
 });
 
 // Bind Enhanced Feature Architecture Routes
-setupEnhancedRoutes(app, { sql, authenticateToken, upload, formatUserResponse });
+setupEnhancedRoutes(app, { sql, authenticateToken, authorizeRoles, upload, formatUserResponse });
+
+// Handle any unmatched API routes with clean JSON 404
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, message: `API endpoint not found: ${req.method} ${req.originalUrl}` });
+});
 
 // Serve frontend build in production
 const distPath = path.resolve(__dirname, '../intelliattend/dist');

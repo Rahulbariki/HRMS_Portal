@@ -18,9 +18,9 @@ export default function EmployeeLeaves() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [balances, setBalances] = useState({
-    annual: { used: 5, total: 20 },
-    sick: { used: 2, total: 10 },
-    casual: { used: 2, total: 6 },
+    annual: { used: 0, total: 15 },
+    sick: { used: 0, total: 12 },
+    casual: { used: 0, total: 12 },
   });
 
   const [formData, setFormData] = useState({

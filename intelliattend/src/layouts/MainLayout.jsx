@@ -31,19 +31,19 @@ export default function MainLayout() {
   const dashboardRoute = roleRoutes[user?.role] || '/login';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex transition-colors">
+    <div className="h-screen h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex overflow-hidden transition-colors">
       <Sidebar
         user={user}
         dashboardRoute={dashboardRoute}
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
       />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         <Header
           user={user}
           onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
         />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col">
           <Outlet />
         </main>
       </div>

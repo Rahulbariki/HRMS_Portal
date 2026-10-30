@@ -8,54 +8,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 
-const INITIAL_REGULARIZATIONS = [
-  {
-    id: 1,
-    attendanceDate: '2026-10-24',
-    day: 'Saturday',
-    originalClockIn: '10:45 AM',
-    originalClockOut: '06:15 PM',
-    requestedClockIn: '09:30 AM',
-    requestedClockOut: '06:30 PM',
-    reasonType: 'Biometric Scanner Failure / Network Glitch',
-    reasonDetails: 'Device terminal failed to sync face verification at office gate entry.',
-    status: 'Approved',
-    managerComment: 'Verified with physical security entry register.',
-    appliedDate: '2026-10-24',
-  },
-  {
-    id: 2,
-    attendanceDate: '2026-10-21',
-    day: 'Wednesday',
-    originalClockIn: '11:15 AM',
-    originalClockOut: '07:30 PM',
-    requestedClockIn: '09:00 AM',
-    requestedClockOut: '07:30 PM',
-    reasonType: 'On-site Client Meeting',
-    reasonDetails: 'Client site deployment visit at Hyderabad facility during morning hours.',
-    status: 'Approved',
-    managerComment: 'Approved as per itinerary.',
-    appliedDate: '2026-10-21',
-  },
-  {
-    id: 3,
-    attendanceDate: '2026-10-26',
-    day: 'Monday',
-    originalClockIn: 'Missed Punch',
-    originalClockOut: '07:00 PM',
-    requestedClockIn: '09:15 AM',
-    requestedClockOut: '07:00 PM',
-    reasonType: 'Forgot to Clock In',
-    reasonDetails: 'Was in urgent sprint triage call with tech lead right after arrival.',
-    status: 'Pending',
-    managerComment: null,
-    appliedDate: '2026-10-26',
-  },
-];
-
 export default function EmployeeRegularization() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState(INITIAL_REGULARIZATIONS);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +27,7 @@ export default function EmployeeRegularization() {
     try {
       setLoading(true);
       const res = await api.get('/regularizations?userId=' + (user?.employeeId || 'IA-EM-001'));
-      if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+      if (res.data?.success && Array.isArray(res.data?.data)) {
         setRequests(res.data.data);
       }
     } catch (err) {

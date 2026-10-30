@@ -6,51 +6,8 @@ import {
 import clsx from 'clsx';
 import api from '../../services/api';
 
-const INITIAL_TEAM_TASKS = [
-  {
-    id: 1,
-    title: 'Migrate Core Services to PostgreSQL',
-    assignee: 'Sarah Miller',
-    role: 'Lead Full Stack Engineer',
-    dueDate: '2026-10-31',
-    priority: 'high',
-    status: 'in_progress',
-    description: 'Execute database migration scripts and test connection pooling resilience.',
-  },
-  {
-    id: 2,
-    title: 'Prepare Q4 Product Delivery Roadmap',
-    assignee: 'Alex Rivera',
-    role: 'Product Lead',
-    dueDate: '2026-11-05',
-    priority: 'medium',
-    status: 'pending',
-    description: 'Consolidate stakeholder feature requests into sprint milestones.',
-  },
-  {
-    id: 3,
-    title: 'Security Compliance & SOC2 Evidence Audit',
-    assignee: 'David Chen',
-    role: 'DevOps Engineer',
-    dueDate: '2026-10-28',
-    priority: 'high',
-    status: 'completed',
-    description: 'Gather IAM logs, review encryption keys, and export auditor package.',
-  },
-  {
-    id: 4,
-    title: 'Design Dark Mode UI Assets for Mobile App',
-    assignee: 'Sarah Miller',
-    role: 'Lead Full Stack Engineer',
-    dueDate: '2026-11-02',
-    priority: 'low',
-    status: 'in_progress',
-    description: 'Finalize Figma design tokens and hand off SVG specifications to developers.',
-  },
-];
-
 export default function ManagerTasks() {
-  const [tasks, setTasks] = useState(INITIAL_TEAM_TASKS);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +25,7 @@ export default function ManagerTasks() {
     try {
       setLoading(true);
       const res = await api.get('/tasks');
-      if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+      if (res.data?.success && Array.isArray(res.data?.data)) {
         const mapped = res.data.data.map(t => {
           const assigneeName = Array.isArray(t.assignees) && t.assignees[0]?.name
             ? t.assignees[0].name

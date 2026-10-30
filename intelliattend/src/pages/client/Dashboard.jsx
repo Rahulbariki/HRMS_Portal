@@ -19,10 +19,10 @@ export default function ClientDashboard() {
     supervisedManagers: 1,
     totalEmployees: 1,
     activePolicies: 4,
-    unresolvedTickets: 1,
+    unresolvedTickets: 0,
     planLicense: 'Enterprise Tier',
     planStatus: 'Active',
-    supportStatus: '1 Open Query'
+    supportStatus: '24x7 Priority'
   });
 
   useEffect(() => {

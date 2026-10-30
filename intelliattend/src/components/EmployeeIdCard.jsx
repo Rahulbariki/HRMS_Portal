@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Download, Printer, RotateCw, QrCode, User } from 'lucide-react';
 
 export default function EmployeeIdCard({
@@ -18,7 +18,15 @@ export default function EmployeeIdCard({
 }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [signatureError, setSignatureError] = useState(false);
+  const [cardAvatarErr, setCardAvatarErr] = useState(false);
   const cardRef = useRef(null);
+
+  const rawAvatar = employee.avatarUrl || employee.avatar;
+  const avatarSrc = (typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('/') || rawAvatar.startsWith('data:'))) ? rawAvatar : null;
+
+  useEffect(() => {
+    setCardAvatarErr(false);
+  }, [avatarSrc]);
 
   const handlePrint = () => {
     window.print();
@@ -179,17 +187,19 @@ export default function EmployeeIdCard({
                   }}
                 >
                   <div className="w-full h-full rounded-full overflow-hidden border-[4px] border-white bg-slate-900 flex items-center justify-center">
-                    {employee.avatar ? (
+                    {avatarSrc && !cardAvatarErr ? (
                       <img
-                        src={employee.avatar}
+                        src={avatarSrc}
                         alt={employee.name}
                         className="w-full h-full object-cover object-center"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
+                        onError={() => setCardAvatarErr(true)}
                       />
                     ) : (
-                      <User className="w-20 h-20 text-teal-300" />
+                      <div className="w-full h-full bg-slate-900 flex items-center justify-center text-teal-300 font-extrabold text-2xl select-none">
+                        {employee.avatar && typeof employee.avatar === 'string' && employee.avatar.length <= 3 
+                          ? employee.avatar 
+                          : (employee.name?.split(' ').map(n => n[0]).slice(0, 2).join('') || <User className="w-16 h-16 text-teal-300" />)}
+                      </div>
                     )}
                   </div>
                 </div>

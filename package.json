@@ -5,11 +5,12 @@
   "type": "module",
   "description": "HRMS Portal - Human Resource Management System",
   "scripts": {
-    "dev": "npm --prefix intelliattend run dev",
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,green\" \"node server/index.js\" \"npm --prefix intelliattend run dev\"",
+    "client": "npm --prefix intelliattend run dev",
+    "server": "node server/index.js",
     "build": "npm --prefix intelliattend run build",
     "preview": "npm --prefix intelliattend run preview",
     "lint": "npm --prefix intelliattend run lint",
-    "server": "node server/index.js",
     "migrate": "node server/migrate.js",
     "test:db": "node server/test-neon.js"
   },
@@ -22,8 +23,13 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
+    "express-rate-limit": "^8.7.2",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.5.0",
     "undici": "^8.12.3"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
   }
 }

@@ -57,25 +57,25 @@ const quickActions = [
   { label: 'Security Audit Logs', icon: Shield, href: '/superadmin/audit-logs', colorClass: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400' },
 ];
 
-const recentActivity = [
-  { id: 1, type: 'company_created', title: 'TechCorp Solutions India provisioned', description: 'Enterprise Plan with Neon DB connection', time: '2 hours ago', status: 'success' },
-  { id: 2, type: 'payment_received', title: 'Subscription payment received', description: '₹1,50,000 processed via Razorpay', time: '4 hours ago', status: 'success' },
-  { id: 3, type: 'subdomain_request', title: 'Wildcard SSL renewed', description: '*.intelliattend.io Let\'s Encrypt certificate auto-renewed', time: '6 hours ago', status: 'info' },
-  { id: 4, type: 'support_ticket', title: 'Support ticket resolved', description: 'Biometric device sync query closed', time: '8 hours ago', status: 'success' },
-];
-
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState(statCardsConfig);
+  const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [auditStatus, setAuditStatus] = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
 
   useEffect(() => {
     const fetchSuperAdminStats = async () => {
       try {
         setLoading(true);
-        const res = await api.get('/superadmin/dashboard/stats');
-        if (res.data?.success && res.data.data) {
-          const d = res.data.data;
+        setAuditStatus('loading');
+        const [res, auditRes] = await Promise.allSettled([
+          api.get('/superadmin/dashboard/stats'),
+          api.get('/superadmin/audit-logs')
+        ]);
+
+        if (res.status === 'fulfilled' && res.value.data?.success && res.value.data.data) {
+          const d = res.value.data.data;
           setStats([
             {
               title: 'Total Companies',
@@ -106,7 +106,7 @@ export default function SuperAdminDashboard() {
             },
             {
               title: 'Pending Requests',
-              value: String(d.pendingRequests || '1'),
+              value: String(d.pendingRequests || '0'),
               change: '-5%',
               trend: 'down',
               icon: Clock,
@@ -114,6 +114,20 @@ export default function SuperAdminDashboard() {
               bgClass: 'bg-amber-50 dark:bg-amber-950/40'
             },
           ]);
+        }
+
+        if (auditRes.status === 'fulfilled' && auditRes.value.data?.success && Array.isArray(auditRes.value.data.data)) {
+          const raw = auditRes.value.data.data.slice(0, 5).map((l) => ({
+            id: l.id,
+            title: l.action || 'System Audit Event',
+            description: l.details || `${l.user_email || 'System'} event`,
+            time: l.created_at ? new Date(l.created_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'Recent',
+            status: 'success'
+          }));
+          setActivities(raw);
+          setAuditStatus('success');
+        } else {
+          setAuditStatus('error');
         }
       } catch (err) {
         console.error('Failed to load superadmin stats:', err);
@@ -217,19 +231,33 @@ export default function SuperAdminDashboard() {
             </Link>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {recentActivity.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3.5 p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-              >
-                <div className="mt-0.5">{getStatusIcon(activity.status)}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-xs text-slate-900 dark:text-white">{activity.title}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{activity.description}</p>
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">{activity.time}</span>
+            {activities.length > 0 ? (
+              activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3.5 p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                >
+                  <div className="mt-0.5">{getStatusIcon(activity.status)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-xs text-slate-900 dark:text-white">{activity.title}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{activity.description}</p>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">{activity.time}</span>
+                  </div>
                 </div>
+              ))
+            ) : auditStatus === 'loading' ? (
+              <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
+                Loading audit events...
               </div>
-            ))}
+            ) : auditStatus === 'error' ? (
+              <div className="p-8 text-center text-xs text-rose-500 dark:text-rose-400">
+                Failed to load audit events.
+              </div>
+            ) : auditStatus === 'success' ? (
+              <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
+                No recent security audit events recorded.
+              </div>
+            ) : null}
           </div>
           <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 text-center">
             Neon Serverless PostgreSQL • Branch Main

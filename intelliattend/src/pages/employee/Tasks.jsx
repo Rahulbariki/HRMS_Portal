@@ -9,116 +9,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 
-const INITIAL_TASKS = [
-  {
-    id: 1,
-    title: 'Go through Guides and setup git',
-    subtitle: 'Go through Guides and setup git, GitHub workspace, clone repos, and configure local SSH keys.',
-    scope: 'assignedToMe',
-    assignees: [
-      { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-      { name: 'David Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-    ],
-    assignedBy: 'David Chen',
-    assignedDate: '2026-10-10',
-    priority: 'Medium',
-    dueDate: '2026-10-15',
-    dueDateFormatted: '15 Oct 2026',
-    status: 'Completed',
-    progress: 100,
-    comments: [
-      {
-        id: 1,
-        author: 'David Chen',
-        time: '12 Oct 2026, 10:30 AM',
-        content: 'Please confirm when your local SSH keys and repository remotes are working properly.',
-      },
-      {
-        id: 2,
-        author: 'Sarah Miller',
-        time: '14 Oct 2026, 04:15 PM',
-        content: 'Completed setup, verified git push and branches. All guides reviewed.',
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Work on dashboards implementation',
-    subtitle: 'Work on dashboards implementation in the panels of employee, manager, and client views.',
-    scope: 'assignedToMe',
-    assignees: [
-      { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-      { name: 'David Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-    ],
-    assignedBy: 'David Chen',
-    assignedDate: '2026-10-16',
-    priority: 'Medium',
-    dueDate: '2026-10-23',
-    dueDateFormatted: '23 Oct 2026',
-    status: 'Completed',
-    progress: 100,
-    comments: [
-      {
-        id: 1,
-        author: 'David Chen',
-        time: '18 Oct 2026, 11:00 AM',
-        content: 'Ensure responsiveness on tablets and mobile screens for all quick action widgets.',
-      },
-      {
-        id: 2,
-        author: 'Sarah Miller',
-        time: '23 Oct 2026, 06:00 PM',
-        content: 'Implemented and tested work timers, quick actions, leaves summary, and regularizations.',
-      },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Implement Face Biometrics & Geo Attendance verification',
-    subtitle: 'Integrate MediaPipe camera feed for facial match check during punch in/out workflow.',
-    scope: 'assignedToMe',
-    assignees: [
-      { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-    ],
-    assignedBy: 'David Chen',
-    assignedDate: '2026-10-24',
-    priority: 'High',
-    dueDate: '2026-10-29',
-    dueDateFormatted: '29 Oct 2026',
-    status: 'In Progress',
-    progress: 75,
-    comments: [
-      {
-        id: 1,
-        author: 'David Chen',
-        time: '25 Oct 2026, 02:20 PM',
-        content: 'Add fallbacks for when webcam permission is denied or device does not have camera.',
-      },
-    ],
-  },
-  {
-    id: 4,
-    title: 'Review Organisation Chart & Branch Filter components',
-    subtitle: 'Verify SVG link connectors, pan/zoom canvas, and employee detail cards.',
-    scope: 'assignedByMe',
-    assignees: [
-      { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-      { name: 'Alex Rivera', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
-    ],
-    assignedBy: 'Rahul Bariki',
-    assignedDate: '2026-10-25',
-    priority: 'Medium',
-    dueDate: '2026-10-31',
-    dueDateFormatted: '31 Oct 2026',
-    status: 'Pending',
-    progress: 30,
-    comments: [],
-  },
-];
+const getLocalTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function EmployeeTasks() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -126,7 +27,7 @@ export default function EmployeeTasks() {
       try {
         setLoading(true);
         const res = await api.get('/tasks');
-        if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        if (res.data?.success && Array.isArray(res.data?.data)) {
           setTasks(res.data.data);
         }
       } catch (err) {
@@ -161,7 +62,7 @@ export default function EmployeeTasks() {
 
   // Counts for filter pills
   const counts = useMemo(() => {
-    const today = '2026-10-26';
+    const today = getLocalTodayString();
     const scoped = tasks.filter(t => t.scope === scope);
     const all = scoped.length;
     const dueToday = scoped.filter(t => t.dueDate === today).length;
@@ -171,7 +72,7 @@ export default function EmployeeTasks() {
 
   // Filter tasks
   const filteredTasks = useMemo(() => {
-    const today = '2026-10-26';
+    const today = getLocalTodayString();
     return tasks.filter(task => {
       if (task.scope !== scope) return false;
 
@@ -223,7 +124,7 @@ export default function EmployeeTasks() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `tasks_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `tasks_export_${getLocalTodayString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -263,7 +164,7 @@ export default function EmployeeTasks() {
           scope: 'assignedByMe',
           assignees,
           assignedBy: user?.name || 'Sarah Miller',
-          assignedDate: '2026-10-26',
+          assignedDate: getLocalTodayString(),
           priority: newTaskPriority,
           dueDate: newTaskDueDate || '2026-10-31',
           dueDateFormatted: formattedDate,

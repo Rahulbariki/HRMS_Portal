@@ -53,6 +53,34 @@ export default function SuperAdminSubdomainRequests() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    const fetchSubdomains = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/superadmin/subdomain-requests');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const mapped = res.data.data.map(s => ({
+            id: s.id,
+            tenant: s.company_name || 'Corporate Tenant',
+            subdomain: s.subdomain || 'tenant.intelliattend.io',
+            customDomain: s.custom_domain || 'None',
+            sslStatus: s.ssl_status || 'Unverified',
+            cnameRecord: s.cname_record || 'cname.intelliattend.io',
+            status: s.status || 'Active',
+            provisionedAt: s.created_at ? new Date(s.created_at).toISOString().split('T')[0] : '2026-01-10',
+            routedCluster: 'ap-south-1 (Mumbai)'
+          }));
+          setSubdomains(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load subdomains from Neon DB:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubdomains();
+  }, []);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}

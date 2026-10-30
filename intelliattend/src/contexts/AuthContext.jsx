@@ -24,7 +24,8 @@ export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
       const savedUserStr = localStorage.getItem('hrms_user');
-      if (savedUserStr) {
+      const token = localStorage.getItem('token');
+      if (savedUserStr && token) {
         const parsed = JSON.parse(savedUserStr);
         return Boolean(parsed && parsed.role);
       }
@@ -34,40 +35,59 @@ export function AuthProvider({ children }) {
     }
   });
 
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const checkAuth = async () => {
     const token = localStorage.getItem('token');
-    if (!token || token.startsWith('mock-')) return Boolean(user);
+    if (!token) {
+      setUser(null);
+      setIsLoggedIn(false);
+      return false;
+    }
 
     try {
       const response = await api.get('/auth/me');
       if (response.data?.success && response.data?.data) {
-        setUser(response.data.data);
-        localStorage.setItem('hrms_user', JSON.stringify(response.data.data));
+        const currentUser = response.data.data;
+        setUser(currentUser);
+        localStorage.setItem('hrms_user', JSON.stringify(currentUser));
         setIsLoggedIn(true);
         return true;
       }
-    } catch {
-      // Retain local demo session
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('hrms_user');
+        setUser(null);
+        setIsLoggedIn(false);
+        return false;
+      }
     }
     return Boolean(user);
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token || token.startsWith('mock-')) return;
+    if (!token) return;
 
     api.get('/auth/me')
       .then(response => {
         if (response.data?.success && response.data?.data) {
-          setUser(response.data.data);
-          localStorage.setItem('hrms_user', JSON.stringify(response.data.data));
+          const currentUser = response.data.data;
+          setUser(currentUser);
+          localStorage.setItem('hrms_user', JSON.stringify(currentUser));
           setIsLoggedIn(true);
         }
       })
-      .catch(() => {
-        // Retain local demo session
+      .catch((err) => {
+        const status = err.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('hrms_user');
+          setUser(null);
+          setIsLoggedIn(false);
+        }
       });
   }, []);
 
@@ -75,81 +95,51 @@ export function AuthProvider({ children }) {
     const email = (credentials.email || '').toLowerCase().trim();
     const password = credentials.password || '';
 
-    // Enforce email format: must end with .intelliattend@gmail.com or @intelliattend.com
-    const isValidFormat = email.endsWith('.intelliattend@gmail.com') || email.endsWith('@intelliattend.com');
-    if (!isValidFormat) {
+    if (!email || !password) {
       return {
         success: false,
-        message: 'Invalid login email format. Logins are strictly restricted to *.intelliattend@gmail.com (e.g. rahulbariki.intelliattend@gmail.com).',
+        message: 'Please provide both email and password.',
       };
     }
 
-    // Enforce password for production accounts
-    if (password && password !== 'password123') {
-      return {
-        success: false,
-        message: 'Invalid password. All accounts require password123.',
-      };
-    }
+    setLoading(true);
 
-    // 1. Try real backend API first if available
     try {
-      const response = await api.post('/auth/login', credentials);
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+      });
+
       if (response.data?.success) {
-        const { token, user: apiUser } = response.data.data;
-        localStorage.setItem('token', token || 'mock-token-session');
-        localStorage.setItem('hrms_user', JSON.stringify(apiUser));
-        setUser(apiUser);
-        setIsLoggedIn(true);
-        return { success: true, user: apiUser };
+        const token = response.data?.token || response.data?.data?.token;
+        const apiUser = response.data?.user || response.data?.data?.user;
+
+        if (token && apiUser) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('hrms_user', JSON.stringify(apiUser));
+          setUser(apiUser);
+          setIsLoggedIn(true);
+          return { success: true, user: apiUser };
+        }
       }
-    } catch {
-      // Fallback to enterprise session authentication
-    }
 
-    // 2. Enforce strict authorization list for production accounts
-    const ALLOWED_PRODUCTION_EMAILS = {
-      'rahulbariki.intelliattend@gmail.com': 'superadmin',
-      'clientadmin.intelliattend@gmail.com': 'client',
-      'manager.intelliattend@gmail.com': 'manager',
-      'employee.intelliattend@gmail.com': 'employee',
-      'payrolladmin.intelliattend@gmail.com': 'payroll_admin',
-    };
-
-    const targetRole = ALLOWED_PRODUCTION_EMAILS[email];
-    if (!targetRole) {
       return {
         success: false,
-        message: 'Account not recognized. Access is strictly restricted to registered corporate accounts.',
+        message: response.data?.message || 'Authentication failed. Please check credentials.',
       };
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Server connection error during sign-in.';
+      return {
+        success: false,
+        message: errMsg,
+      };
+    } finally {
+      setLoading(false);
     }
-
-    const officialUser = DEMO_USERS[targetRole];
-    const activeUser = {
-      ...officialUser,
-      email: email,
-      loginEmail: email,
-    };
-
-    const token = `prod-hrms-token-${targetRole}-${Date.now()}`;
-    localStorage.setItem('token', token);
-    localStorage.setItem('hrms_user', JSON.stringify(activeUser));
-    setUser(activeUser);
-    setIsLoggedIn(true);
-
-    return { success: true, user: activeUser };
   };
 
-  const switchRole = (role) => {
-    if (DEMO_USERS[role]) {
-      const newUser = DEMO_USERS[role];
-      const token = `mock-hrms-token-${role}-${Date.now()}`;
-      localStorage.setItem('token', token);
-      localStorage.setItem('hrms_user', JSON.stringify(newUser));
-      setUser(newUser);
-      setIsLoggedIn(true);
-      return newUser;
-    }
+  const switchRole = async () => {
+    console.warn('Role switching is disabled in production mode. Please sign in with respective credentials.');
     return user;
   };
 
@@ -157,8 +147,11 @@ export function AuthProvider({ children }) {
     try {
       const response = await api.post('/auth/register', data);
       return response.data;
-    } catch {
-      return { success: true, message: 'Registration demo successful' };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Registration failed.',
+      };
     }
   };
 

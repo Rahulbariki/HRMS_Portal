@@ -1132,6 +1132,9 @@ async function migrate() {
     const { runEnhancedMigration } = await import('./migrate-v2.js');
     await runEnhancedMigration();
 
+    const { runV3Migration } = await import('./migrate-v3.js');
+    await runV3Migration();
+
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {
     console.error('Migration failed:', error);

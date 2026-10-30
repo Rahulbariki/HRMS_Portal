@@ -15,7 +15,7 @@ export default function EmployeeAttendance() {
   const [punchLoading, setPunchLoading] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [logs, setLogs] = useState([]);
-  const [summary, setSummary] = useState({ present: 18, absent: 0, late: 1, wfh: 1 });
+  const [summary, setSummary] = useState({ present: 0, absent: 0, late: 0, wfh: 0 });
   const [locationMode, setLocationMode] = useState('Headquarters (Office)');
 
   // 1. Fetch live attendance status, logs, and summary from Neon PostgreSQL

@@ -14,6 +14,8 @@ import clsx from 'clsx';
 const menuItems = {
   superadmin: [
     { label: 'Dashboard', path: '/superadmin/dashboard', icon: LayoutDashboard },
+    { label: 'Chat', path: '/superadmin/chat', icon: MessageSquare },
+    { label: 'Emails', path: '/superadmin/mail', icon: Mail },
     { label: 'Companies', path: '/superadmin/companies', icon: Building2 },
     { label: 'Plan Management', path: '/superadmin/plan-management', icon: CreditCard },
     { label: 'Transactions', path: '/superadmin/transactions', icon: IndianRupee },
@@ -32,6 +34,8 @@ const menuItems = {
   ],
   client: [
     { label: 'Dashboard', path: '/client/dashboard', icon: LayoutDashboard },
+    { label: 'Chat', path: '/client/chat', icon: MessageSquare },
+    { label: 'Emails', path: '/client/mail', icon: Mail },
     { label: 'Managers', path: '/client/managers', icon: Users },
     { label: 'Policies', path: '/client/policies', icon: FileCheck },
     { label: 'Billings', path: '/client/billings', icon: IndianRupee },
@@ -69,6 +73,8 @@ const menuItems = {
   ],
   payroll_admin: [
     { label: 'Dashboard', path: '/payroll-admin/dashboard', icon: LayoutDashboard },
+    { label: 'Chat', path: '/payroll-admin/chat', icon: MessageSquare },
+    { label: 'Emails', path: '/payroll-admin/mail', icon: Mail },
     { label: 'Employees', path: '/payroll-admin/employees', icon: Users },
     { label: 'Invoices', path: '/payroll-admin/invoices', icon: FileText },
     { label: 'Settings', path: '/payroll-admin/settings', icon: Settings },
@@ -115,9 +121,9 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
 
   return (
     <>
-      {window.innerWidth < 768 && mobileOpen && (
+      {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
@@ -125,12 +131,12 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
 
       <aside
         className={clsx(
-          'fixed lg:relative z-50 lg:z-auto h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden',
+          'fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto h-full max-h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out shrink-0 overflow-hidden shadow-2xl lg:shadow-none',
           collapsed ? 'w-16' : 'w-64',
-          window.innerWidth < 768 && !mobileOpen ? '-translate-x-full' : 'translate-x-0'
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="h-16 shrink-0 flex items-center px-4 border-b border-slate-200 dark:border-slate-800">
           {!collapsed && (
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="IntelliAttend" className="h-8 w-auto rounded-lg object-contain" />
@@ -147,7 +153,7 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
           )}
         </div>
 
-        <nav className="flex-1 py-4 overflow-y-auto">
+        <nav className="flex-1 min-h-0 py-3 overflow-y-auto overscroll-contain">
           <ul className="space-y-1 px-3">
             {items.map((item) => (
               <li key={item.path}>
@@ -179,7 +185,7 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
           </ul>
         </nav>
 
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="shrink-0 p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           {!collapsed ? (
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white shadow-sm border border-slate-800 dark:border-slate-700">
               <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center flex-shrink-0">

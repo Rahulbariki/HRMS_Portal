@@ -8,9 +8,9 @@ export default function SuperAdminLoginPage() {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: 'rahulbariki.intelliattend@gmail.com',
-    password: 'password123',
-    remember: true,
+    email: '',
+    password: '',
+    remember: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

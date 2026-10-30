@@ -16,6 +16,7 @@ export default function EmployeeProfile() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const [directorySearch, setDirectorySearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
   const [directory, setDirectory] = useState([]);
@@ -88,9 +89,14 @@ export default function EmployeeProfile() {
     if (e && e.preventDefault) e.preventDefault();
     setSaveLoading(true);
     try {
-      const res = await api.put('/users/profile', profileData);
+      const payload = {
+        ...profileData,
+        id: profileData.employeeId || profileData.id || user?.id,
+        employeeId: profileData.employeeId || profileData.id || user?.id,
+      };
+      const res = await api.put('/users/profile', payload);
       if (res.data?.success && res.data?.data) {
-        setProfileData(res.data.data);
+        setProfileData(prev => ({ ...prev, ...res.data.data }));
         if (updateUser) updateUser(res.data.data);
         setIsEditing(false);
         setSaveSuccess(true);
@@ -114,9 +120,11 @@ export default function EmployeeProfile() {
       const res = await api.post('/upload/avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (res.data?.success && res.data?.url) {
-        setProfileData(prev => ({ ...prev, avatar: res.data.url, avatarUrl: res.data.url }));
-        if (updateUser) updateUser({ avatar: res.data.url, avatarUrl: res.data.url });
+      const newUrl = res.data?.url || res.data?.avatarUrl || res.data?.data?.url;
+      if (res.data?.success && newUrl) {
+        setAvatarError(false);
+        setProfileData(prev => ({ ...prev, avatar: newUrl, avatarUrl: newUrl }));
+        if (updateUser) updateUser({ avatar: newUrl, avatarUrl: newUrl });
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 4000);
       }
@@ -194,6 +202,14 @@ export default function EmployeeProfile() {
   }, [directory, directorySearch, deptFilter]);
 
   const departments = ['All', 'Platform Administration & Security', 'Human Resources & Corporate Governance', 'Engineering & Technology'];
+
+  const currentAvatarSrc = (profileData.avatarUrl && (profileData.avatarUrl.startsWith('http') || profileData.avatarUrl.startsWith('/') || profileData.avatarUrl.startsWith('data:')))
+    ? profileData.avatarUrl
+    : ((profileData.avatar && (profileData.avatar.startsWith('http') || profileData.avatar.startsWith('/') || profileData.avatar.startsWith('data:'))) ? profileData.avatar : null);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [currentAvatarSrc]);
 
   return (
     <div className="space-y-6">
@@ -329,18 +345,24 @@ export default function EmployeeProfile() {
                 <div className="flex items-center justify-between p-4 rounded-xl bg-teal-50/50 border border-teal-200/70">
                   <div className="flex items-center gap-4">
                     <div className="relative group">
-                      <img
-                        src={profileData.avatarUrl || profileData.avatar || '/avatar_rahul.png'}
-                        alt={profileData.fullName}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-xs bg-teal-800 text-white flex items-center justify-center font-bold text-lg"
-                        onError={(e) => { e.target.src = '/avatar_rahul.png'; }}
-                      />
+                      {currentAvatarSrc && !avatarError ? (
+                        <img
+                          src={currentAvatarSrc}
+                          alt={profileData.fullName}
+                          className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-xs"
+                          onError={() => setAvatarError(true)}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full border-2 border-white shadow-xs bg-slate-900 text-teal-300 flex items-center justify-center font-bold text-lg select-none">
+                          {(profileData.fullName || 'User').split(' ').map(n => n[0]).slice(0, 2).join('')}
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => avatarInputRef.current?.click()}
                         disabled={uploadingAvatar}
                         className="absolute inset-0 bg-slate-900/60 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px] font-bold"
-                        title="Upload Avatar to Cloudinary"
+                        title="Upload Avatar"
                       >
                         {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                         <span className="text-[9px] mt-0.5">{uploadingAvatar ? 'Saving...' : 'Photo'}</span>
@@ -592,6 +614,10 @@ export default function EmployeeProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   {filteredDirectory.map((emp) => {
                     const isSelected = selectedEmpId === emp.employeeId;
+                    const empAvatar = (emp.avatarUrl && typeof emp.avatarUrl === 'string' && (emp.avatarUrl.startsWith('http') || emp.avatarUrl.startsWith('/') || emp.avatarUrl.startsWith('data:')))
+                      ? emp.avatarUrl
+                      : ((emp.avatar && typeof emp.avatar === 'string' && (emp.avatar.startsWith('http') || emp.avatar.startsWith('/') || emp.avatar.startsWith('data:'))) ? emp.avatar : null);
+
                     return (
                       <div
                         key={emp.employeeId}
@@ -604,14 +630,20 @@ export default function EmployeeProfile() {
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={emp.avatar}
-                            alt={emp.name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-2xs flex-shrink-0"
-                            onError={(e) => {
-                              e.target.src = '/avatar_rahul.png';
-                            }}
-                          />
+                          {empAvatar ? (
+                            <img
+                              src={empAvatar}
+                              alt={emp.name}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-2xs flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={clsx("w-12 h-12 rounded-full border-2 border-white shadow-2xs flex-shrink-0 bg-slate-900 text-teal-300 font-bold flex items-center justify-center text-xs", empAvatar ? "hidden" : "")}>
+                            {emp.avatar && emp.avatar.length <= 3 ? emp.avatar : (emp.name?.split(' ').map(n => n[0]).slice(0, 2).join('') || 'U')}
+                          </div>
                           <div className="min-w-0">
                             <h4 className="font-bold text-xs text-slate-900 group-hover:text-teal-700 transition truncate">
                               {emp.name}
