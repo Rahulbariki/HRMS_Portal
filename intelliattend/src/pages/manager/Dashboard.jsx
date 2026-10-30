@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import TeamAttendanceWidget from '../../components/TeamAttendanceWidget';
 
 const pages = [
   { label: 'Employee Directory', path: '/manager/employees', icon: Users, desc: 'Personnel roster & promotions', colorClass: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400' },
@@ -115,6 +116,8 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
+      {/* Live Team Attendance Table Widget */}
+      <TeamAttendanceWidget />
 
       {/* Pages Grid */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">

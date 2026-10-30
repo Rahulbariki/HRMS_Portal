@@ -176,7 +176,21 @@ export default function Sidebar({ user, mobileOpen: controlledMobileOpen, setMob
                         "h-5 w-5 flex-shrink-0 transition-colors", 
                         isActive ? "text-teal-400 dark:text-white" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-200"
                       )} aria-hidden="true" />
-                      {!collapsed && <span>{item.label}</span>}
+                      {!collapsed && (
+                        <div className="flex items-center justify-between flex-1 min-w-0">
+                          <span className="truncate">{item.label}</span>
+                          {item.label === 'Leaves' && (
+                            <span className="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-teal-600 text-white text-[10px] font-bold px-1.5 shadow-xs">
+                              1
+                            </span>
+                          )}
+                          {item.label === 'My Tasks' && (
+                            <span className="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold px-1.5">
+                              5
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </NavLink>
