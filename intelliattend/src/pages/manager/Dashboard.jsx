@@ -3,19 +3,27 @@ import { Link } from 'react-router-dom';
 import {
   Calendar, ClipboardList, FileCheck, FolderOpen, Newspaper,
   IndianRupee, Award, LogOut, FileText, HelpCircle, Settings, User,
-  Users, CheckCircle2, Clock, ChevronRight, UserCheck
+  Users, CheckCircle2, Clock, ChevronRight, UserCheck, Building2,
+  CalendarDays, TrendingUp, Receipt, Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 const pages = [
+  { label: 'Employee Directory', path: '/manager/employees', icon: Users, desc: 'Personnel roster & promotions', colorClass: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400' },
+  { label: 'Departments & Roles', path: '/manager/departments-designations', icon: Building2, desc: 'Operational pods & designations', colorClass: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400' },
   { label: 'Leave Approvals', path: '/manager/leaves', icon: Calendar, desc: 'Review team leave requests', colorClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
+  { label: 'Allocate Leaves', path: '/manager/allocate-leaves', icon: CalendarDays, desc: 'Credit statutory quotas', colorClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
   { label: 'Task Assignments', path: '/manager/tasks', icon: ClipboardList, desc: 'Assign and monitor sprints', colorClass: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' },
   { label: 'Team Attendance', path: '/manager/attendance', icon: UserCheck, desc: 'Verify punch-ins & logs', colorClass: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400' },
-  { label: 'Expense Reimbursements', path: '/manager/expenses', icon: IndianRupee, desc: 'Authorize claims & receipts', colorClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' },
+  { label: 'Expense Claims', path: '/manager/expenses', icon: IndianRupee, desc: 'Authorize claims & receipts', colorClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' },
+  { label: 'Internal Expenses', path: '/manager/internal-expenses', icon: Receipt, desc: 'Company operational spend', colorClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' },
+  { label: 'Revenue & Inflows', path: '/manager/income', icon: TrendingUp, desc: 'Client remittances & retainers', colorClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
+  { label: 'Employee Salaries', path: '/manager/employee-salaries', icon: Award, desc: 'CTC & compensation structures', colorClass: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400' },
   { label: 'Payroll & Disbursal', path: '/manager/salary', icon: Award, desc: 'Compensation governance', colorClass: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400' },
+  { label: 'Payroll Admins', path: '/manager/payroll-admins', icon: Shield, desc: 'Disbursal authorizations', colorClass: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' },
   { label: 'Official Documents', path: '/manager/documents', icon: FolderOpen, desc: 'Corporate repository & KYC', colorClass: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400' },
-  { label: 'Company Announcements', path: '/manager/news', icon: Newspaper, desc: 'Publish team circulars', colorClass: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400' },
+  { label: 'Company Circulars', path: '/manager/news', icon: Newspaper, desc: 'Publish team circulars', colorClass: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400' },
   { label: 'Holiday Calendar', path: '/manager/holidays', icon: Calendar, desc: '2026 Gazetted schedule', colorClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400' },
   { label: 'Letters & Certificates', path: '/manager/letters', icon: FileText, desc: 'Issuance & credentials', colorClass: 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400' },
   { label: 'Exit & Offboarding', path: '/manager/offboarding', icon: LogOut, desc: 'Separation & KT signoffs', colorClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400' },

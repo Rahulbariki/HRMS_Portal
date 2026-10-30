@@ -25,6 +25,7 @@ export default function MainLayout() {
     client: '/client/dashboard',
     manager: '/manager/dashboard',
     employee: '/employee/dashboard',
+    payroll_admin: '/payroll-admin/dashboard',
   };
 
   const dashboardRoute = roleRoutes[user?.role] || '/login';

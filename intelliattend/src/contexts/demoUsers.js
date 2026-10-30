@@ -61,6 +61,23 @@ export const DEMO_USERS = {
     doj: '01-01-2026',
     bloodGroup: 'O+',
   },
+  payroll_admin: {
+    id: 'IA-PA-001',
+    name: 'James Wilson',
+    email: 'payrolladmin.intelliattend@gmail.com',
+    loginEmail: 'payrolladmin.intelliattend@gmail.com',
+    corporateEmail: 'payrolladmin@intelliattend.com',
+    role: 'payroll_admin',
+    avatar: 'JW',
+    designation: 'Senior Payroll & Disbursal Administrator',
+    company: 'IntelliAttend Technologies',
+    department: 'Finance & Accounts',
+    manager: 'Alex Rivera (Client Admin)',
+    phone: '9876543299',
+    emergencyPhone: '9876543200',
+    doj: '10-01-2024',
+    bloodGroup: 'B+',
+  },
 };
 
 export const OFFICIAL_USERS = DEMO_USERS;

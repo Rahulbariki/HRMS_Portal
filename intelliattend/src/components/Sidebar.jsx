@@ -5,7 +5,8 @@ import {
   Calendar, ClipboardList, IndianRupee, Shield, Mail,
   FolderOpen, Newspaper, LogOut, ChevronLeft, ChevronRight,
   Building, UserCheck, HelpCircle, FileCheck, Award, Zap,
-  MessageSquare, CalendarDays, Clock, RefreshCw, Network, Globe
+  MessageSquare, CalendarDays, Clock, RefreshCw, Network, Globe,
+  TrendingUp, Receipt
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import clsx from 'clsx';
@@ -40,17 +41,24 @@ const menuItems = {
   ],
   manager: [
     { label: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
+    { label: 'Employees', path: '/manager/employees', icon: Users },
+    { label: 'Departments & Roles', path: '/manager/departments-designations', icon: Building2 },
     { label: 'Chat', path: '/manager/chat', icon: MessageSquare },
     { label: 'Emails', path: '/manager/mail', icon: Mail },
     { label: 'My Tasks', path: '/manager/tasks', icon: ClipboardList },
     { label: 'News', path: '/manager/news', icon: Newspaper },
     { label: 'Documents', path: '/manager/documents', icon: FolderOpen },
     { label: 'Leaves', path: '/manager/leaves', icon: Calendar },
+    { label: 'Allocate Leaves', path: '/manager/allocate-leaves', icon: CalendarDays },
     { label: 'Holidays', path: '/manager/holidays', icon: CalendarDays },
     { label: 'Attendance', path: '/manager/attendance', icon: Clock },
     { label: 'Regularization', path: '/manager/regularization', icon: RefreshCw },
     { label: 'Expenses', path: '/manager/expenses', icon: IndianRupee },
-    { label: 'Salary', path: '/manager/salary', icon: Award },
+    { label: 'Internal Expenses', path: '/manager/internal-expenses', icon: Receipt },
+    { label: 'Income', path: '/manager/income', icon: TrendingUp },
+    { label: 'Employee Salaries', path: '/manager/employee-salaries', icon: Award },
+    { label: 'Payroll & Disbursal', path: '/manager/salary', icon: CreditCard },
+    { label: 'Payroll Admins', path: '/manager/payroll-admins', icon: Shield },
     { label: 'Letters', path: '/manager/letters', icon: FileText },
     { label: 'Offboarding', path: '/manager/offboarding', icon: LogOut },
     { label: 'Company Policies', path: '/manager/policies', icon: FileCheck },
@@ -58,6 +66,13 @@ const menuItems = {
     { label: 'Support Queries', path: '/manager/queries', icon: HelpCircle },
     { label: 'Settings', path: '/manager/settings', icon: Settings },
     { label: 'Profile', path: '/manager/profile', icon: UserCheck },
+  ],
+  payroll_admin: [
+    { label: 'Dashboard', path: '/payroll-admin/dashboard', icon: LayoutDashboard },
+    { label: 'Employees', path: '/payroll-admin/employees', icon: Users },
+    { label: 'Invoices', path: '/payroll-admin/invoices', icon: FileText },
+    { label: 'Settings', path: '/payroll-admin/settings', icon: Settings },
+    { label: 'Profile', path: '/payroll-admin/profile', icon: UserCheck },
   ],
   employee: [
     { label: 'Dashboard', path: '/employee/dashboard', icon: LayoutDashboard },

@@ -113,6 +113,7 @@ export function AuthProvider({ children }) {
       'clientadmin.intelliattend@gmail.com': 'client',
       'manager.intelliattend@gmail.com': 'manager',
       'employee.intelliattend@gmail.com': 'employee',
+      'payrolladmin.intelliattend@gmail.com': 'payroll_admin',
     };
 
     const targetRole = ALLOWED_PRODUCTION_EMAILS[email];

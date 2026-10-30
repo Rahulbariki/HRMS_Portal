@@ -1128,6 +1128,10 @@ async function migrate() {
     `;
     console.log('✓ Official 2026 holidays seeded');
 
+    // Run enhanced migrations for reference feature architecture parity
+    const { runEnhancedMigration } = await import('./migrate-v2.js');
+    await runEnhancedMigration();
+
     console.log('\nSUCCESS: Neon PostgreSQL schema and seed migration complete!');
   } catch (error) {
     console.error('Migration failed:', error);

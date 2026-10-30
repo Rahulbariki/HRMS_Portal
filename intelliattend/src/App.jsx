@@ -42,6 +42,17 @@ import ManagerLetters from './pages/manager/Letters';
 import ManagerQueries from './pages/manager/Queries';
 import ManagerSettings from './pages/manager/Settings';
 import ManagerProfile from './pages/manager/Profile';
+import ManagerEmployees from './pages/manager/Employees';
+import ManagerDepartmentDesignations from './pages/manager/DepartmentDesignations';
+import ManagerAllocateLeaves from './pages/manager/AllocateLeaves';
+import ManagerInternalExpenses from './pages/manager/InternalExpenses';
+import ManagerIncome from './pages/manager/Income';
+import ManagerEmployeeSalaries from './pages/manager/EmployeeSalaries';
+import ManagerPayrollAdmins from './pages/manager/PayrollAdmins';
+import PayrollAdminDashboard from './pages/payroll-admin/Dashboard';
+import PayrollAdminEmployees from './pages/payroll-admin/Employees';
+import PayrollAdminInvoices from './pages/payroll-admin/Invoices';
+import PayrollAdminSettings from './pages/payroll-admin/Settings';
 import EmployeeDashboard from './pages/employee/Dashboard';
 import EmployeeLeaves from './pages/employee/Leaves';
 import EmployeeTasks from './pages/employee/Tasks';
@@ -86,6 +97,7 @@ function ProtectedRoute({ children, allowedRoles }) {
       superadmin: '/superadmin/dashboard',
       client: '/client/dashboard',
       manager: '/manager/dashboard',
+      payroll_admin: '/payroll-admin/dashboard',
       employee: '/employee/dashboard',
     };
     return <Navigate to={roleRoutes[user.role] || '/login'} replace />;
@@ -121,6 +133,7 @@ function RoleDashboardRedirect() {
     superadmin: '/superadmin/dashboard',
     client: '/client/dashboard',
     manager: '/manager/dashboard',
+    payroll_admin: '/payroll-admin/dashboard',
     employee: '/employee/dashboard',
   };
   return <Navigate to={roleRoutes[user.role] || '/employee/dashboard'} replace />;

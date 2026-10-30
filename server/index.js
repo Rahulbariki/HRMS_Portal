@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import sql from './db.js';
 import { uploadBufferToCloudinary, deleteFromCloudinary } from './cloudinary.js';
+import { setupEnhancedRoutes } from './enhancedRoutes.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -89,11 +90,13 @@ app.post('/api/auth/login', async (req, res) => {
       'rahulbariki.intelliattend@gmail.com',
       'clientadmin.intelliattend@gmail.com',
       'manager.intelliattend@gmail.com',
-      'employee.intelliattend@gmail.com'
+      'employee.intelliattend@gmail.com',
+      'payrolladmin.intelliattend@gmail.com'
     ];
 
     const normalizedEmail = email.toLowerCase().trim();
-    if (!ALLOWED_EMAILS.includes(normalizedEmail)) {
+    const isDomainAllowed = normalizedEmail.endsWith('.intelliattend@gmail.com') || normalizedEmail.endsWith('@intelliattend.com');
+    if (!ALLOWED_EMAILS.includes(normalizedEmail) && !isDomainAllowed) {
       return res.status(403).json({ success: false, message: 'Access denied: Only authorized production accounts are permitted.' });
     }
 
@@ -2453,6 +2456,9 @@ app.get('/api/client/dashboard-stats', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch client dashboard stats' });
   }
 });
+
+// Bind Enhanced Feature Architecture Routes
+setupEnhancedRoutes(app, { sql, authenticateToken, upload, formatUserResponse });
 
 // Serve frontend build in production
 const distPath = path.resolve(__dirname, '../intelliattend/dist');
