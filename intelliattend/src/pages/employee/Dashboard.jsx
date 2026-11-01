@@ -10,19 +10,19 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
-const menuItems = [
-  { label: 'Leaves', path: '/employee/leaves', icon: Calendar, color: 'emerald', count: 3, desc: 'Balance & apply' },
-  { label: 'Tasks', path: '/employee/tasks', icon: ClipboardList, color: 'indigo', count: 5, desc: 'Active sprint tasks' },
-  { label: 'Attendance', path: '/employee/attendance', icon: UserCheck, color: 'teal', count: 0, desc: 'Logs & regularize' },
-  { label: 'Expenses', path: '/employee/expenses', icon: IndianRupee, color: 'amber', count: 2, desc: 'Claims & receipts' },
-  { label: 'Salary', path: '/employee/salary', icon: Award, color: 'purple', count: 0, desc: 'Payslips & CTC' },
-  { label: 'Policies', path: '/employee/policies', icon: FileText, color: 'blue', count: 0, desc: 'HR compliance' },
-  { label: 'Documents', path: '/employee/documents', icon: FolderOpen, color: 'emerald', count: 0, desc: 'Official repository' },
-  { label: 'News', path: '/employee/news', icon: Newspaper, color: 'sky', count: 0, desc: 'Company circulars' },
-  { label: 'Holidays', path: '/employee/holidays', icon: Calendar, color: 'rose', count: 0, desc: '2026 Calendar' },
-  { label: 'Offboarding', path: '/employee/offboarding', icon: LogOut, color: 'rose', count: 0, desc: 'Exit formalities' },
-  { label: 'Letters', path: '/employee/letters', icon: FileText, color: 'cyan', count: 0, desc: 'Offer & credentials' },
-  { label: 'Support', path: '/employee/support-query', icon: HelpCircle, color: 'amber', count: 0, desc: 'Helpdesk & tickets' },
+const DEFAULT_MENU_ITEMS = [
+  { label: 'Leaves', path: '/employee/leaves', icon: Calendar, color: 'emerald', key: 'leaves', desc: 'Balance & apply' },
+  { label: 'Tasks', path: '/employee/tasks', icon: ClipboardList, color: 'indigo', key: 'tasks', desc: 'Active sprint tasks' },
+  { label: 'Attendance', path: '/employee/attendance', icon: UserCheck, color: 'teal', key: 'attendance', desc: 'Logs & regularize' },
+  { label: 'Expenses', path: '/employee/expenses', icon: IndianRupee, color: 'amber', key: 'expenses', desc: 'Claims & receipts' },
+  { label: 'Salary', path: '/employee/salary', icon: Award, color: 'purple', key: 'salary', desc: 'Payslips & CTC' },
+  { label: 'Policies', path: '/employee/policies', icon: FileText, color: 'blue', key: 'policies', desc: 'HR compliance' },
+  { label: 'Documents', path: '/employee/documents', icon: FolderOpen, color: 'emerald', key: 'documents', desc: 'Official repository' },
+  { label: 'News', path: '/employee/news', icon: Newspaper, color: 'sky', key: 'news', desc: 'Company circulars' },
+  { label: 'Holidays', path: '/employee/holidays', icon: Calendar, color: 'rose', key: 'holidays', desc: '2026 Calendar' },
+  { label: 'Offboarding', path: '/employee/offboarding', icon: LogOut, color: 'rose', key: 'offboarding', desc: 'Exit formalities' },
+  { label: 'Letters', path: '/employee/letters', icon: FileText, color: 'cyan', key: 'letters', desc: 'Offer & credentials' },
+  { label: 'Support', path: '/employee/support-query', icon: HelpCircle, color: 'amber', key: 'support', desc: 'Helpdesk & tickets' },
 ];
 
 const colorStyles = {
@@ -152,6 +152,22 @@ export default function EmployeeDashboard() {
   // Coworker birthdays
   const [birthdays, setBirthdays] = useState([]);
 
+  // Live module badge counts
+  const [moduleCounts, setModuleCounts] = useState({
+    leaves: 0,
+    tasks: 0,
+    expenses: 0,
+    attendance: 0,
+    salary: 0,
+    policies: 0,
+    documents: 0,
+    news: 0,
+    holidays: 0,
+    offboarding: 0,
+    letters: 0,
+    support: 0,
+  });
+
   // Current formatted time & date
   const [currentClock, setCurrentClock] = useState(() => new Date().toLocaleTimeString('en-US', { hour12: false }));
 
@@ -162,12 +178,16 @@ export default function EmployeeDashboard() {
 
     const loadDashboardData = async () => {
       try {
-        const [todayRes, logsRes, leavesRes, summaryRes, directoryRes] = await Promise.allSettled([
+        const [todayRes, logsRes, leavesRes, summaryRes, directoryRes, tasksRes, myLeavesRes, myExpensesRes, announcementsRes] = await Promise.allSettled([
           api.get(`/attendance/today?userId=${userId}`),
           api.get(`/attendance/logs?userId=${userId}`),
           api.get(`/employee/leaves/balance?userId=${userId}`),
           api.get(`/employee/attendance/summary?userId=${userId}`),
-          api.get('/users/directory')
+          api.get('/users/directory'),
+          api.get('/tasks'),
+          api.get(`/leaves/my-requests?userId=${userId}`),
+          api.get(`/expenses/my?userId=${userId}`),
+          api.get('/announcements')
         ]);
 
         if (!isMounted) return;
@@ -230,6 +250,35 @@ export default function EmployeeDashboard() {
           }
           setBirthdays(upcoming);
         }
+
+        // Calculate live module badge counts
+        let liveTasksCount = 0;
+        if (tasksRes.status === 'fulfilled' && tasksRes.value?.data?.success && Array.isArray(tasksRes.value?.data?.data)) {
+          liveTasksCount = tasksRes.value.data.data.filter(t => t.status !== 'Completed' && t.status !== 'Done').length;
+        }
+
+        let pendingLeavesCount = 0;
+        if (myLeavesRes.status === 'fulfilled' && myLeavesRes.value?.data?.success && Array.isArray(myLeavesRes.value?.data?.data)) {
+          pendingLeavesCount = myLeavesRes.value.data.data.filter(l => l.status === 'Pending').length;
+        }
+
+        let pendingExpensesCount = 0;
+        if (myExpensesRes.status === 'fulfilled' && myExpensesRes.value?.data?.success && Array.isArray(myExpensesRes.value?.data?.data)) {
+          pendingExpensesCount = myExpensesRes.value.data.data.filter(e => e.status === 'Pending').length;
+        }
+
+        let newsCount = 0;
+        if (announcementsRes.status === 'fulfilled' && announcementsRes.value?.data?.success && Array.isArray(announcementsRes.value?.data?.data)) {
+          newsCount = announcementsRes.value.data.data.length;
+        }
+
+        setModuleCounts(prev => ({
+          ...prev,
+          tasks: liveTasksCount,
+          leaves: pendingLeavesCount,
+          expenses: pendingExpensesCount,
+          news: newsCount
+        }));
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       }
@@ -985,8 +1034,9 @@ export default function EmployeeDashboard() {
           <span className="text-xs text-slate-400 dark:text-slate-500">12 interconnected modules</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {menuItems.map((item, index) => {
+          {DEFAULT_MENU_ITEMS.map((item, index) => {
             const theme = colorStyles[item.color] || colorStyles.indigo;
+            const liveCount = moduleCounts[item.key] || 0;
             return (
               <Link
                 key={index}
@@ -1000,9 +1050,9 @@ export default function EmployeeDashboard() {
                   {item.label}
                 </span>
                 <span className="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-1">{item.desc}</span>
-                {item.count > 0 && (
+                {liveCount > 0 && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${theme.badge}`}>
-                    {item.count} Action{item.count > 1 ? 's' : ''}
+                    {liveCount} {item.key === 'news' ? 'Circular' : 'Active'}{liveCount > 1 ? 's' : ''}
                   </span>
                 )}
               </Link>
