@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const CATEGORIES = [
   'All',
@@ -23,6 +24,8 @@ export default function ManagerInternalExpenses() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [feedback, setFeedback] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, title }
+  const [deleting, setDeleting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -76,15 +79,23 @@ export default function ManagerInternalExpenses() {
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (!window.confirm(`Delete expense record "${title}"?`)) return;
+  const handleDelete = (id, title) => {
+    setDeleteTarget({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/manager/internal-expenses/${id}`);
-      setFeedback(`Expense "${title}" deleted.`);
+      setDeleting(true);
+      await api.delete(`/manager/internal-expenses/${deleteTarget.id}`);
+      setFeedback(`Expense "${deleteTarget.title}" deleted.`);
       fetchInternalExpenses();
       setTimeout(() => setFeedback(''), 4000);
     } catch (err) {
       console.error('Delete error:', err);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -422,6 +433,18 @@ export default function ManagerInternalExpenses() {
           </div>
         </div>
       )}
+
+      {/* Modern Expense Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Expense Record"
+        message={`Are you sure you want to permanently delete the expenditure record "${deleteTarget?.title}"?`}
+        confirmLabel="Delete Expense"
+        type="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

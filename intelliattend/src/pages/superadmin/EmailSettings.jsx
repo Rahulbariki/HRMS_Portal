@@ -26,6 +26,7 @@ export default function SuperAdminEmailSettings() {
   const [testEmail, setTestEmail] = useState('rahulbariki24@gmail.com');
   const [sendingTest, setSendingTest] = useState(false);
   const [testSuccess, setTestSuccess] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleSendTestEmail = (e) => {
     e.preventDefault();
@@ -129,11 +130,21 @@ export default function SuperAdminEmailSettings() {
               </div>
             </div>
 
+            {saveSuccess && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>SMTP relay settings saved and hot-reloaded successfully.</span>
+              </div>
+            )}
+
             <div className="pt-2 flex justify-end">
               <button
                 type="button"
-                onClick={() => alert('SMTP Settings saved and hot-reloaded successfully.')}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition shadow-sm"
+                onClick={() => {
+                  setSaveSuccess(true);
+                  setTimeout(() => setSaveSuccess(false), 4000);
+                }}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition shadow-sm cursor-pointer"
               >
                 Save Relay Configuration
               </button>

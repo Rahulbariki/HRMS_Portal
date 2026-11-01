@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 export default function ClientPolicies() {
   const [policies, setPolicies] = useState([]);
@@ -15,6 +16,8 @@ export default function ClientPolicies() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, title }
+  const [deleting, setDeleting] = useState(false);
 
   const [newPolicy, setNewPolicy] = useState({
     title: '',
@@ -77,17 +80,25 @@ export default function ClientPolicies() {
     }
   };
 
-  const handleDeletePolicy = async (id, title) => {
-    if (!window.confirm(`Are you sure you want to remove policy "${title}"?`)) return;
+  const handleDeletePolicy = (id, title) => {
+    setDeleteTarget({ id, title });
+  };
+
+  const confirmDeletePolicy = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await api.delete(`/policies/${id}`);
+      setDeleting(true);
+      const res = await api.delete(`/policies/${deleteTarget.id}`);
       if (res.data?.success) {
-        setPolicies(prev => prev.filter(p => p.id !== id));
-        setFeedback({ type: 'success', text: `Policy "${title}" removed.` });
+        setPolicies(prev => prev.filter(p => p.id !== deleteTarget.id));
+        setFeedback({ type: 'success', text: `Policy "${deleteTarget.title}" removed.` });
       }
     } catch (err) {
       console.error('Error deleting policy:', err);
       setFeedback({ type: 'error', text: 'Failed to delete policy' });
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -361,6 +372,18 @@ export default function ClientPolicies() {
           </div>
         </div>
       )}
+
+      {/* Modern Delete Policy Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(deleteTarget)}
+        title="Remove Policy Document"
+        message={`Are you sure you want to remove policy "${deleteTarget?.title}"? This policy will no longer be visible to staff members.`}
+        confirmLabel="Remove Policy"
+        type="danger"
+        loading={deleting}
+        onConfirm={confirmDeletePolicy}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

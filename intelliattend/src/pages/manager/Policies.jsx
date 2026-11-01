@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const CATEGORIES = ['All', 'Conduct', 'Security', 'Leave', 'Workplace', 'General'];
 
@@ -16,6 +17,8 @@ export default function ManagerPolicies() {
   const [feedback, setFeedback] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, title }
+  const [deleting, setDeleting] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -59,15 +62,23 @@ export default function ManagerPolicies() {
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (!window.confirm(`Delete policy "${title}"?`)) return;
+  const handleDelete = (id, title) => {
+    setDeleteTarget({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/policies/${id}`);
-      setFeedback(`Policy "${title}" removed.`);
+      setDeleting(true);
+      await api.delete(`/policies/${deleteTarget.id}`);
+      setFeedback(`Policy "${deleteTarget.title}" removed.`);
       fetchPolicies();
       setTimeout(() => setFeedback(''), 4000);
     } catch (err) {
       console.error('Error deleting policy:', err);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -317,6 +328,18 @@ export default function ManagerPolicies() {
           </div>
         </div>
       )}
+
+      {/* Modern Delete Policy Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Corporate Policy"
+        message={`Are you sure you want to remove policy "${deleteTarget?.title}"? This policy will no longer be visible to staff members.`}
+        confirmLabel="Remove Policy"
+        type="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

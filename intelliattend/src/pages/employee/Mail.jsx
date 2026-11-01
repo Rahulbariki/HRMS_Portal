@@ -8,6 +8,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const EMAIL_LABELS = ['General', 'Corporate', 'Urgent', 'Announcement', 'Project'];
 
@@ -24,6 +25,8 @@ export default function EmployeeMail() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [showTrashConfirm, setShowTrashConfirm] = useState(false);
+  const [emptyingTrash, setEmptyingTrash] = useState(false);
 
   // Compose form state
   const [composeDraftId, setComposeDraftId] = useState(null);
@@ -180,9 +183,13 @@ export default function EmployeeMail() {
   };
 
   // Empty Trash
-  const handleEmptyTrash = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete all emails in Trash?')) return;
+  const handleEmptyTrash = () => {
+    setShowTrashConfirm(true);
+  };
+
+  const confirmEmptyTrash = async () => {
     try {
+      setEmptyingTrash(true);
       await api.post('/mail/empty-trash', { userEmail: user?.email });
       setEmails([]);
       setSelectedEmail(null);
@@ -191,6 +198,9 @@ export default function EmployeeMail() {
       setTimeout(() => setFeedback(''), 3000);
     } catch (err) {
       console.error('Failed to empty trash:', err);
+    } finally {
+      setEmptyingTrash(false);
+      setShowTrashConfirm(false);
     }
   };
 
@@ -1086,6 +1096,18 @@ export default function EmployeeMail() {
           </div>
         </div>
       )}
+
+      {/* Empty Trash Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showTrashConfirm}
+        title="Empty Trash Bin"
+        message="Are you sure you want to permanently delete all emails currently in Trash? This action cannot be undone."
+        confirmLabel="Empty Trash"
+        type="danger"
+        loading={emptyingTrash}
+        onConfirm={confirmEmptyTrash}
+        onCancel={() => setShowTrashConfirm(false)}
+      />
     </div>
   );
 }

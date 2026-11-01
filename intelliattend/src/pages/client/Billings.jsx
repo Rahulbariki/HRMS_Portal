@@ -15,6 +15,7 @@ export default function ClientBillings() {
   const [loading, setLoading] = useState(true);
   const [autoRenew, setAutoRenew] = useState(true);
   const [downloadNotice, setDownloadNotice] = useState('');
+  const [cardNotice, setCardNotice] = useState('');
   const [activeInvoice, setActiveInvoice] = useState(null);
 
   const fetchBillingData = async () => {
@@ -173,9 +174,17 @@ export default function ClientBillings() {
             </div>
           </div>
 
-          <div className="pt-6">
+          <div className="pt-6 space-y-2">
+            {cardNotice && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center animate-in fade-in">
+                {cardNotice}
+              </div>
+            )}
             <button
-              onClick={() => alert('Corporate card details are managed by Treasury SuperAdmin.')}
+              onClick={() => {
+                setCardNotice('Corporate payment methods are centrally provisioned by Treasury SuperAdmin.');
+                setTimeout(() => setCardNotice(''), 4500);
+              }}
               className="w-full text-xs font-semibold py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition cursor-pointer"
             >
               Update Payment Method

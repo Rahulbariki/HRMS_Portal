@@ -43,6 +43,7 @@ export default function EmployeeChat() {
   // File Attachment State
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef(null);
 
   // Call / Video Modal State
@@ -227,7 +228,8 @@ export default function EmployeeChat() {
           }
         } catch (uploadErr) {
           console.error('File upload failed:', uploadErr);
-          alert('Failed to upload file attachment. Please try again.');
+          setUploadError('Failed to upload file attachment. Please try again.');
+          setTimeout(() => setUploadError(''), 4000);
           setIsSending(false);
           return;
         }
@@ -778,6 +780,12 @@ export default function EmployeeChat() {
             )}
 
             {/* Attachment preview banner */}
+            {uploadError && (
+              <div className="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 border-t border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
+                <span>{uploadError}</span>
+                <button type="button" onClick={() => setUploadError('')} className="font-bold cursor-pointer">✕</button>
+              </div>
+            )}
             {selectedFile && (
               <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">

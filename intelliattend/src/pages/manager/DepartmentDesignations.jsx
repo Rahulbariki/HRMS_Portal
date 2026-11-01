@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 export default function ManagerDepartmentDesignations() {
   const [activeTab, setActiveTab] = useState('departments');
@@ -18,6 +19,8 @@ export default function ManagerDepartmentDesignations() {
   const [showDeptModal, setShowDeptModal] = useState(false);
   const [showDesModal, setShowDesModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, type: 'department' | 'designation', name }
+  const [deleting, setDeleting] = useState(false);
 
   // Forms
   const [deptForm, setDeptForm] = useState({ name: '', code: '', head_name: '', description: '' });
@@ -100,27 +103,32 @@ export default function ManagerDepartmentDesignations() {
     }
   };
 
-  const handleDeleteDept = async (id, name) => {
-    if (!window.confirm(`Delete department "${name}"?`)) return;
-    try {
-      await api.delete(`/manager/departments/${id}`);
-      setFeedback(`Department "${name}" deleted.`);
-      fetchData();
-      setTimeout(() => setFeedback(''), 4000);
-    } catch (err) {
-      console.error('Delete error:', err);
-    }
+  const handleDeleteDept = (id, name) => {
+    setDeleteTarget({ id, type: 'department', name });
   };
 
-  const handleDeleteDes = async (id, title) => {
-    if (!window.confirm(`Delete designation "${title}"?`)) return;
+  const handleDeleteDes = (id, title) => {
+    setDeleteTarget({ id, type: 'designation', name: title });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/manager/designations/${id}`);
-      setFeedback(`Designation "${title}" deleted.`);
+      setDeleting(true);
+      if (deleteTarget.type === 'department') {
+        await api.delete(`/manager/departments/${deleteTarget.id}`);
+        setFeedback(`Department "${deleteTarget.name}" deleted.`);
+      } else {
+        await api.delete(`/manager/designations/${deleteTarget.id}`);
+        setFeedback(`Designation "${deleteTarget.name}" deleted.`);
+      }
       fetchData();
       setTimeout(() => setFeedback(''), 4000);
     } catch (err) {
       console.error('Delete error:', err);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -502,6 +510,18 @@ export default function ManagerDepartmentDesignations() {
           </div>
         </div>
       )}
+
+      {/* Modern Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(deleteTarget)}
+        title={deleteTarget?.type === 'department' ? 'Delete Department' : 'Delete Designation'}
+        message={`Are you sure you want to permanently delete the ${deleteTarget?.type || 'item'} "${deleteTarget?.name}"?`}
+        confirmLabel={`Delete ${deleteTarget?.type === 'department' ? 'Department' : 'Designation'}`}
+        type="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

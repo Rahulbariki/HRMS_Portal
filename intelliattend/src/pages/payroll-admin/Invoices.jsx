@@ -7,6 +7,7 @@ import {
 import clsx from 'clsx';
 import api from '../../services/api';
 import PayslipModal from '../../components/PayslipModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 export default function PayrollAdminInvoices() {
   const [invoices, setInvoices] = useState([]);
@@ -14,6 +15,8 @@ export default function PayrollAdminInvoices() {
   const [feedback, setFeedback] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null); // { id, invNum }
+  const [cancelling, setCancelling] = useState(false);
 
   // Disbursal State
   const [disburseModalInvoice, setDisburseModalInvoice] = useState(null);
@@ -78,17 +81,25 @@ export default function PayrollAdminInvoices() {
     }
   };
 
-  const handleCancel = async (id, invNum) => {
-    if (!window.confirm(`Mark invoice ${invNum} as cancelled?`)) return;
+  const handleCancel = (id, invNum) => {
+    setCancelTarget({ id, invNum });
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelTarget) return;
     try {
-      const res = await api.post(`/payroll-admin/invoices/${id}/cancel`);
+      setCancelling(true);
+      const res = await api.post(`/payroll-admin/invoices/${cancelTarget.id}/cancel`);
       if (res.data?.success) {
-        setFeedback(`Invoice ${invNum} marked as cancelled.`);
+        setFeedback(`Invoice ${cancelTarget.invNum} marked as cancelled.`);
         fetchInvoices();
         setTimeout(() => setFeedback(''), 4000);
       }
     } catch (err) {
       console.error('Cancel failed:', err);
+    } finally {
+      setCancelling(false);
+      setCancelTarget(null);
     }
   };
 
@@ -118,7 +129,8 @@ export default function PayrollAdminInvoices() {
       }
     } catch (err) {
       console.error('Disbursal failed:', err);
-      alert(err.response?.data?.message || 'Failed to disburse salaries.');
+      setFeedback(err.response?.data?.message || 'Failed to disburse salaries.');
+      setTimeout(() => setFeedback(''), 5000);
     } finally {
       setDisbursing(false);
     }
@@ -575,6 +587,18 @@ export default function PayrollAdminInvoices() {
           onClose={() => setSelectedPayslip(null)}
         />
       )}
+
+      {/* Invoice Cancellation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(cancelTarget)}
+        title="Cancel Payroll Invoice"
+        message={`Are you sure you want to cancel invoice ${cancelTarget?.invNum}? This will void the invoice record.`}
+        confirmLabel="Cancel Invoice"
+        type="danger"
+        loading={cancelling}
+        onConfirm={confirmCancel}
+        onCancel={() => setCancelTarget(null)}
+      />
     </div>
   );
 }

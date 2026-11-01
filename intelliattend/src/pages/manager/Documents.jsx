@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 export default function ManagerDocuments() {
   const [documents, setDocuments] = useState([]);
@@ -17,6 +18,8 @@ export default function ManagerDocuments() {
   const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, title }
+  const [deleting, setDeleting] = useState(false);
 
   const [newDoc, setNewDoc] = useState({
     title: '',
@@ -58,7 +61,7 @@ export default function ManagerDocuments() {
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!newDoc.file) {
-      alert('Please select a file to upload');
+      setFeedback({ type: 'error', text: 'Please select a file to upload.' });
       return;
     }
 
@@ -93,17 +96,25 @@ export default function ManagerDocuments() {
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+  const handleDelete = (id, title) => {
+    setDeleteTarget({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await api.delete(`/documents/${id}`);
+      setDeleting(true);
+      const res = await api.delete(`/documents/${deleteTarget.id}`);
       if (res.data?.success) {
-        setDocuments((prev) => prev.filter((d) => d.id !== id));
-        setFeedback({ type: 'success', text: `Document "${title}" removed.` });
+        setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+        setFeedback({ type: 'success', text: `Document "${deleteTarget.title}" removed.` });
       }
     } catch (err) {
       console.error('Error deleting document:', err);
       setFeedback({ type: 'error', text: 'Failed to delete document' });
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -459,6 +470,18 @@ export default function ManagerDocuments() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Document"
+        message={`Are you sure you want to permanently delete "${deleteTarget?.title}" from Cloudinary object storage?`}
+        confirmLabel="Delete Document"
+        type="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

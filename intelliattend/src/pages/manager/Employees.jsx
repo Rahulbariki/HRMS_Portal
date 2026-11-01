@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../services/api';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 export default function ManagerEmployees() {
   const [employees, setEmployees] = useState([]);
@@ -21,6 +22,7 @@ export default function ManagerEmployees() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [resetTarget, setResetTarget] = useState(null); // { id, name }
 
   // Form State
   const [formData, setFormData] = useState({
@@ -121,16 +123,24 @@ export default function ManagerEmployees() {
     }
   };
 
-  const handleResetPassword = async (id, name) => {
-    if (!window.confirm(`Reset password for ${name} to default "password123"?`)) return;
+  const handleResetPassword = (id, name) => {
+    setResetTarget({ id, name });
+  };
+
+  const confirmResetPassword = async () => {
+    if (!resetTarget) return;
     try {
-      const res = await api.put(`/manager/employees/${id}/reset-password`);
+      setActionLoading(true);
+      const res = await api.put(`/manager/employees/${resetTarget.id}/reset-password`);
       if (res.data?.success) {
-        setFeedback(`Password for ${name} reset to "password123"`);
+        setFeedback(`Password for ${resetTarget.name} reset to "password123"`);
         setTimeout(() => setFeedback(''), 4000);
       }
     } catch (err) {
       console.error('Failed to reset password:', err);
+    } finally {
+      setActionLoading(false);
+      setResetTarget(null);
     }
   };
 
@@ -680,6 +690,18 @@ export default function ManagerEmployees() {
           </div>
         </div>
       )}
+
+      {/* Modern Password Reset Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(resetTarget)}
+        title="Reset Employee Password"
+        message={`Are you sure you want to reset the password for ${resetTarget?.name || 'this employee'} to the default temporary credential "password123"?`}
+        confirmLabel="Reset Password"
+        type="warning"
+        loading={actionLoading}
+        onConfirm={confirmResetPassword}
+        onCancel={() => setResetTarget(null)}
+      />
     </div>
   );
 }
