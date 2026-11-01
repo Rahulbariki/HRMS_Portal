@@ -497,6 +497,7 @@ app.get('/api/users/directory', async (req, res) => {
       company: u.company_name,
       manager: u.manager_name,
       workLocation: u.work_location,
+      role: u.role,
       employmentType: u.employment_type,
       shift: u.shift,
       panNumber: u.pan_number,

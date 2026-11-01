@@ -285,3 +285,4 @@ export default function PayslipModal({ payslip, employee, company, onClose }) {
     </div>
   );
 }
+
