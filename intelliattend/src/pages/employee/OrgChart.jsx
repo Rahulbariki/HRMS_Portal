@@ -1,14 +1,16 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import {
   Search, ZoomIn, ZoomOut,
-  List, GitFork, ChevronDown, ChevronRight, Check
+  List, GitFork, ChevronDown, ChevronRight, Check,
+  Loader2, RefreshCw, AlertCircle
 } from 'lucide-react';
 import clsx from 'clsx';
+import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
 
-// Hierarchical company org data
-const ORG_DATA = {
+// Fallback hierarchical company org data if offline or loading fails
+const FALLBACK_ORG_DATA = {
   id: 'IA-SA-001',
   name: 'Rahul Bariki',
   designation: 'Global Platform Super Administrator & Founder',
@@ -16,7 +18,7 @@ const ORG_DATA = {
   email: 'rahulbariki.intelliattend@gmail.com',
   phone: '+91 62817 69923',
   avatar: '/avatar_rahul.png',
-  totalReports: 3,
+  totalReports: 1,
   children: [
     {
       id: 'IA-CA-001',
@@ -36,27 +38,169 @@ const ORG_DATA = {
           email: 'manager.intelliattend@gmail.com',
           phone: '+91 98765 43210',
           avatar: null,
-          totalReports: 1,
+          totalReports: 4,
           children: [
             {
               id: 'IA-EM-001',
               name: 'Sarah Miller',
-              designation: 'Lead Product Software Engineer',
+              designation: 'Lead Product Software Development Engineer',
               department: 'Engineering & Technology',
               email: 'employee.intelliattend@gmail.com',
               phone: '+91 98765 43211',
               avatar: null,
               isCurrentUser: true,
               totalReports: 0,
+            },
+            {
+              id: 'IA-EM-002',
+              name: 'Marcus Vance',
+              designation: 'Frontend Engineer',
+              department: 'Engineering',
+              email: 'marcus@intelliattend.com',
+              phone: '+91 98765 43213',
+              avatar: null,
+              totalReports: 0,
+            },
+            {
+              id: 'IA-EM-003',
+              name: 'Priya Sharma',
+              designation: 'Product UI/UX Designer',
+              department: 'Product & Design',
+              email: 'priya@intelliattend.com',
+              phone: '+91 98765 43214',
+              avatar: null,
+              totalReports: 0,
+            },
+            {
+              id: 'IA-EM-004',
+              name: 'Daniel Chen',
+              designation: 'Cloud DevOps Specialist',
+              department: 'Engineering',
+              email: 'daniel@intelliattend.com',
+              phone: '+91 98765 43215',
+              avatar: null,
+              totalReports: 0,
             }
           ]
+        },
+        {
+          id: 'IA-PA-001',
+          name: 'James Wilson',
+          designation: 'Senior Payroll & Disbursal Administrator',
+          department: 'Finance & Accounts',
+          email: 'payrolladmin@intelliattend.com',
+          phone: '+91 98765 43216',
+          avatar: null,
+          totalReports: 0,
         }
       ]
     }
   ]
 };
 
+// Helper: builds hierarchical multi-level org tree dynamically from PostgreSQL directory records
+function buildOrgTreeFromUsers(users, currentUserId) {
+  if (!Array.isArray(users) || users.length === 0) return FALLBACK_ORG_DATA;
+
+  const nodeMap = {};
+  users.forEach((u) => {
+    const isMe = u.id === currentUserId || (currentUserId && String(u.employeeId) === String(currentUserId));
+    nodeMap[u.id] = {
+      id: u.id,
+      employeeId: u.employeeId || u.id,
+      name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Employee',
+      firstName: u.firstName,
+      lastName: u.lastName,
+      designation: u.designation || 'Staff Member',
+      department: u.department || 'General',
+      email: u.email || u.loginEmail || '',
+      loginEmail: u.loginEmail || u.email,
+      phone: u.phone || '+91 98765 43210',
+      emergencyPhone: u.emergencyPhone || '+91 98765 43299',
+      avatar: u.avatarUrl || u.avatar || null,
+      avatarUrl: u.avatarUrl || u.avatar || null,
+      manager: u.manager || '',
+      role: u.role,
+      bloodGroup: u.bloodGroup || 'O+',
+      doj: u.doj || '01-01-2026',
+      company: u.company || 'IntelliAttend',
+      children: [],
+      totalReports: 0,
+      isCurrentUser: Boolean(isMe),
+    };
+  });
+
+  const roots = [];
+  const superAdminUser = users.find((u) => u.role === 'superadmin' || u.id === 'IA-SA-001');
+  const clientUser = users.find((u) => u.role === 'client' || u.id === 'IA-CA-001');
+  const managerUser = users.find((u) => u.role === 'manager' || u.id === 'IA-MG-001');
+
+  users.forEach((u) => {
+    const node = nodeMap[u.id];
+    const mgrField = (u.manager || '').toLowerCase();
+
+    // Board of directors or top superadmin is always a top root
+    if (mgrField.includes('board') || u.id === superAdminUser?.id) {
+      roots.push(node);
+      return;
+    }
+
+    let parent = null;
+    if (mgrField.includes('rahul') || mgrField.includes('super admin') || mgrField.includes('ia-sa')) {
+      parent = superAdminUser;
+    } else if (mgrField.includes('alex') || mgrField.includes('client admin') || mgrField.includes('ia-ca')) {
+      parent = clientUser;
+    } else if (mgrField.includes('david') || mgrField.includes('engineering manager') || mgrField.includes('ia-mg') || mgrField.includes('manager')) {
+      parent = managerUser;
+    } else {
+      parent = users.find(
+        (p) =>
+          p.id !== u.id &&
+          (mgrField.includes(p.name?.toLowerCase()) ||
+            mgrField.includes(p.id?.toLowerCase()) ||
+            (p.lastName && mgrField.includes(p.lastName.toLowerCase())))
+      );
+    }
+
+    if (parent && nodeMap[parent.id] && parent.id !== u.id) {
+      nodeMap[parent.id].children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  function countAndSortReports(node) {
+    node.totalReports = node.children.length;
+    // Sort children: managers/clients first, then by name
+    node.children.sort((a, b) => {
+      if (a.children.length !== b.children.length) {
+        return b.children.length - a.children.length;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    node.children.forEach(c => countAndSortReports(c));
+  }
+
+  roots.forEach(r => countAndSortReports(r));
+
+  // If single root, return it; if multiple roots, choose primary or wrap in executive root
+  if (roots.length === 1) return roots[0];
+  if (roots.length > 1) {
+    const mainRoot = roots.find(r => r.id === superAdminUser?.id) || roots[0];
+    roots.forEach(r => {
+      if (r.id !== mainRoot.id && !mainRoot.children.some(c => c.id === r.id)) {
+        mainRoot.children.push(r);
+      }
+    });
+    countAndSortReports(mainRoot);
+    return mainRoot;
+  }
+
+  return FALLBACK_ORG_DATA;
+}
+
 function flattenTree(node, depth = 0, path = []) {
+  if (!node) return [];
   const currentPath = [...path, node.id];
   let list = [{ ...node, depth, path: currentPath }];
   if (node.children && node.children.length > 0) {
@@ -67,8 +211,26 @@ function flattenTree(node, depth = 0, path = []) {
   return list;
 }
 
+function findSubtree(node, targetId) {
+  if (!node) return null;
+  if (node.id === targetId || (node.children && node.children.some(c => c.id === targetId))) {
+    return node;
+  }
+  for (const child of node.children || []) {
+    const found = findSubtree(child, targetId);
+    if (found) return found;
+  }
+  return null;
+}
+
 export default function EmployeeOrgChart() {
   const { user } = useAuth();
+  const currentUserId = user?.employeeId || user?.id || 'IA-EM-001';
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [rawUsers, setRawUsers] = useState([]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
   const [viewMode, setViewMode] = useState('tree'); // 'tree' | 'list'
@@ -81,10 +243,43 @@ export default function EmployeeOrgChart() {
 
   const containerRef = useRef(null);
 
+  // Fetch live organization directory from PostgreSQL API
+  const fetchOrgDirectory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get('/users/directory');
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setRawUsers(res.data.data);
+      } else {
+        setRawUsers([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch org directory:', err);
+      setError('Could not load live directory from database. Displaying cached organizational hierarchy.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrgDirectory();
+  }, []);
+
+  // Construct full live org tree
+  const fullOrgTree = useMemo(() => {
+    if (rawUsers.length > 0) {
+      return buildOrgTreeFromUsers(rawUsers, currentUserId);
+    }
+    return FALLBACK_ORG_DATA;
+  }, [rawUsers, currentUserId]);
+
   // Filter or show only my branch
   const activeTree = useMemo(() => {
-    return ORG_DATA;
-  }, [showOnlyMyBranch]);
+    if (!showOnlyMyBranch) return fullOrgTree;
+    const branch = findSubtree(fullOrgTree, currentUserId);
+    return branch || fullOrgTree;
+  }, [fullOrgTree, showOnlyMyBranch, currentUserId]);
 
   // Flattened list for list view or search
   const flattenedEmployees = useMemo(() => {
@@ -159,14 +354,33 @@ export default function EmployeeOrgChart() {
   return (
     <div className="space-y-4">
       {/* Page Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-          Organisation Chart
-        </h1>
-        <p className="font-body mt-1 text-xs text-slate-500">
-          See where you fit in the company.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+            Organisation Chart
+          </h1>
+          <p className="font-body mt-1 text-xs text-slate-500">
+            Live interactive reporting structure and team hierarchy powered by Neon PostgreSQL.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchOrgDirectory()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition cursor-pointer shadow-xs"
+        >
+          <RefreshCw className={clsx('h-3.5 w-3.5 text-slate-500', loading && 'animate-spin text-teal-600')} />
+          <span>Sync Directory</span>
+        </button>
       </div>
+
+      {/* Database sync status or notification */}
+      {error && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Control Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
@@ -416,18 +630,16 @@ export default function EmployeeOrgChart() {
             </div>
             <EmployeeIdCard
               employee={{
-                name: selectedNode.name.toUpperCase(),
-                designation: selectedNode.designation.toUpperCase(),
-                employeeId: selectedNode.id === 'emp-rahul-01' || selectedNode.name.toLowerCase().includes('rahul')
-                  ? 'SI0121'
-                  : `SI00${Math.abs(selectedNode.name.length * 7) % 80 + 10}`,
-                email: selectedNode.email,
-                phone: selectedNode.phone.replace(/[^0-9]/g, '').slice(-10) || '9876543210',
-                emergencyPhone: '9876543299',
-                doj: '05-10-2026',
-                bloodGroup: 'O+',
-                avatar: selectedNode.avatar,
-                company: 'IntelliAttend',
+                name: (selectedNode.name || 'EMPLOYEE').toUpperCase(),
+                designation: (selectedNode.designation || 'STAFF').toUpperCase(),
+                employeeId: selectedNode.id || selectedNode.employeeId || 'IA-EM-001',
+                email: selectedNode.email || selectedNode.loginEmail || 'employee@intelliattend.com',
+                phone: (selectedNode.phone || '9876543210').replace(/[^0-9]/g, '').slice(-10) || '9876543210',
+                emergencyPhone: (selectedNode.emergencyPhone || '9876543299').replace(/[^0-9]/g, '').slice(-10) || '9876543299',
+                doj: selectedNode.doj || '01-01-2026',
+                bloodGroup: selectedNode.bloodGroup || 'O+',
+                avatar: selectedNode.avatar || selectedNode.avatarUrl,
+                company: selectedNode.company || 'IntelliAttend Technologies',
               }}
               showActions={true}
             />
