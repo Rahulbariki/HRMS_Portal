@@ -115,14 +115,14 @@ function buildOrgTreeFromUsers(users, currentUserId) {
       department: u.department || 'General',
       email: u.email || u.loginEmail || '',
       loginEmail: u.loginEmail || u.email,
-      phone: u.phone || '+91 98765 43210',
-      emergencyPhone: u.emergencyPhone || '+91 98765 43299',
+      phone: u.phone || '',
+      emergencyPhone: u.emergencyPhone || '',
       avatar: u.avatarUrl || u.avatar || null,
       avatarUrl: u.avatarUrl || u.avatar || null,
       manager: u.manager || '',
       role: u.role,
-      bloodGroup: u.bloodGroup || 'O+',
-      doj: u.doj || '01-01-2026',
+      bloodGroup: u.bloodGroup || '',
+      doj: u.doj || '',
       company: u.company || 'IntelliAttend',
       children: [],
       totalReports: 0,
@@ -213,7 +213,11 @@ function flattenTree(node, depth = 0, path = []) {
 
 function findSubtree(node, targetId) {
   if (!node) return null;
-  if (node.id === targetId || (node.children && node.children.some(c => c.id === targetId))) {
+  const isTargetMatch = (id) => id === targetId;
+  const nodeMatches = isTargetMatch(node.id) || (node.employeeId && isTargetMatch(node.employeeId));
+  const childMatches = node.children && node.children.some(c => isTargetMatch(c.id) || (c.employeeId && isTargetMatch(c.employeeId)));
+
+  if (nodeMatches || childMatches) {
     return node;
   }
   for (const child of node.children || []) {
@@ -253,6 +257,7 @@ export default function EmployeeOrgChart() {
         setRawUsers(res.data.data);
       } else {
         setRawUsers([]);
+        setError('Could not load live directory from database. Displaying cached organizational hierarchy.');
       }
     } catch (err) {
       console.error('Failed to fetch org directory:', err);
@@ -632,12 +637,12 @@ export default function EmployeeOrgChart() {
               employee={{
                 name: (selectedNode.name || 'EMPLOYEE').toUpperCase(),
                 designation: (selectedNode.designation || 'STAFF').toUpperCase(),
-                employeeId: selectedNode.id || selectedNode.employeeId || 'IA-EM-001',
-                email: selectedNode.email || selectedNode.loginEmail || 'employee@intelliattend.com',
-                phone: (selectedNode.phone || '9876543210').replace(/[^0-9]/g, '').slice(-10) || '9876543210',
-                emergencyPhone: (selectedNode.emergencyPhone || '9876543299').replace(/[^0-9]/g, '').slice(-10) || '9876543299',
-                doj: selectedNode.doj || '01-01-2026',
-                bloodGroup: selectedNode.bloodGroup || 'O+',
+                employeeId: selectedNode.employeeId || selectedNode.id || 'IA-EM-001',
+                email: selectedNode.email || selectedNode.loginEmail || '',
+                phone: selectedNode.phone ? selectedNode.phone.replace(/[^0-9]/g, '').slice(-10) : '',
+                emergencyPhone: selectedNode.emergencyPhone ? selectedNode.emergencyPhone.replace(/[^0-9]/g, '').slice(-10) : '',
+                doj: selectedNode.doj || '',
+                bloodGroup: selectedNode.bloodGroup || '',
                 avatar: selectedNode.avatar || selectedNode.avatarUrl,
                 company: selectedNode.company || 'IntelliAttend Technologies',
               }}

@@ -288,7 +288,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">PHONE</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-xs sm:text-[13px] font-sans">
-                    {employee.phone || '9876543220'}
+                    {employee.phone || 'Not provided'}
                   </span>
                 </div>
 
@@ -297,7 +297,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">EMG.NO.</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-xs sm:text-[13px] font-sans">
-                    {employee.emergencyPhone || '9876543299'}
+                    {employee.emergencyPhone || 'Not provided'}
                   </span>
                 </div>
 
@@ -306,7 +306,7 @@ export default function EmployeeIdCard({
                   <span className="w-24 font-bold tracking-wider text-slate-500 text-[11px]">DOJ</span>
                   <span className="font-bold text-slate-400 mr-2.5">:</span>
                   <span className="font-extrabold text-[#0f172a] tracking-wide text-xs sm:text-[13px] font-sans">
-                    {employee.doj || '01-01-2026'}
+                    {employee.doj || 'Not provided'}
                   </span>
                 </div>
               </div>
@@ -392,7 +392,7 @@ export default function EmployeeIdCard({
               <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
                 <span className="font-bold text-slate-500">Blood Group</span>
                 <span className="font-extrabold text-rose-600 font-mono text-sm">
-                  {employee.bloodGroup || 'O+'}
+                  {employee.bloodGroup || 'Not provided'}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
